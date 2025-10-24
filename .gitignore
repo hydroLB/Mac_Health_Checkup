@@ -23,3 +23,6 @@ build/
 # ---- Added by audit ----
 # OS / tooling
 .DS_Store
+.vite/
+coverage/
+target/
