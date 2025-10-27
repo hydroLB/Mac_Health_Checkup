@@ -26,3 +26,5 @@ build/
 .vite/
 coverage/
 target/
+git-autosnap.sh
+gitleaks-prepush.json
