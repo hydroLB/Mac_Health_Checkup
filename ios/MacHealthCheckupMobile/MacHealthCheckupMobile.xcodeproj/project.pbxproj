@@ -1,0 +1,275 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		9A0A00000000000100000001 /* MacHealthCheckupMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0A00000000000200000001 /* MacHealthCheckupMobileApp.swift */; };
+		9A0A00000000000100000002 /* MobileAppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0A00000000000200000002 /* MobileAppState.swift */; };
+		9A0A00000000000100000003 /* MobileRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0A00000000000200000003 /* MobileRootView.swift */; };
+		9A0A00000000000100000004 /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0A00000000000200000004 /* PairingView.swift */; };
+		9A0A00000000000100000007 /* SecureTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0A00000000000200000006 /* SecureTokenStore.swift */; };
+		9A0A00000000000100000008 /* SnapshotCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0A00000000000200000007 /* SnapshotCache.swift */; };
+		9A0A00000000000100000009 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0A00000000000200000008 /* SettingsView.swift */; };
+		9A0A0000000000010000000A /* QRCodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0A00000000000200000009 /* QRCodeScannerView.swift */; };
+		9A0A0000000000010000000B /* TLSFingerprintView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0A0000000000020000000A /* TLSFingerprintView.swift */; };
+		9A0A00000000000100000005 /* MacHealthCheckupCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9A0A00000000000F00000001 /* MacHealthCheckupCore */; };
+		9A0A00000000000100000006 /* MacHealthCheckupUI in Frameworks */ = {isa = PBXBuildFile; productRef = 9A0A00000000000F00000002 /* MacHealthCheckupUI */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		9A0A00000000000300000001 /* MacHealthCheckupMobile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacHealthCheckupMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9A0A00000000000200000001 /* MacHealthCheckupMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealthCheckupMobileApp.swift; sourceTree = "<group>"; };
+		9A0A00000000000200000002 /* MobileAppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileAppState.swift; sourceTree = "<group>"; };
+		9A0A00000000000200000003 /* MobileRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileRootView.swift; sourceTree = "<group>"; };
+		9A0A00000000000200000004 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingView.swift; sourceTree = "<group>"; };
+		9A0A00000000000200000005 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9A0A00000000000200000006 /* SecureTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureTokenStore.swift; sourceTree = "<group>"; };
+		9A0A00000000000200000007 /* SnapshotCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotCache.swift; sourceTree = "<group>"; };
+		9A0A00000000000200000008 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		9A0A00000000000200000009 /* QRCodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeScannerView.swift; sourceTree = "<group>"; };
+		9A0A0000000000020000000A /* TLSFingerprintView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TLSFingerprintView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9A0A00000000000400000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9A0A00000000000100000005 /* MacHealthCheckupCore in Frameworks */,
+				9A0A00000000000100000006 /* MacHealthCheckupUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		9A0A00000000000500000001 = {
+			isa = PBXGroup;
+			children = (
+				9A0A00000000000500000002 /* MacHealthCheckupMobileApp */,
+				9A0A00000000000600000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9A0A00000000000500000002 /* MacHealthCheckupMobileApp */ = {
+			isa = PBXGroup;
+			children = (
+				9A0A00000000000200000001 /* MacHealthCheckupMobileApp.swift */,
+				9A0A00000000000200000002 /* MobileAppState.swift */,
+				9A0A00000000000200000003 /* MobileRootView.swift */,
+				9A0A00000000000200000004 /* PairingView.swift */,
+				9A0A00000000000200000006 /* SecureTokenStore.swift */,
+				9A0A00000000000200000007 /* SnapshotCache.swift */,
+				9A0A00000000000200000008 /* SettingsView.swift */,
+				9A0A00000000000200000009 /* QRCodeScannerView.swift */,
+				9A0A0000000000020000000A /* TLSFingerprintView.swift */,
+				9A0A00000000000200000005 /* Info.plist */,
+			);
+			path = MacHealthCheckupMobileApp;
+			sourceTree = "<group>";
+		};
+		9A0A00000000000600000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9A0A00000000000300000001 /* MacHealthCheckupMobile.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9A0A00000000000700000001 /* MacHealthCheckupMobile */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9A0A00000000000800000001 /* Build configuration list for PBXNativeTarget "MacHealthCheckupMobile" */;
+			buildPhases = (
+				9A0A00000000000900000001 /* Sources */,
+				9A0A00000000000400000001 /* Frameworks */,
+				9A0A00000000000A00000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MacHealthCheckupMobile;
+			packageProductDependencies = (
+				9A0A00000000000F00000001 /* MacHealthCheckupCore */,
+				9A0A00000000000F00000002 /* MacHealthCheckupUI */,
+			);
+			productName = MacHealthCheckupMobile;
+			productReference = 9A0A00000000000300000001 /* MacHealthCheckupMobile.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9A0A00000000000B00000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					9A0A00000000000700000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = 9A0A00000000000C00000001 /* Build configuration list for PBXProject "MacHealthCheckupMobile" */;
+			compatibilityVersion = "Xcode 16.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 9A0A00000000000500000001;
+			packageReferences = (
+				9A0A00000000000E00000001 /* XCLocalSwiftPackageReference "../../swift-ui" */,
+			);
+			productRefGroup = 9A0A00000000000600000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9A0A00000000000700000001 /* MacHealthCheckupMobile */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		9A0A00000000000A00000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9A0A00000000000900000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9A0A00000000000100000001 /* MacHealthCheckupMobileApp.swift in Sources */,
+				9A0A00000000000100000002 /* MobileAppState.swift in Sources */,
+				9A0A00000000000100000003 /* MobileRootView.swift in Sources */,
+				9A0A00000000000100000004 /* PairingView.swift in Sources */,
+				9A0A00000000000100000007 /* SecureTokenStore.swift in Sources */,
+				9A0A00000000000100000008 /* SnapshotCache.swift in Sources */,
+				9A0A00000000000100000009 /* SettingsView.swift in Sources */,
+				9A0A0000000000010000000A /* QRCodeScannerView.swift in Sources */,
+				9A0A0000000000010000000B /* TLSFingerprintView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		9A0A00000000000D00000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MacHealthCheckupMobileApp/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 0.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.example.mac-health-checkup";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		9A0A00000000000D00000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MacHealthCheckupMobileApp/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 0.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.example.mac-health-checkup";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		9A0A00000000001000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				PRODUCT_NAME = "$(PROJECT_NAME)";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		9A0A00000000001000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				PRODUCT_NAME = "$(PROJECT_NAME)";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		9A0A00000000000800000001 /* Build configuration list for PBXNativeTarget "MacHealthCheckupMobile" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9A0A00000000000D00000001 /* Debug */,
+				9A0A00000000000D00000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9A0A00000000000C00000001 /* Build configuration list for PBXProject "MacHealthCheckupMobile" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9A0A00000000001000000001 /* Debug */,
+				9A0A00000000001000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		9A0A00000000000E00000001 /* XCLocalSwiftPackageReference "../../swift-ui" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../../swift-ui";
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9A0A00000000000F00000001 /* MacHealthCheckupCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9A0A00000000000E00000001 /* XCLocalSwiftPackageReference "../../swift-ui" */;
+			productName = MacHealthCheckupCore;
+		};
+		9A0A00000000000F00000002 /* MacHealthCheckupUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9A0A00000000000E00000001 /* XCLocalSwiftPackageReference "../../swift-ui" */;
+			productName = MacHealthCheckupUI;
+		};
+/* End XCSwiftPackageProductDependency section */
+
+	};
+	rootObject = 9A0A00000000000B00000001 /* Project object */;
+}

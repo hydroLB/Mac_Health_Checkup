@@ -1,0 +1,20 @@
+{
+  "benchmarks": {
+    "display_parse": {
+      "ops_per_sec": 35683.22230342167
+    },
+    "hz_parse": {
+      "ops_per_sec": 858523.8466558793
+    },
+    "usb_tree_parse": {
+      "ops_per_sec": 1573762.5930821707
+    }
+  },
+  "metadata": {
+    "iterations": 200,
+    "machine": "arm64",
+    "platform": "macOS-15.7.3-arm64-arm-64bit",
+    "python": "3.11.0",
+    "repeats": 5
+  }
+}
