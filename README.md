@@ -118,6 +118,27 @@ make serve
 
 The agent serves `GET /v1/health` (no auth) and `GET /v1/snapshot` (Bearer token).
 
+### Development: safe ports and localhost defaults
+
+The agent binds to `api.bind_host` and `api.port` from `config/config.json`. By default this is local-only
+(`127.0.0.1`). If the preferred port is already in use, the server automatically tries the next ports until it can
+bind successfully.
+
+Override bind host and port via environment variables (useful in dev and CI):
+
+- `MAC_HEALTH_CHECKUP_API_BIND_HOST` (example: `127.0.0.1`)
+- `MAC_HEALTH_CHECKUP_API_PORT` (range `0-65535`; use `0` for an OS-assigned ephemeral port)
+
+Examples:
+
+```sh
+# Random free port (prints the final URL on startup)
+MAC_HEALTH_CHECKUP_API_PORT=0 make serve
+
+# Fixed port
+MAC_HEALTH_CHECKUP_API_PORT=7878 make serve
+```
+
 ### Optional TLS + certificate pinning
 
 If you use LAN access on an untrusted network, HTTPS prevents passive sniffing. The included iOS client supports

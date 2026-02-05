@@ -48,10 +48,7 @@ public final class DashboardViewModel: ObservableObject {
     @Published public var sectionSearchText: String = ""
     @Published public var theme: Theme
     @Published public var appTitle: String
-    @Published public var temperatureAccessStatus: String?
-    @Published public var isTemperatureAccessInFlight: Bool = false
     @Published public var isSettingsPresented: Bool = false
-    @Published public var settingsFocus: SettingsFocus? = nil
 
     private var snapshotRefreshTask: Task<Void, Never>?
     private var fanRefreshTask: Task<Void, Never>?
@@ -118,9 +115,7 @@ public final class DashboardViewModel: ObservableObject {
         self.appTitle = appTitle
         self.visibilityStore = SectionVisibilityStore()
         self.selectedSectionKey = Self.overviewKey
-        self.temperatureAccessStatus = nil
         self.isSettingsPresented = false
-        self.settingsFocus = nil
         if historyEnabled {
             self.history = MetricHistoryStore(
                 fileURL: historyFile,
@@ -434,79 +429,13 @@ public final class DashboardViewModel: ObservableObject {
         }
     }
 
-    public func requestTemperatureSensorAccess() async {
+    public func openSettings() {
         /**
          Summary
-         Trigger an explicit temperature sensor authorization flow (macOS admin prompt).
+         Present the settings sheet.
 
          Inputs
          None.
-
-         Outputs
-         None.
-
-         Side effects
-         Calls a backend authorization endpoint which may display a macOS admin prompt; refreshes the snapshot on success.
-
-         Error handling
-         Stores an actionable `AppError` in `lastError` when authorization fails or the backend does not support it.
-
-         Ties to other methods
-         Called by `SettingsView` when the user taps "Request Access Now".
-
-         Why this exists
-         Snapshot refresh must be non-interactive by default; privileged access should be user-initiated and idiot-proof.
-         */
-        if isTemperatureAccessInFlight { return }
-        isTemperatureAccessInFlight = true
-        defer { isTemperatureAccessInFlight = false }
-
-        guard let accessBackend = backend as? any TemperatureAccessBackend else {
-            let message = "Temperature authorization is not supported by the current backend."
-            temperatureAccessStatus = message
-            lastError = AppError.context(#fileID, #function, message)
-            return
-        }
-
-        do {
-            let response = try await accessBackend.requestTemperatureSensorAccess()
-            if response.ok {
-                let found = response.sensorsFound ?? 0
-                temperatureAccessStatus = found > 0 ? "Authorized. Detected \(found) temperature sensors." : "Authorized."
-                await refreshOnce()
-                return
-            }
-            var message = response.guidance ?? "Temperature authorization failed."
-            if let retry = response.retryAfterSec, retry > 0 {
-                message += " Retry after \(retry)s."
-            }
-            if let err = response.error, !err.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                message += " error=\(err)"
-            }
-            if let raw = response.raw, !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                message += "\n\nRaw output (truncated):\n" + _truncate(raw, maxChars: 8000)
-            }
-            temperatureAccessStatus = message
-            lastError = AppError.context(#fileID, #function, message)
-        } catch let error as AppError {
-            if _isCancellationError(error) { return }
-            temperatureAccessStatus = error.description
-            lastError = error
-        } catch {
-            if _isCancellationError(error) { return }
-            let appError = AppError.context(#fileID, #function, "Temperature authorization request failed", error)
-            temperatureAccessStatus = appError.description
-            lastError = appError
-        }
-    }
-
-    public func openSettings(focus: SettingsFocus? = nil) {
-        /**
-         Summary
-         Present the settings sheet and optionally focus a specific section inside it.
-
-         Inputs
-         focus: Optional settings focus target, such as temperature sensors.
 
          Outputs
          None.
@@ -523,66 +452,7 @@ public final class DashboardViewModel: ObservableObject {
          Why this exists
          Keeps settings navigation idiot-proof and avoids telling users to hunt for the right card.
          */
-        settingsFocus = focus
         isSettingsPresented = true
-    }
-
-    public func clearSettingsFocus() {
-        /**
-         Summary
-         Clear any pending settings focus target after the UI has navigated to it.
-
-         Inputs
-         None.
-
-         Outputs
-         None.
-
-         Side effects
-         Mutates `settingsFocus`.
-
-         Error handling
-         None.
-
-         Ties to other methods
-         Called by `SettingsView` after scrolling to the requested target.
-
-         Why this exists
-         Prevents repeated auto-scrolling every time the settings sheet re-renders.
-         */
-        settingsFocus = nil
-    }
-
-    public func thermalPermissionRequired(sectionKey: String) -> Bool {
-        /**
-         Summary
-         Determine whether a section reports that thermal sensors need authorization.
-
-         Inputs
-         sectionKey: Section key to inspect (example: "performance").
-
-         Outputs
-         True when the underlying thermals diagnostics reports `permission_required=true`.
-
-         Side effects
-         None.
-
-         Error handling
-         Returns false for missing or malformed diagnostics.
-
-         Ties to other methods
-         Used by views to show an actionable "Open Settings" call-to-action.
-
-         Why this exists
-         The UI should guide users directly to the fix instead of showing an empty table.
-         */
-        guard let payload = sectionPayload(for: sectionKey) else { return false }
-        guard let diagnostics = payload.diagnostics else { return false }
-        guard case let .object(thermals) = diagnostics["thermals"] else { return false }
-        if case let .bool(required) = thermals["permission_required"] {
-            return required
-        }
-        return false
     }
 
     private func refreshFanOnce() async {
@@ -719,6 +589,44 @@ public final class DashboardViewModel: ObservableObject {
          */
         guard let payload = sectionPayload(for: key) else {
             return "No data yet"
+        }
+
+        let normalizedKey = key.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        // For sections that already render richer metrics/tables, prefer those summaries over a potentially redundant
+        // `field` string emitted by the backend.
+        if ["battery", "fan", "ssd", "network", "input"].contains(normalizedKey) {
+            if let metrics = payload.metrics, !metrics.isEmpty {
+                if normalizedKey == "network" {
+                    let preferredLabels = ["SSID", "IPv4", "RSSI", "Interface"]
+                    for label in preferredLabels {
+                        if let row = metrics.first(where: { $0.label == label }) {
+                            return _truncate("\(row.label): \(row.value)", maxChars: 160)
+                        }
+                    }
+                }
+                if let first = metrics.first {
+                    return _truncate("\(first.label): \(first.value)", maxChars: 160)
+                }
+            }
+
+            if let table = payload.table {
+                let rows = table.rows.count
+                if normalizedKey == "input" {
+                    let names = table.rows.compactMap { row -> String? in
+                        if row.indices.contains(1) {
+                            return row[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                        }
+                        return row.first?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                        .filter { !$0.isEmpty }
+                    if !names.isEmpty {
+                        return _truncate(names.prefix(2).joined(separator: "  •  "), maxChars: 160)
+                    }
+                    return rows == 1 ? "Input: 1 device" : "Input: \(rows) devices"
+                }
+            }
+            // Fall through to field/diagnostics fallback when no metrics/table summary is available.
         }
 
         if let field = payload.field?.trimmingCharacters(in: .whitespacesAndNewlines), !field.isEmpty {

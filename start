@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+
+# Guard against sourcing this file (e.g. `. ./start`), which would mutate the caller's shell options.
+if (return 0 2>/dev/null); then
+  echo "Do not source this script. Run it as an executable: ./start" >&2
+  return 2
+fi
+
+set -eu
+(set -o pipefail) 2>/dev/null && set -o pipefail
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+
+# Prefer the repo-local venv if present so the command is stable even without manual activation.
+PYTHON="$SCRIPT_DIR/.venv/bin/python"
+if [ ! -x "$PYTHON" ]; then
+  PYTHON="python3"
+fi
+
+exec "$PYTHON" "$SCRIPT_DIR/run.py" "$@"

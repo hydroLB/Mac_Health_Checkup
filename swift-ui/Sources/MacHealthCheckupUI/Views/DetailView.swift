@@ -127,6 +127,7 @@ private struct SectionDetailView: View {
                                     .font(theme.fonts.caption)
                                     .foregroundStyle(theme.colors.label)
                             }
+                            .help(HelpText.section(key: descriptor.key))
                             Spacer()
                             if selectedKey != nil {
                                 SectionHealthBadge(theme: theme, health: health)
@@ -134,33 +135,26 @@ private struct SectionDetailView: View {
                         }
                     }
 
-                    if selectedKey == "performance", model.thermalPermissionRequired(sectionKey: "performance") {
-                        Card(theme: theme) {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("Temperature sensors need authorization")
-                                    .font(theme.fonts.body)
-                                    .foregroundStyle(theme.colors.label)
-                                Text("macOS restricts low-level thermal sensors. Authorize once and the Performance section will populate a full sensor table.")
-                                    .font(theme.fonts.body)
-                                    .foregroundStyle(theme.colors.field)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                Button("Open Temperature Sensors Settings") {
-                                    model.openSettings(focus: .temperatureSensors)
+                    if let payload {
+                        if _shouldShowFieldSummaryCard(sectionKey: selectedKey, payload: payload) {
+                            if let field = payload.field?.trimmingCharacters(in: .whitespacesAndNewlines), !field.isEmpty {
+                                Card(theme: theme) {
+                                    if selectedKey == "general" {
+                                        GeneralInfoSummaryView(theme: theme, rawField: field)
+                                            .help(HelpText.section(key: selectedKey))
+                                    } else {
+                                        Text(field)
+                                            .font(theme.fonts.body)
+                                            .foregroundStyle(theme.colors.field)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .textSelection(.enabled)
+                                            .help(HelpText.section(key: selectedKey))
+                                    }
                                 }
-                                .buttonStyle(.borderedProminent)
-                                .tint(theme.colors.section)
                             }
                         }
-                    }
-
-                    Card(theme: theme) {
-                        if let payload, let field = payload.field, !field.isEmpty {
-                            Text(field)
-                                .font(theme.fonts.body)
-                                .foregroundStyle(theme.colors.field)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .textSelection(.enabled)
-                        } else if model.isRefreshing || model.snapshot == nil {
+                    } else if model.isRefreshing || model.snapshot == nil {
+                        Card(theme: theme) {
                             HStack(spacing: 10) {
                                 ProgressView()
                                     .controlSize(.small)
@@ -168,7 +162,9 @@ private struct SectionDetailView: View {
                                     .font(theme.fonts.body)
                                     .foregroundStyle(theme.colors.field)
                             }
-                        } else {
+                        }
+                    } else {
+                        Card(theme: theme) {
                             Text("No data yet")
                                 .font(theme.fonts.body)
                                 .foregroundStyle(theme.colors.field)
@@ -181,6 +177,7 @@ private struct SectionDetailView: View {
                                 Text("Metrics")
                                     .font(theme.fonts.body)
                                     .foregroundStyle(theme.colors.label)
+                                    .help("Key-value metrics for this section. Hover a label to see what it means.")
                                 MetricsGridView(theme: theme, sectionKey: selectedKey, model: model, rows: metrics)
                             }
                         }
@@ -223,6 +220,268 @@ private struct SectionDetailView: View {
         }
         .background(theme.colors.background)
     }
+}
+
+private struct GeneralInfoSummaryView: View {
+    /**
+     Summary
+     Render the General Info section as clean labeled rows instead of a single pipe-delimited line.
+
+     Inputs
+     theme: Theme for consistent typography and colors.
+     rawField: Raw field string from the snapshot backend, typically `Model | Chip | macOS X.Y | Serial`.
+
+     Outputs
+     A SwiftUI view for the General Info summary card.
+
+     Side effects
+     None.
+
+     Error handling
+     Falls back to plain text when parsing fails.
+
+     Ties to other methods
+     Used by `SectionDetailView` when `selectedKey == "general"`.
+
+     Why this exists
+     The General Info payload is easy to parse and reads better as labeled rows, reducing scanning friction and avoiding a "single long selected string" look.
+     */
+
+    let theme: Theme
+    let rawField: String
+
+    var body: some View {
+        /**
+         Summary
+         Render a parsed set of labeled rows or a plain-text fallback.
+
+         Inputs
+         None.
+
+         Outputs
+         A SwiftUI view.
+
+         Side effects
+         None.
+
+         Error handling
+         None. Parsing failures render a plain text fallback.
+
+         Ties to other methods
+         Uses `_parseGeneralInfoField`.
+
+         Why this exists
+         Keeps the view resilient to backend formatting tweaks without breaking the UI.
+         */
+        if let parsed = _parseGeneralInfoField(rawField) {
+            VStack(alignment: .leading, spacing: 10) {
+                _GeneralInfoRow(
+                    theme: theme,
+                    systemImage: "laptopcomputer",
+                    label: "Model",
+                    value: parsed.model,
+                    valueFont: theme.fonts.body
+                )
+                Divider().opacity(0.6)
+                _GeneralInfoRow(
+                    theme: theme,
+                    systemImage: "cpu",
+                    label: "Chip",
+                    value: parsed.chip,
+                    valueFont: theme.fonts.body
+                )
+                Divider().opacity(0.6)
+                _GeneralInfoRow(
+                    theme: theme,
+                    systemImage: "macwindow",
+                    label: "OS",
+                    value: parsed.os,
+                    valueFont: theme.fonts.mono
+                )
+                Divider().opacity(0.6)
+                _GeneralInfoRow(
+                    theme: theme,
+                    systemImage: "number",
+                    label: "Serial",
+                    value: parsed.serial,
+                    valueFont: theme.fonts.mono
+                )
+            }
+            .textSelection(.enabled)
+        } else {
+            Text(rawField)
+                .font(theme.fonts.body)
+                .foregroundStyle(theme.colors.field)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .textSelection(.enabled)
+        }
+    }
+}
+
+private struct _GeneralInfoParts: Equatable, Sendable {
+    /**
+     Summary
+     Hold parsed General Info parts for clean rendering.
+
+     Inputs
+     model: Model name.
+     chip: Chip string.
+     os: OS string.
+     serial: Serial number.
+
+     Outputs
+     Value type consumed by `GeneralInfoSummaryView`.
+
+     Side effects
+     None.
+
+     Error handling
+     None.
+
+     Ties to other methods
+     Produced by `_parseGeneralInfoField`.
+
+     Why this exists
+     Keeps parsing and rendering decoupled and avoids re-splitting strings in the view body.
+     */
+
+    let model: String
+    let chip: String
+    let os: String
+    let serial: String
+}
+
+private func _parseGeneralInfoField(_ raw: String) -> _GeneralInfoParts? {
+    /**
+     Summary
+     Parse the General Info field string into stable parts.
+
+     Inputs
+     raw: Raw summary field, expected to be pipe-delimited.
+
+     Outputs
+     Parsed parts or nil when parsing fails.
+
+     Side effects
+     None.
+
+     Error handling
+     Never throws. Returns nil when the shape is unexpected.
+
+     Ties to other methods
+     Used by `GeneralInfoSummaryView`.
+
+     Why this exists
+     The backend intentionally emits a compact string; the UI can upgrade it into a native layout without changing the snapshot schema.
+     */
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    if trimmed.isEmpty { return nil }
+    let parts = trimmed
+        .split(separator: "|", omittingEmptySubsequences: false)
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+    guard parts.count >= 4 else { return nil }
+    let model = parts[0]
+    let chip = parts[1]
+    let os = parts[2]
+    let serial = parts[3]
+    return _GeneralInfoParts(model: model, chip: chip, os: os, serial: serial)
+}
+
+private struct _GeneralInfoRow: View {
+    /**
+     Summary
+     Render a single labeled General Info row with an icon and a selectable value.
+
+     Inputs
+     theme: Theme values.
+     systemImage: SF Symbol name.
+     label: Left-side label.
+     value: Right-side value.
+     valueFont: Font used for the value.
+
+     Outputs
+     A SwiftUI row view.
+
+     Side effects
+     None.
+
+     Error handling
+     None.
+
+     Ties to other methods
+     Used by `GeneralInfoSummaryView`.
+
+     Why this exists
+     Keeps the General Info card layout consistent and easy to tweak in one place.
+     */
+
+    let theme: Theme
+    let systemImage: String
+    let label: String
+    let value: String
+    let valueFont: Font
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: systemImage)
+                .foregroundStyle(theme.colors.label)
+                .frame(width: 18)
+            Text(label)
+                .font(theme.fonts.caption)
+                .foregroundStyle(theme.colors.label)
+                .frame(width: 54, alignment: .leading)
+            Text(value)
+                .font(valueFont)
+                .foregroundStyle(theme.colors.field)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .lineLimit(2)
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+private func _shouldShowFieldSummaryCard(sectionKey: String?, payload: SnapshotSection) -> Bool {
+    /**
+     Summary
+     Decide whether to render the "field" summary card for a section.
+
+     Inputs
+     sectionKey: Optional section key.
+     payload: Snapshot section payload.
+
+     Outputs
+     True when the summary card should be shown.
+
+     Side effects
+     None.
+
+     Error handling
+     None.
+
+     Ties to other methods
+     Used by `SectionDetailView` to avoid redundant summaries when metrics or tables already provide details.
+
+     Why this exists
+     Some sections publish a verbose `field` plus a richer metrics/table representation; showing both is redundant and can read like "double data".
+     */
+    let key = (sectionKey ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    let field = payload.field?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    if field.isEmpty { return false }
+
+    let hasMetrics = (payload.metrics?.isEmpty == false)
+    let hasTable = (payload.table != nil && !(payload.table?.rows.isEmpty ?? true))
+
+    // Hide summary when a richer rendering exists.
+    if hasMetrics || hasTable {
+        // These sections typically duplicate the same information between `field` and metrics/table.
+        if ["fan", "battery", "ssd", "network", "input", "display"].contains(key) {
+            return false
+        }
+        // If the field is empty but metrics/table exist, we already return false above.
+    }
+
+    return true
 }
 
 private func _tableTitleForSection(key: String) -> String? {
@@ -292,9 +551,12 @@ private struct MetricsGridView: View {
                         .font(theme.fonts.caption)
                         .foregroundStyle(theme.colors.label)
                     Spacer()
-                    Text("Value °C")
-                        .font(theme.fonts.caption)
-                        .foregroundStyle(theme.colors.label)
+                    HStack(spacing: 4) {
+                        Text("Value")
+                            .font(theme.fonts.caption)
+                            .foregroundStyle(theme.colors.label)
+                        TemperatureUnitToggleLabel(theme: theme)
+                    }
                 }
                 .padding(.bottom, 2)
             }
@@ -309,10 +571,14 @@ private struct MetricsGridView: View {
                     Text(row.label)
                         .font(theme.fonts.body)
                         .foregroundStyle(theme.colors.field)
+                        .help(HelpText.metric(sectionKey: sectionKey, label: row.label))
                     Spacer()
-                    Text(row.value)
-                        .font(theme.fonts.mono)
-                        .foregroundStyle(_metricValueColor(theme: theme, health: health))
+                    TemperatureValueView(
+                        theme: theme,
+                        raw: row.value,
+                        valueColor: _metricValueColor(theme: theme, health: health)
+                    )
+                        .help("\(HelpText.metric(sectionKey: sectionKey, label: row.label))\n\nCurrent value: \(row.value)")
                     if let sectionKey {
                         let points = model.historyPoints(sectionKey: sectionKey, metricLabel: row.label)
                         if points.count >= 3 {
@@ -467,6 +733,7 @@ private struct SectionTableView: View {
                         .font(theme.fonts.mono)
                         .foregroundStyle(theme.colors.label)
                         .lineLimit(1)
+                        .help(HelpText.tableHeader(sectionKey: key, header: header))
                 }
                 ForEach(0..<table.headers.count, id: \.self) { _ in
                     Rectangle()
@@ -477,6 +744,7 @@ private struct SectionTableView: View {
                 ForEach(Array(table.rows.enumerated()), id: \.offset) { rowIndex, row in
                     ForEach(0..<max(1, table.headers.count), id: \.self) { colIndex in
                         let value = colIndex < row.count ? row[colIndex] : ""
+                        let header = colIndex < table.headers.count ? table.headers[colIndex] : ""
                         Text(value)
                             .font(theme.fonts.mono)
                             .foregroundStyle(theme.colors.field)
@@ -484,6 +752,7 @@ private struct SectionTableView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.vertical, 2)
                             .background(rowIndex.isMultiple(of: 2) ? Color.clear : theme.colors.background.opacity(0.08))
+                            .help(HelpText.tableCell(sectionKey: key, header: header, value: value))
                     }
                 }
             }
@@ -566,6 +835,7 @@ private struct OverviewView: View {
                                         .font(theme.fonts.caption)
                                         .foregroundStyle(theme.colors.label)
                                 }
+                                .help(HelpText.section(key: section.key))
                                 Spacer()
                                 if let first = payload?.metrics?.first {
                                     let points = model.historyPoints(sectionKey: section.key, metricLabel: first.label)
@@ -604,6 +874,7 @@ private struct OverviewView: View {
                                     .foregroundStyle(theme.colors.field)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .lineLimit(3)
+                                    .help(HelpText.section(key: section.key))
                             }
                         }
                         .contentShape(Rectangle())
@@ -681,13 +952,6 @@ private struct OverviewExpandedContent: View {
          Users want to see more details at a glance without losing their place in the overview list.
          */
         VStack(alignment: .leading, spacing: 10) {
-            if sectionKey == "performance", model.thermalPermissionRequired(sectionKey: "performance") {
-                Button("Fix Temperature Sensors") {
-                    model.openSettings(focus: .temperatureSensors)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(theme.colors.section)
-            }
             if let field = payload?.field {
                 let trimmed = field.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
@@ -697,6 +961,7 @@ private struct OverviewExpandedContent: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .lineLimit(8)
                         .textSelection(.enabled)
+                        .help(HelpText.section(key: sectionKey))
                 }
             }
             if let metrics = payload?.metrics, !metrics.isEmpty {
@@ -748,6 +1013,7 @@ private struct OverviewTablePreview: View {
                             .foregroundStyle(theme.colors.label)
                             .lineLimit(1)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                            .help(HelpText.tableHeader(sectionKey: nil, header: headers[idx]))
                     }
                 }
                 .padding(.bottom, 2)
@@ -757,11 +1023,13 @@ private struct OverviewTablePreview: View {
                 HStack(spacing: 10) {
                     ForEach(0..<maxCols, id: \.self) { colIndex in
                         let value = row.indices.contains(colIndex) ? row[colIndex] : ""
+                        let header = headers.indices.contains(colIndex) ? headers[colIndex] : "Value"
                         Text(value)
                             .font(theme.fonts.mono)
                             .foregroundStyle(theme.colors.field)
                             .lineLimit(1)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                            .help("\(header)\n\nCurrent value: \(value)")
                     }
                 }
                 if rowIndex < min(maxRows, rows.count) - 1 {

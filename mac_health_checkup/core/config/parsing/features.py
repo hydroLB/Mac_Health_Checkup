@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from mac_health_checkup.core.config.models.backend import ApiConfig, FansConfig
 from mac_health_checkup.core.config.models.gui import DisplayTransportConfig, GuiConfig, ThresholdsConfig
 from mac_health_checkup.core.config.parsing.base import get_section
@@ -45,10 +47,25 @@ def parse_api(raw: JsonDict) -> ApiConfig:
     """
     try:
         section = get_section(raw, "api")
+        bind_host = require_str(section.get("bind_host"))
+        bind_override = os.getenv("MAC_HEALTH_CHECKUP_API_BIND_HOST")
+        if bind_override is not None and bind_override.strip():
+            bind_host = require_str(bind_override.strip())
+
+        port = require_int(0, 65535)(section.get("port"))
+        port_override = os.getenv("MAC_HEALTH_CHECKUP_API_PORT")
+        if port_override is not None and port_override.strip():
+            try:
+                port = require_int(0, 65535)(port_override.strip())
+            except ValueError as exc:
+                raise ValueError(
+                    f"Invalid MAC_HEALTH_CHECKUP_API_PORT override: {port_override!r} (expected 0-65535)"
+                ) from exc
+
         return ApiConfig(
             enabled=require_bool(section.get("enabled")),
-            bind_host=require_str(section.get("bind_host")),
-            port=require_int(1, 65535)(section.get("port")),
+            bind_host=bind_host,
+            port=port,
             allow_lan=require_bool(section.get("allow_lan")),
             allow_insecure_http_lan=require_bool(section.get("allow_insecure_http_lan")),
             tls_enabled=require_bool(section.get("tls_enabled")),
@@ -129,7 +146,6 @@ def parse_fans(raw: JsonDict) -> FansConfig:
         section = get_section(raw, "fans")
         return FansConfig(
             use_sudo=require_bool(section.get("use_sudo")),
-            use_admin_prompt=require_bool(section.get("use_admin_prompt")),
         )
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(format_error(MODULE_PATH, "parse_fans", "Failed to parse fans", exc)) from exc

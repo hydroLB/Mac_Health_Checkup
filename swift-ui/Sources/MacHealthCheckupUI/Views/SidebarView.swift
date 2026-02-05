@@ -66,6 +66,7 @@ public struct SidebarView: View {
                         SectionHealthBadge(theme: model.theme, health: model.sectionHealth(for: section.key))
                     }
                 }
+                .help(HelpText.section(key: section.key))
                 .tag(section.key as String?)
                 .padding(.vertical, 4)
             }

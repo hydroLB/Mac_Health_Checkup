@@ -79,6 +79,27 @@ class ShutdownManager:
                 format_error(MODULE_PATH, "ShutdownManager.wait_for_shutdown", "Failed while waiting", exc)
             ) from exc
 
+    def shutdown_requested(self) -> bool:
+        """
+        Purpose: Return whether shutdown has been requested.
+        Ties: Used by UI refresh loops and server entrypoints to avoid scheduling new work during teardown.
+        Inputs: None.
+        Outputs: True when shutdown was triggered, else false.
+        Side effects: None.
+        Why: Provides a safe public check for shutdown state without exposing internal event fields.
+        """
+        try:
+            return bool(self._shutdown_event.is_set())
+        except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
+            raise RuntimeError(
+                format_error(
+                    MODULE_PATH,
+                    "ShutdownManager.shutdown_requested",
+                    "Failed to query shutdown state",
+                    exc,
+                )
+            ) from exc
+
     def trigger_shutdown(self) -> None:
         """
         Purpose: Trigger shutdown and run cleanup callbacks.

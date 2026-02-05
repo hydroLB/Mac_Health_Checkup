@@ -1,26 +1,231 @@
 from __future__ import annotations
 
+import argparse
 import os
 import shlex
 import subprocess
+import sys
 from pathlib import Path
-from shutil import which
+from shutil import rmtree, which
+from typing import Iterable, Sequence, cast
 
 from mac_health_checkup.core.utils.errors import format_error
 
 MODULE_PATH = "run_mac_health_checkup_ui.py"
 
 
-def main() -> int:
+def _parse_args() -> argparse.Namespace:
     """
-    Purpose: Provide a single-file entrypoint to launch the native macOS SwiftUI UI without opening Xcode.
-    Ties: Invokes `make swift-run`, which builds and runs the Swift package executable `mac-health-checkup-ui`.
-    Inputs: None.
-    Outputs: Process exit code from `make`.
-    Side effects: Builds Swift targets and launches the macOS SwiftUI dashboard process.
-    Why: Makes "press Run" in VS Code or any IDE start the UI with a predictable config and repo root.
+    Summary
+    Parse CLI arguments for the one-click SwiftUI launcher.
+
+    Inputs
+    None.
+
+    Outputs
+    Parsed `argparse.Namespace`.
+
+    Side effects
+    Reads process argv.
+
+    Error handling
+    Raises `RuntimeError` with a location-tagged message if parsing fails.
+
+    Ties to other methods
+    Called by `main` to support `--help` without launching the SwiftUI app.
+
+    Why this exists
+    Users should be able to run `python3 run_mac_health_checkup_ui.py --help` safely without triggering builds.
     """
     try:
+        parser = argparse.ArgumentParser(description="Launch the native macOS SwiftUI UI (one-click).")
+        # Preserve existing behavior of ignoring unknown flags while still supporting `--help`.
+        return parser.parse_known_args()[0]
+    except (RuntimeError, ValueError, TypeError) as exc:
+        raise RuntimeError(format_error(MODULE_PATH, "_parse_args", "Failed to parse args", exc)) from exc
+
+
+def _should_clean_swiftpm_cache(combined_output: str) -> bool:
+    """
+    Summary
+    Decide whether a SwiftPM build/run failure looks like a stale module cache that can be fixed by cleaning.
+
+    Inputs
+    combined_output: The combined stdout/stderr text from a failed `make swift-run` invocation.
+
+    Outputs
+    True if the failure matches known stale-cache signatures; otherwise False.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises RuntimeError with a location-tagged message if inputs are invalid.
+
+    Ties to other methods
+    Used by `_run_make_swift_run_with_retry` to decide whether to remove `.local/swiftpm` and retry once.
+
+    Why this exists
+    SwiftPM caches can embed absolute paths; moving the repo makes builds fail with "PCH was compiled with module
+    cache path ..." and "missing required module 'SwiftShims'". Auto-healing keeps the one-command runner reliable.
+    """
+    try:
+        if not isinstance(combined_output, str):
+            raise TypeError(f"combined_output must be str, got {type(combined_output).__name__}")
+
+        # These signatures are stable across SwiftPM versions and are strongly correlated with stale caches.
+        triggers = (
+            "PCH was compiled with module cache path",
+            "missing required module 'SwiftShims'",
+            "Invalid manifest",
+        )
+        return any(t in combined_output for t in triggers)
+    except (RuntimeError, ValueError, TypeError) as exc:
+        raise RuntimeError(
+            format_error(
+                MODULE_PATH,
+                "_should_clean_swiftpm_cache",
+                "Failed to decide whether to clean SwiftPM cache",
+                exc,
+            )
+        ) from exc
+
+
+def _stream_command(
+    argv: Sequence[str],
+    *,
+    cwd: Path,
+    env: dict[str, str],
+) -> tuple[int, str]:
+    """
+    Summary
+    Run a subprocess while streaming its output to the caller's stdout, and also capture the combined output.
+
+    Inputs
+    argv: Command argv to execute.
+    cwd: Working directory for the subprocess.
+    env: Environment variables for the subprocess.
+
+    Outputs
+    Tuple of (exit_code, combined_output).
+
+    Side effects
+    Starts a child process and writes its output to stdout.
+
+    Error handling
+    Raises RuntimeError with a location-tagged message when process creation fails.
+
+    Ties to other methods
+    Used by `_run_make_swift_run_with_retry` to capture error text without hiding build progress.
+
+    Why this exists
+    Swift builds can take time; streaming output keeps the user informed while still allowing error inspection for
+    auto-retry decisions.
+    """
+    try:
+        proc = subprocess.Popen(
+            list(argv),
+            cwd=str(cwd),
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+    except (OSError, ValueError, TypeError) as exc:
+        raise RuntimeError(
+            format_error(MODULE_PATH, "_stream_command", f"Failed to start process: {argv!r}", exc)
+        ) from exc
+
+    try:
+        captured: list[str] = []
+        assert proc.stdout is not None  # stdout is PIPE by construction.
+        for line in cast(Iterable[str], proc.stdout):
+            sys.stdout.write(line)
+            sys.stdout.flush()
+            captured.append(line)
+        return int(proc.wait()), "".join(captured)
+    except (OSError, RuntimeError, ValueError, TypeError) as exc:
+        raise RuntimeError(
+            format_error(MODULE_PATH, "_stream_command", "Failed while streaming process output", exc)
+        ) from exc
+
+
+def _run_make_swift_run_with_retry(*, repo_root: Path, env: dict[str, str]) -> int:
+    """
+    Summary
+    Invoke `make swift-run` and, on known SwiftPM stale-cache failures, clean `.local/swiftpm` and retry once.
+
+    Inputs
+    repo_root: Repository root directory.
+    env: Environment variables to pass to `make`.
+
+    Outputs
+    Process exit code from the final `make swift-run` attempt.
+
+    Side effects
+    Builds Swift targets; may delete `.local/swiftpm` to clear stale caches; launches the SwiftUI app on success.
+
+    Error handling
+    Raises RuntimeError with a location-tagged message when cleanup fails unexpectedly.
+
+    Ties to other methods
+    Called by `main` after it prepares `SWIFT_APP_ARGS`.
+
+    Why this exists
+    Moving the repo between folders can poison SwiftPM module caches with embedded absolute paths. Retrying after
+    cleaning keeps the "one command" UX reliable without requiring manual cache surgery.
+    """
+    try:
+        exit_code, output = _stream_command(["make", "swift-run"], cwd=repo_root, env=env)
+        if exit_code == 0:
+            return 0
+
+        if not _should_clean_swiftpm_cache(output):
+            return int(exit_code)
+
+        swiftpm_cache_dir = repo_root / ".local" / "swiftpm"
+        if swiftpm_cache_dir.exists():
+            # Local build cache only; safe to remove to recover from path-embedded artifacts.
+            rmtree(swiftpm_cache_dir)
+
+        sys.stdout.write(
+            "\n[mac-health-checkup] Detected stale SwiftPM cache. Cleaned .local/swiftpm and retrying once.\n"
+        )
+        sys.stdout.flush()
+        exit_code2, _ = _stream_command(["make", "swift-run"], cwd=repo_root, env=env)
+        return int(exit_code2)
+    except (RuntimeError, ValueError, TypeError, OSError) as exc:
+        raise RuntimeError(
+            format_error(MODULE_PATH, "_run_make_swift_run_with_retry", "Failed to run SwiftUI app", exc)
+        ) from exc
+
+
+def main() -> int:
+    """
+    Summary
+    Launch the native macOS SwiftUI UI without opening Xcode.
+
+    Inputs
+    None.
+
+    Outputs
+    Process exit code from the underlying `make swift-run` invocation.
+
+    Side effects
+    Builds Swift targets and launches the macOS SwiftUI dashboard process.
+
+    Error handling
+    Raises RuntimeError with a location-tagged message when prerequisites are missing or when the launch fails.
+
+    Ties to other methods
+    Sets `SWIFT_APP_ARGS` for the Makefile target and delegates execution to `_run_make_swift_run_with_retry`.
+
+    Why this exists
+    Keeps "press Run" ergonomics while ensuring the SwiftUI app always receives the correct repo root and config path.
+    """
+    try:
+        _parse_args()
         repo_root = Path(__file__).resolve().parent
         config_path = repo_root / "config" / "config.json"
         if not config_path.is_file():
@@ -41,8 +246,7 @@ def main() -> int:
             config_arg = shlex.quote(str(config_path))
             env["SWIFT_APP_ARGS"] = f"--repo-root {repo_arg} --config {config_arg}"
 
-        result = subprocess.run(["make", "swift-run"], cwd=str(repo_root), env=env, check=False)
-        return int(result.returncode)
+        return int(_run_make_swift_run_with_retry(repo_root=repo_root, env=env))
     except (RuntimeError, ValueError, TypeError, OSError) as exc:
         raise RuntimeError(format_error(MODULE_PATH, "main", "Failed to launch macOS UI", exc)) from exc
 

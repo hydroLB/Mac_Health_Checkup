@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from threading import Lock
 from typing import Callable, overload
 
 from mac_health_checkup.core.config.io import config_max_bytes, read_config_file, resolve_config_path
@@ -17,6 +18,7 @@ _CONFIG_CACHE: Config | None = None
 _RAW_CACHE: JsonDict | None = None
 _RAW_CACHE_PATH: Path | None = None
 _CONFIG_CACHE_PATH: Path | None = None
+_CACHE_LOCK = Lock()
 
 
 def reset_config_cache() -> None:
@@ -44,10 +46,11 @@ def reset_config_cache() -> None:
     """
     try:
         global _CONFIG_CACHE, _RAW_CACHE, _RAW_CACHE_PATH, _CONFIG_CACHE_PATH
-        _CONFIG_CACHE = None
-        _RAW_CACHE = None
-        _RAW_CACHE_PATH = None
-        _CONFIG_CACHE_PATH = None
+        with _CACHE_LOCK:
+            _CONFIG_CACHE = None
+            _RAW_CACHE = None
+            _RAW_CACHE_PATH = None
+            _CONFIG_CACHE_PATH = None
     except (RuntimeError, NameError) as exc:
         raise RuntimeError(
             format_error(MODULE_PATH, "reset_config_cache", "Failed to reset cache", exc)
@@ -158,12 +161,18 @@ def get_config() -> Config:
     try:
         global _CONFIG_CACHE, _CONFIG_CACHE_PATH
         config_path = resolve_config_path()
-        if _CONFIG_CACHE is not None and _CONFIG_CACHE_PATH == config_path:
-            return _CONFIG_CACHE
-        raw = load_raw_config()
-        _CONFIG_CACHE = parse_config(raw)
-        _CONFIG_CACHE_PATH = config_path
-        return _CONFIG_CACHE
+        with _CACHE_LOCK:
+            cached = _CONFIG_CACHE
+            cached_path = _CONFIG_CACHE_PATH
+        if cached is not None and cached_path == config_path:
+            return cached
+
+        raw = _load_raw_config_for_path(config_path)
+        parsed = parse_config(raw)
+        with _CACHE_LOCK:
+            _CONFIG_CACHE = parsed
+            _CONFIG_CACHE_PATH = config_path
+        return parsed
     except (RuntimeError, ValueError, TypeError) as exc:
         raise RuntimeError(format_error(MODULE_PATH, "get_config", "Failed to build config", exc)) from exc
 
@@ -192,19 +201,55 @@ def load_raw_config() -> JsonDict:
     Provides one bounded IO entrypoint for all config reads, reducing the chance of inconsistent cache behavior.
     """
     try:
-        global _RAW_CACHE, _RAW_CACHE_PATH
         config_path = resolve_config_path()
-        if _RAW_CACHE is not None and _RAW_CACHE_PATH == config_path:
-            return _RAW_CACHE
+        return _load_raw_config_for_path(config_path)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        raise RuntimeError(
+            format_error(MODULE_PATH, "load_raw_config", "Failed to load config", exc)
+        ) from exc
+
+
+def _load_raw_config_for_path(config_path: Path) -> JsonDict:
+    """
+    Summary
+    Load raw config JSON for a specific resolved config path with caching.
+
+    Inputs
+    config_path: Resolved config path.
+
+    Outputs
+    Raw config dict decoded from JSON.
+
+    Side effects
+    Reads from disk and updates the raw config cache for the given path.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when reading or decoding fails.
+
+    Ties to other methods
+    Used by `get_config` and `load_raw_config` to ensure both caches stay consistent under concurrency.
+
+    Why this exists
+    `ThreadingHTTPServer` and UI refresh loops can access config concurrently; caching must be thread-safe.
+    """
+    try:
+        global _RAW_CACHE, _RAW_CACHE_PATH
+        with _CACHE_LOCK:
+            cached = _RAW_CACHE
+            cached_path = _RAW_CACHE_PATH
+        if cached is not None and cached_path == config_path:
+            return cached
+
         max_bytes = config_max_bytes()
         raw_text = read_config_file(config_path, max_bytes)
         data = json.loads(raw_text)
         if not isinstance(data, dict):
             raise ValueError("config root must be object")
-        _RAW_CACHE = data
-        _RAW_CACHE_PATH = config_path
+        with _CACHE_LOCK:
+            _RAW_CACHE = data
+            _RAW_CACHE_PATH = config_path
         return data
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError, json.JSONDecodeError, RuntimeError, TypeError) as exc:
         raise RuntimeError(
-            format_error(MODULE_PATH, "load_raw_config", "Failed to load config", exc)
+            format_error(MODULE_PATH, "_load_raw_config_for_path", "Failed to load raw config for path", exc)
         ) from exc

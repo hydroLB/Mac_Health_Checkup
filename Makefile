@@ -34,7 +34,7 @@ tls-selfsigned:
 		-subj "/CN=mac-health-checkup-agent"
 
 test:
-	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest --cov=mac_health_checkup --cov-report=term-missing --cov-report=xml
+	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest -p pytest_cov --cov=mac_health_checkup --cov-report=term-missing --cov-report=xml
 
 lint:
 	$(PYTHON) -m ruff check .

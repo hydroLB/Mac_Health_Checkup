@@ -39,7 +39,7 @@ def main() -> int:
     Configures logging, runs diagnostics, and may start a GUI or emit JSON to stdout.
 
     Error handling
-    Raises `RuntimeError` with module and method context when the entrypoint fails unexpectedly.
+    Returns exit code 1 and prints a bounded error message to stderr when the entrypoint fails unexpectedly.
 
     Ties to other methods
     Uses `SECTION_HANDLERS` and `run_section` for section execution. Uses `emit_snapshot_json` for frontend
@@ -56,7 +56,7 @@ def main() -> int:
             component_field=cfg.logging.component_field,
         )
         args = _parse_args()
-        log_stream = sys.stderr if args.snapshot_json else sys.stdout
+        log_stream = sys.stderr
         configure_logging_once(cfg.logging.redaction(), fields, level=logging.INFO, stream=log_stream)
         corr_id = new_correlation_id()
         logger = StructuredLogger("mac_health_checkup", cfg.logging.redaction(), fields)
@@ -81,7 +81,7 @@ def main() -> int:
             server.start()
             public_url = os.environ.get("MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL") or server.url()
             print(
-                f"Snapshot API running at {server.url()} (endpoints: /v1/health, /v1/snapshot, /v1/section, /v1/authorize/thermals)"
+                f"Snapshot API running at {server.url()} (endpoints: /v1/health, /v1/snapshot, /v1/section)"
             )
             if public_url != server.url():
                 print(f"Public base URL: {public_url}")
@@ -121,20 +121,10 @@ def main() -> int:
 
         if args.cli:
             host = ConsoleHost()
-            for key in SECTION_HANDLERS:
-                logger.info(
-                    "running section", event="section_start", context=context, payload={"section": key}
-                )
-                result = run_section(host, key)
-                logger.info(
-                    "section completed",
-                    event="section_end",
-                    context=context,
-                    payload={"section": key, "ok": bool(result)},
-                )
+            code = _run_sections_best_effort(host, logger=logger, context=context)
             _print_console_output(host)
             shutdown.trigger_shutdown()
-            return 0
+            return code
 
         try:
             from mac_health_checkup.app.gui.app import DashboardApp
@@ -146,17 +136,23 @@ def main() -> int:
                 payload={"error": str(exc)},
             )
             host = ConsoleHost()
-            for key in SECTION_HANDLERS:
-                run_section(host, key)
+            code = _run_sections_best_effort(host, logger=None, context=None)
             _print_console_output(host)
             shutdown.trigger_shutdown()
-            return 0
+            return code
 
         app = DashboardApp()
         app.start()
         return 0
     except Exception as exc:
-        raise RuntimeError(format_error(MODULE_PATH, "main", "Entrypoint failed", exc)) from exc
+        err = format_error(MODULE_PATH, "main", "Entrypoint failed", exc)
+        try:
+            sys.stderr.write(err + "\n")
+        except BrokenPipeError:
+            return 1
+        except Exception:
+            return 1
+        return 1
 
 
 def _print_console_output(host: ConsoleHost) -> None:
@@ -246,3 +242,59 @@ def _parse_args() -> argparse.Namespace:
         return parser.parse_args()
     except (RuntimeError, ValueError, TypeError) as exc:
         raise RuntimeError(format_error(MODULE_PATH, "_parse_args", "Failed to parse args", exc)) from exc
+
+
+def _run_sections_best_effort(
+    host: ConsoleHost, *, logger: StructuredLogger | None, context: LogContext | None
+) -> int:
+    """
+    Summary
+    Run all configured sections without letting one failure abort the overall run.
+
+    Inputs
+    host: Section host that receives render output.
+    logger: Optional structured logger for section lifecycle logs.
+    context: Optional log context used when logging is enabled.
+
+    Outputs
+    Exit code `0` when all sections run without raising, else `1`.
+
+    Side effects
+    Executes section handlers and mutates the host output stores.
+
+    Error handling
+    Captures section exceptions into the host field output and continues. Never raises.
+
+    Ties to other methods
+    Used by `main` for CLI mode and GUI-unavailable CLI fallback mode.
+
+    Why this exists
+    Ensures the CLI remains resilient even when individual diagnostics are unavailable on a given macOS build.
+    """
+    exit_code = 0
+    for key in SECTION_HANDLERS:
+        if logger is not None and context is not None:
+            logger.info("running section", event="section_start", context=context, payload={"section": key})
+        try:
+            result = run_section(host, key)
+            if logger is not None and context is not None:
+                logger.info(
+                    "section completed",
+                    event="section_end",
+                    context=context,
+                    payload={"section": key, "ok": bool(result)},
+                )
+        except Exception as exc:
+            exit_code = 1
+            if logger is not None and context is not None:
+                logger.error(
+                    "section failed",
+                    event="section_error",
+                    context=context,
+                    payload={"section": key, "error": str(exc), "error_type": type(exc).__name__},
+                )
+            try:
+                host.set_field(key, f"Error: {type(exc).__name__}", tooltip=str(exc))
+            except Exception:
+                continue
+    return exit_code

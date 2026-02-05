@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Callable
@@ -39,6 +40,7 @@ class Cache:
 
     ttl_seconds: int
     _entries: dict[str, tuple[float, JsonDict]] = field(default_factory=dict)
+    _lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
 
     def get(self, key: str) -> JsonDict | None:
         """
@@ -50,7 +52,8 @@ class Cache:
         Why: Avoids redundant system calls within a TTL window.
         """
         try:
-            entry = self._entries.get(key)
+            with self._lock:
+                entry = self._entries.get(key)
             if entry is None:
                 return None
             ts, data = entry
@@ -70,7 +73,8 @@ class Cache:
         Why: Keeps recent diagnostics results available.
         """
         try:
-            self._entries[key] = (time.time(), value)
+            with self._lock:
+                self._entries[key] = (time.time(), value)
         except (TypeError, ValueError) as exc:
             raise RuntimeError(format_error(MODULE_PATH, "Cache.set", "Failed to store cache", exc)) from exc
 
