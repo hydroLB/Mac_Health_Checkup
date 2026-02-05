@@ -60,6 +60,7 @@ struct DisplayListTableView: View {
                     }
                     Spacer()
                 }
+                .help("\(HelpText.section(key: "display"))\n\nName: \(name)\nDetails: \(details.isEmpty ? "(none)" : details)")
                 .padding(.vertical, 7)
 
                 if index < table.rows.count - 1 {
@@ -129,6 +130,7 @@ struct InputDevicesListTableView: View {
                             .lineLimit(1)
                     }
                 }
+                .help("\(HelpText.section(key: "input"))\n\nDevice: \(device)\nType: \(kind)\nTransport: \(transport.isEmpty ? "(unknown)" : transport)")
                 .padding(.vertical, 7)
 
                 if index < table.rows.count - 1 {
@@ -214,6 +216,7 @@ struct DevicesListTableView: View {
                                 .lineLimit(2)
                             Spacer()
                         }
+                        .help("\(HelpText.section(key: "devices"))\n\nBus: \(bus)\nDevice: \(device)")
                         .padding(.vertical, 7)
                         if index < rows.count - 1 {
                             Divider().opacity(0.6)
@@ -361,6 +364,8 @@ struct IndentedTreeTableView: View {
     let theme: Theme
     let title: String?
     let rows: [[String]]
+    @State private var expandedNodeIds: Set<String> = []
+    @State private var didInitializeExpansion: Bool = false
 
     var body: some View {
         let nodes = buildTree(rows: rows)
@@ -369,10 +374,16 @@ struct IndentedTreeTableView: View {
                 Text(title)
                     .font(theme.fonts.caption)
                     .foregroundStyle(theme.colors.label)
+                    .help(HelpText.section(key: "ports"))
             }
-            TreeNodesView(theme: theme, nodes: nodes)
+            TreeNodesView(theme: theme, nodes: nodes, expandedNodeIds: $expandedNodeIds)
         }
         .textSelection(.enabled)
+        .onAppear {
+            if didInitializeExpansion { return }
+            didInitializeExpansion = true
+            expandedNodeIds = _collectExpandableNodeIds(nodes: nodes)
+        }
     }
 
     private func buildTree(rows: [[String]]) -> [Node] {
@@ -423,9 +434,44 @@ struct IndentedTreeTableView: View {
         return roots
     }
 
+    private func _collectExpandableNodeIds(nodes: [Node]) -> Set<String> {
+        /**
+         Summary
+         Collect the ids of nodes that should be expanded by default.
+
+         Inputs
+         nodes: Root nodes of the tree.
+
+         Outputs
+         Set of node ids that have children.
+
+         Side effects
+         None.
+
+         Error handling
+         None.
+
+         Ties to other methods
+         Used by `body` to default-expand the Ports tree.
+
+         Why this exists
+         The Ports section is most useful when fully unfolded at rest so users can scan the whole topology quickly.
+         */
+        var out: Set<String> = []
+        var stack: [Node] = nodes
+        while let node = stack.popLast() {
+            if !node.children.isEmpty {
+                out.insert(node.id)
+                stack.append(contentsOf: node.children)
+            }
+        }
+        return out
+    }
+
     private struct TreeNodesView: View {
         let theme: Theme
         let nodes: [Node]
+        @Binding var expandedNodeIds: Set<String>
 
         var body: some View {
             VStack(alignment: .leading, spacing: 0) {
@@ -433,8 +479,18 @@ struct IndentedTreeTableView: View {
                     if node.children.isEmpty {
                         _TreeRow(theme: theme, label: node.label, isGroup: false)
                     } else {
-                        DisclosureGroup {
-                            TreeNodesView(theme: theme, nodes: node.children)
+                        let isExpanded = Binding(
+                            get: { expandedNodeIds.contains(node.id) },
+                            set: { newValue in
+                                if newValue {
+                                    expandedNodeIds.insert(node.id)
+                                } else {
+                                    expandedNodeIds.remove(node.id)
+                                }
+                            }
+                        )
+                        DisclosureGroup(isExpanded: isExpanded) {
+                            TreeNodesView(theme: theme, nodes: node.children, expandedNodeIds: $expandedNodeIds)
                                 .padding(.leading, 18)
                         } label: {
                             _TreeRow(theme: theme, label: node.label, isGroup: true)
@@ -464,6 +520,7 @@ struct IndentedTreeTableView: View {
                         .lineLimit(2)
                     Spacer()
                 }
+                .help("\(HelpText.section(key: "ports"))\n\nUSB node: \(label)")
                 .padding(.vertical, 7)
             }
 

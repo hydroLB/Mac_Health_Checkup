@@ -302,11 +302,16 @@ class SnapshotBuilder:
             host = ConsoleHost()
             sections: list[SnapshotSection] = []
             ok = True
+            failed_sections: list[str] = []
             for key, handler in self._handlers.items():
                 diagnostics = self._run_handler(host, key, handler)
                 if diagnostics.get("ok") is False:
                     ok = False
+                    failed_sections.append(key)
                 sections.append(self._build_section_payload(host, key, diagnostics))
+            error_text: str | None = None
+            if failed_sections:
+                error_text = f"Failed sections: {', '.join(failed_sections)}"
             return Snapshot(
                 schema_version=2,
                 generated_at_unix_ms=int(time.time() * 1000),
@@ -314,7 +319,7 @@ class SnapshotBuilder:
                 section_catalog=section_catalog,
                 sections=sections,
                 ok=ok,
-                error=None,
+                error=error_text,
             )
         except Exception as exc:
             return Snapshot(

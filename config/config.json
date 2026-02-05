@@ -97,8 +97,7 @@
     "request_timeout_sec": 15
   },
   "fans": {
-    "use_sudo": false,
-    "use_admin_prompt": false
+    "use_sudo": false
   },
   "thresholds": {
     "temp_warn_c": 75.0,

@@ -185,6 +185,8 @@ class SnapshotBackendTests(unittest.TestCase):
         self.assertEqual(code, 1)
         data = json.loads(payload)
         self.assertFalse(data["ok"])
+        self.assertIsInstance(data.get("error"), str)
+        self.assertIn("boom", data["error"])
         self.assertEqual(len(data["sections"]), 1)
         section = data["sections"][0]
         self.assertEqual(section["key"], "boom")

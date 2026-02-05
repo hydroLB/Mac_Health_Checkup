@@ -5,7 +5,6 @@ import subprocess
 import threading
 import time
 from dataclasses import dataclass
-from shlex import quote
 from typing import Sequence
 
 from mac_health_checkup.core.config import RetryConfig, get_config
@@ -89,99 +88,6 @@ def system_profiler_out(
     except (RuntimeError, ValueError) as exc:
         raise RuntimeError(
             format_error(MODULE_PATH, "system_profiler_out", "system_profiler failed", exc)
-        ) from exc
-
-
-def run_with_admin_prompt(
-    cmd: Sequence[str],
-    context: str,
-    *,
-    timeout: int | None = None,
-) -> tuple[str | None, str | None]:
-    """
-    Summary
-    Run a command via a macOS admin authorization prompt (AppleScript).
-
-    Inputs
-    cmd: Command list to execute.
-    context: Context label used for error messages.
-    timeout: Optional timeout override in seconds.
-
-    Outputs
-    Tuple of (stdout, error message). Error is None on success.
-
-    Side effects
-    May display a macOS admin password prompt and executes a subprocess.
-
-    Error handling
-    Raises RuntimeError on unexpected subprocess failures. Returns stderr text on normal command failures.
-
-    Ties to other methods
-    Used by diagnostics collectors when `sudo -n` timestamps are unreliable in background agents.
-
-    Why this exists
-    `sudo` timestamps are often tied to a TTY; the SwiftUI local agent runs without a TTY, so a proper system prompt is required.
-    """
-    try:
-        if not cmd:
-            return None, "empty command"
-        timeout_sec = timeout if timeout is not None else get_config().timeouts.default_cmd_timeout
-        marker = "__MHC_EXIT__="
-        shell_cmd = " ".join(quote(str(part)) for part in cmd)
-        wrapped = f"{shell_cmd} 2>&1; echo {quote(marker)}$?; exit 0"
-        script = f'do shell script "{_escape_applescript_string(wrapped)}" with administrator privileges'
-        result = _run_once(["/usr/bin/osascript", "-e", script], timeout_sec)
-        if result.returncode == 0 and result.stdout is not None:
-            stdout = result.stdout
-            lines = stdout.splitlines()
-            if lines and lines[-1].startswith(marker):
-                try:
-                    exit_code = int(lines[-1][len(marker) :].strip())
-                except ValueError:
-                    return stdout, None
-                output = "\n".join(lines[:-1]).strip()
-                if exit_code != 0:
-                    return output, f"command_failed exit_code={exit_code}"
-                return output, None
-            return stdout, None
-        err = result.stderr or f"admin prompt command failed with code {result.returncode}"
-        return result.stdout, err
-    except (OSError, subprocess.SubprocessError, ValueError) as exc:
-        raise RuntimeError(
-            format_error(MODULE_PATH, "run_with_admin_prompt", f"Admin prompt failed: {context}", exc)
-        ) from exc
-
-
-def _escape_applescript_string(value: str) -> str:
-    """
-    Summary
-    Escape a string for inclusion inside an AppleScript quoted string literal.
-
-    Inputs
-    value: Raw string.
-
-    Outputs
-    Escaped string safe for AppleScript.
-
-    Side effects
-    None.
-
-    Error handling
-    Raises RuntimeError when the input cannot be processed as a string.
-
-    Ties to other methods
-    Used by `run_with_admin_prompt`.
-
-    Why this exists
-    Prevents malformed AppleScript when commands contain quotes or backslashes.
-    """
-    try:
-        return value.replace("\\", "\\\\").replace('"', '\\"')
-    except (AttributeError, TypeError) as exc:
-        raise RuntimeError(
-            format_error(
-                MODULE_PATH, "_escape_applescript_string", "Failed to escape AppleScript string", exc
-            )
         ) from exc
 
 

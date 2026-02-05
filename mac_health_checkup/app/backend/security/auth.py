@@ -28,7 +28,7 @@ def auth_ok(authorization: Optional[str], api: ApiConfig) -> bool:
     Raises `RuntimeError` with module and method context when validation fails unexpectedly.
 
     Ties to other methods
-    Used by the HTTP handler for `/v1/snapshot`, `/v1/section`, and `/v1/authorize/thermals`.
+    Used by the HTTP handler for `/v1/snapshot` and `/v1/section`.
 
     Why this exists
     Prevents unauthenticated access on the local network and keeps token handling consistent.

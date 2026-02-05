@@ -4,7 +4,7 @@ import Foundation
 
 import Security
 
-public final class LocalAgentBackendClient: SnapshotBackend, TemperatureAccessBackend, @unchecked Sendable {
+public final class LocalAgentBackendClient: SnapshotBackend, @unchecked Sendable {
     /**
      Summary
      Run a local Mac agent server process and fetch snapshots over loopback HTTP.
@@ -137,31 +137,6 @@ public final class LocalAgentBackendClient: SnapshotBackend, TemperatureAccessBa
         return try await state.fetchSectionSnapshot(sectionKey: sectionKey)
     }
 
-    public func requestTemperatureSensorAccess() async throws -> TemperatureAccessResponse {
-        /**
-         Summary
-         Ensure the local agent is running and request temperature sensor access via HTTP.
-
-         Inputs
-         None.
-
-         Outputs
-         `TemperatureAccessResponse` describing authorization result.
-
-         Side effects
-         Starts the agent process on first use and performs a loopback HTTP request that may trigger a macOS admin prompt.
-
-         Error handling
-         Throws `AppError` when startup, health checks, or the authorization request fails.
-
-         Ties to other methods
-         Used by the macOS UI settings flow to explicitly request temperature access.
-
-         Why this exists
-         Snapshot refresh should not unexpectedly trigger prompts; authorization is explicit and user-initiated.
-         */
-        return try await state.requestTemperatureAccess()
-    }
 }
 
 private actor LocalAgentState {
@@ -237,36 +212,6 @@ private actor LocalAgentState {
             throw AppError.context(#fileID, #function, "Local agent remote client not initialized")
         }
         return try await remote.fetchSectionSnapshotResponse(sectionKey: sectionKey)
-    }
-
-    func requestTemperatureAccess() async throws -> TemperatureAccessResponse {
-        /**
-         Summary
-         Ensure the agent is started and request temperature authorization via the local API.
-
-         Inputs
-         None.
-
-         Outputs
-         `TemperatureAccessResponse`.
-
-         Side effects
-         Starts a background process and performs a loopback HTTP request.
-
-         Error handling
-         Throws `AppError` when startup fails or the request cannot be completed.
-
-         Ties to other methods
-         Used by `LocalAgentBackendClient.requestTemperatureSensorAccess`.
-
-         Why this exists
-         Keeps authorization calls serialized with agent lifecycle to avoid races.
-         */
-        try await ensureStarted()
-        guard let remote else {
-            throw AppError.context(#fileID, #function, "Local agent remote client not initialized")
-        }
-        return try await remote.requestTemperatureSensorAccess()
     }
 
     func stop() async {
@@ -498,7 +443,7 @@ private enum LocalAgentConfigOverlay {
             guard var api = root["api"] as? [String: Any] else {
                 throw AppError.context(#fileID, #function, "Base config missing 'api' object: \(baseConfigFile.path)")
             }
-            var fans = (root["fans"] as? [String: Any]) ?? [:]
+            let fans = (root["fans"] as? [String: Any]) ?? [:]
 
             api["enabled"] = true
             api["bind_host"] = "127.0.0.1"
@@ -507,9 +452,6 @@ private enum LocalAgentConfigOverlay {
             api["allow_insecure_http_lan"] = false
             api["tls_enabled"] = false
             api["auth_token"] = authToken
-
-            fans["use_sudo"] = true
-            fans["use_admin_prompt"] = true
 
             root["api"] = api
             root["fans"] = fans

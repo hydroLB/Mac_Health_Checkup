@@ -10,10 +10,66 @@ from mac_health_checkup.app.gui.dashboard.queueing import SectionQueue
 from mac_health_checkup.app.gui.dashboard.sections import SECTION_HANDLERS, run_section
 from mac_health_checkup.app.gui.sections.types import SectionHost, Widget
 from mac_health_checkup.app.gui.widgets.scroll_container import ScrollContainer
+from mac_health_checkup.app.gui.widgets.tooltip import TooltipManager, TooltipTheme
+from mac_health_checkup.app.help_text import (
+    metric as metric_help_text,
+)
+from mac_health_checkup.app.help_text import (
+    section as section_help_text,
+)
+from mac_health_checkup.app.help_text import (
+    table_header as table_header_help_text,
+)
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.utils.errors import format_error
 
 MODULE_PATH = "mac_health_checkup/app/gui/app.py"
+
+
+def _segment_at_char(line: str, char_index: int) -> str:
+    """
+    Summary
+    Return the pipe-delimited segment under a character index.
+
+    Inputs
+    line: Full line of text, typically formatted as `A | B | C`.
+    char_index: Zero-based character index within the line.
+
+    Outputs
+    Segment text under the index, or an empty string when no segment matches.
+
+    Side effects
+    None.
+
+    Error handling
+    Returns an empty string on invalid inputs.
+
+    Ties to other methods
+    Used by tooltip providers to map cursor position to a header or cell value.
+
+    Why this exists
+    Tk Text widgets provide a character offset; tooltips need a deterministic way to map that to a column.
+    """
+    try:
+        text = line or ""
+        idx = int(char_index)
+        if idx < 0:
+            idx = 0
+        parts = text.split(" | ")
+        cursor = 0
+        for i, part in enumerate(parts):
+            start = cursor
+            end = start + len(part)
+            if start <= idx <= end:
+                return part
+            cursor = end
+            if i < len(parts) - 1:
+                cursor += 3  # len(" | ")
+        return ""
+    except (RuntimeError, ValueError, TypeError) as exc:
+        raise RuntimeError(
+            format_error(MODULE_PATH, "_segment_at_char", "Failed to map column segment", exc)
+        ) from exc
 
 
 @dataclass
@@ -114,6 +170,17 @@ class DashboardApp(tk.Tk, SectionHost):
             self._wraplength_px: int | None = None
             self._status_var = tk.StringVar(value="")
             self._scroll: ScrollContainer | None = None
+            self._tooltips = TooltipManager(
+                root=self,
+                theme=TooltipTheme(
+                    bg=self._cfg.fonts.tooltip_bg,
+                    fg=self._cfg.fonts.tooltip_fg,
+                    font_family=self._cfg.fonts.family_default,
+                    font_size=self._cfg.fonts.size_tooltip,
+                ),
+                delay_ms=350,
+            )
+            self._table_headers: dict[int, tuple[str, ...]] = {}
 
             self.title(self._cfg.ui.window_title)
             self.configure(bg=self._cfg.colors.bg)
@@ -216,11 +283,11 @@ class DashboardApp(tk.Tk, SectionHost):
         Provides a consistent, minimal API for section renderers to publish a summary without UI coupling.
         """
         try:
-            _ = tooltip
             section = self._sections.get(key)
             if not section:
                 return
             section.field.configure(text=text, fg=fg or self._cfg.colors.field)
+            self._tooltips.set_static(section.field, (tooltip or section_help_text(key)))
         except (tk.TclError, RuntimeError, ValueError, TypeError) as exc:
             raise RuntimeError(
                 format_error(MODULE_PATH, "DashboardApp.set_field", "Failed to set field", exc)
@@ -258,9 +325,15 @@ class DashboardApp(tk.Tk, SectionHost):
             section = self._sections.get(key)
             if not section:
                 return
+            created = section.metrics is None
             widget = section.metrics or self._create_text_widget(key, section)
             section.metrics = widget
             self._configure_text_tags(widget)
+            if created:
+                self._tooltips.set_dynamic(
+                    widget,
+                    lambda event: self._metrics_tooltip_for_event(key=key, widget=widget, event=event),
+                )
             widget.configure(state="normal")
             widget.delete("1.0", tk.END)
             for label, value, status in rows:
@@ -312,9 +385,16 @@ class DashboardApp(tk.Tk, SectionHost):
             section = self._sections.get(key)
             if not section:
                 return
+            created = section.table is None
             widget = section.table or self._create_text_widget(key, section)
             section.table = widget
             self._configure_text_tags(widget)
+            self._table_headers[id(widget)] = headers
+            if created:
+                self._tooltips.set_dynamic(
+                    widget,
+                    lambda event: self._table_tooltip_for_event(key=key, widget=widget, event=event),
+                )
             widget.configure(state="normal")
             widget.delete("1.0", tk.END)
             widget.insert(tk.END, " | ".join(headers) + "\n", ("header",))
@@ -326,6 +406,102 @@ class DashboardApp(tk.Tk, SectionHost):
             raise RuntimeError(
                 format_error(MODULE_PATH, "DashboardApp.render_table", "Failed to render table", exc)
             ) from exc
+
+    def _metrics_tooltip_for_event(
+        self, *, key: str, widget: tk.Text, event: tk.Event[tk.Misc]
+    ) -> str | None:
+        """
+        Summary
+        Compute tooltip text for a metrics Text widget based on cursor location.
+
+        Inputs
+        key: Section key for help text mapping.
+        widget: Text widget containing metrics.
+        event: Tk event containing cursor coordinates.
+
+        Outputs
+        Tooltip string, or None to hide the tooltip.
+
+        Side effects
+        None.
+
+        Error handling
+        Returns None on parsing failures to keep the UI resilient.
+
+        Ties to other methods
+        Used by `TooltipManager` dynamic providers for metrics tables.
+
+        Why this exists
+        Metrics tables contain multiple rows; tooltips should explain the specific row being hovered.
+        """
+        try:
+            idx = widget.index(f"@{event.x},{event.y}")
+            line_str, col_str = idx.split(".", 1)
+            _ = col_str
+            line_text = widget.get(f"{line_str}.0", f"{line_str}.end").strip()
+            if not line_text or ":" not in line_text:
+                return section_help_text(key)
+            label = line_text.split(":", 1)[0].strip()
+            if not label:
+                return section_help_text(key)
+            base = metric_help_text(key, label)
+            value_part = line_text.split(":", 1)[1].strip()
+            if value_part:
+                return f"{base}\n\nCurrent value: {value_part}"
+            return base
+        except Exception:
+            return None
+
+    def _table_tooltip_for_event(self, *, key: str, widget: tk.Text, event: tk.Event[tk.Misc]) -> str | None:
+        """
+        Summary
+        Compute tooltip text for a table Text widget based on cursor location.
+
+        Inputs
+        key: Section key for help text mapping.
+        widget: Text widget containing a table.
+        event: Tk event containing cursor coordinates.
+
+        Outputs
+        Tooltip string, or None to hide the tooltip.
+
+        Side effects
+        None.
+
+        Error handling
+        Returns None on parsing failures to keep the UI resilient.
+
+        Ties to other methods
+        Used by `TooltipManager` dynamic providers for section tables.
+
+        Why this exists
+        Table widgets contain header, separators, and many cells; tooltips should explain the hovered column.
+        """
+        try:
+            idx = widget.index(f"@{event.x},{event.y}")
+            line_str, col_str = idx.split(".", 1)
+            line = int(line_str)
+            col = int(col_str)
+            if line <= 0:
+                return None
+            if line == 2:
+                return section_help_text(key)
+
+            header_line = widget.get("1.0", "1.end")
+            header = _segment_at_char(header_line, col)
+            if not header:
+                return section_help_text(key)
+            base = table_header_help_text(key, header)
+            if line == 1:
+                return base
+
+            line_text = widget.get(f"{line_str}.0", f"{line_str}.end")
+            value = _segment_at_char(line_text, col)
+            if value:
+                return f"{base}\n\nCurrent value: {value.strip()}"
+            return base
+        except Exception:
+            return None
 
     def section_container(self, key: str) -> Optional[Widget]:
         """
@@ -496,6 +672,10 @@ class DashboardApp(tk.Tk, SectionHost):
                 ),
             )
             title.pack(anchor="w")
+            self._tooltips.set_static(
+                title,
+                "Mac Health Checkup dashboard. Hover over section titles, fields, metrics, and tables for details.",
+            )
 
             status = tk.Label(
                 header,
@@ -509,6 +689,10 @@ class DashboardApp(tk.Tk, SectionHost):
                 ),
             )
             status.pack(anchor="w")
+            self._tooltips.set_static(
+                status,
+                "Refresh status and diagnostic messages. Values update on a timer and may be cached briefly.",
+            )
 
             separator = tk.Frame(root, bg=self._cfg.gui.card_border, height=1)
             separator.pack(fill="x", padx=max(8, self._cfg.gui.section_padx), pady=(0, 8))
@@ -573,6 +757,7 @@ class DashboardApp(tk.Tk, SectionHost):
                     ),
                 )
                 title_label.pack(anchor="w")
+                self._tooltips.set_static(title_label, section_help_text(key))
 
                 subtitle_label = tk.Label(
                     content,
@@ -586,6 +771,7 @@ class DashboardApp(tk.Tk, SectionHost):
                     ),
                 )
                 subtitle_label.pack(anchor="w", pady=(2, 6))
+                self._tooltips.set_static(subtitle_label, section_help_text(key))
 
                 field_label = tk.Label(
                     content,
@@ -601,6 +787,7 @@ class DashboardApp(tk.Tk, SectionHost):
                     justify="left",
                 )
                 field_label.pack(anchor="w", fill="x")
+                self._tooltips.set_static(field_label, section_help_text(key))
 
                 self._sections[key] = _SectionWidgets(
                     frame=content,
@@ -801,7 +988,8 @@ class DashboardApp(tk.Tk, SectionHost):
         Schedules `_refresh` via Tk `after` and triggers an immediate refresh.
 
         Error handling
-        Raises `RuntimeError` with module and method context if scheduling fails.
+        Never raises for section handler failures; updates the status line instead. Raises `RuntimeError` only
+        when Tk scheduling primitives fail unexpectedly.
 
         Ties to other methods
         Calls `_refresh` which runs section handlers and updates the status line.
@@ -831,7 +1019,8 @@ class DashboardApp(tk.Tk, SectionHost):
         Runs section handlers, updates UI widgets, and updates the header status timestamp.
 
         Error handling
-        Raises `RuntimeError` with module and method context if refresh work fails.
+        Captures per-section handler failures, renders a per-section error fallback, and keeps the refresh loop
+        running. Does not raise for recoverable section failures.
 
         Ties to other methods
         Calls `run_section` for each key in `SECTION_HANDLERS`.
@@ -839,18 +1028,37 @@ class DashboardApp(tk.Tk, SectionHost):
         Why this exists
         Centralizes refresh so UI updates remain predictable and bounded by the queueing logic.
         """
+        failures = 0
+        now = datetime.now().strftime("%H:%M:%S")
         try:
             for key in SECTION_HANDLERS:
                 self._queue.enqueue(key)
             for key in self._queue.drain():
-                run_section(self, key)
-            now = datetime.now().strftime("%H:%M:%S")
-            self._status_var.set(f"Last refreshed: {now}")
-            self.after(self._cfg.gui.auto_refresh_ms, self._refresh)
+                try:
+                    run_section(self, key)
+                except Exception as exc:
+                    failures += 1
+                    try:
+                        self.set_field(
+                            key,
+                            f"Error: {type(exc).__name__}",
+                            fg=self._cfg.colors.bad,
+                            tooltip=str(exc),
+                        )
+                    except Exception:
+                        continue
+            if failures:
+                self._status_var.set(f"Last refreshed: {now} ({failures} section errors)")
+            else:
+                self._status_var.set(f"Last refreshed: {now}")
         except (tk.TclError, RuntimeError, ValueError, TypeError) as exc:
-            raise RuntimeError(
-                format_error(MODULE_PATH, "DashboardApp._refresh", "Failed to refresh", exc)
-            ) from exc
+            self._status_var.set(f"Refresh error at {now}: {type(exc).__name__}")
+        finally:
+            try:
+                if not self._shutdown.shutdown_requested():
+                    self.after(self._cfg.gui.auto_refresh_ms, self._refresh)
+            except tk.TclError:
+                return
 
     def _on_close(self) -> None:
         """

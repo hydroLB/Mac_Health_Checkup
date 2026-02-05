@@ -38,11 +38,10 @@ class FansConfig:
     """
     Purpose: Hold fan diagnostics configuration.
     Ties: Used by SSD and fan diagnostics for sudo behavior.
-    Inputs: use_sudo flag and use_admin_prompt toggle.
+    Inputs: use_sudo flag.
     Outputs: Immutable fan configuration.
     Side effects: None.
     Why: Controls when sudo escalation is allowed.
     """
 
     use_sudo: bool
-    use_admin_prompt: bool

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
@@ -13,11 +14,44 @@ from mac_health_checkup.app.gui.sections.types import SectionHost
 from mac_health_checkup.core.config import ApiConfig
 from mac_health_checkup.core.types import JsonDict
 from mac_health_checkup.core.utils.errors import format_error
-from mac_health_checkup.diagnostics.thermals import authorize_temperature_sensors
 
 MODULE_PATH = "mac_health_checkup/app/backend/http/handler_factory.py"
 
 SectionHandler = Callable[[SectionHost], JsonDict]
+
+
+def _is_client_disconnect(exc: BaseException) -> bool:
+    """
+    Summary
+    Determine whether an exception is a normal client disconnect during response writes.
+
+    Inputs
+    exc: Exception raised while reading or writing the connection.
+
+    Outputs
+    True when the error indicates the client closed the connection, else false.
+
+    Side effects
+    None.
+
+    Error handling
+    Never raises; returns false on unexpected inputs.
+
+    Ties to other methods
+    Used by the HTTP handler to avoid attempting a second response after a client disconnect.
+
+    Why this exists
+    Broken pipes are normal when clients cancel requests; treating them as server errors causes noisy logs and
+    can trigger nested exception loops in error handlers.
+    """
+    try:
+        if isinstance(exc, (BrokenPipeError, ConnectionResetError)):
+            return True
+        if isinstance(exc, OSError):
+            return getattr(exc, "errno", None) in (errno.EPIPE, errno.ECONNRESET)
+        return False
+    except Exception:
+        return False
 
 
 def build_handler_factory(
@@ -82,17 +116,6 @@ def build_handler_factory(
                     if path == "/v1/health":
                         self._respond_json(HTTPStatus.OK, {"ok": True, "service": "mac-health-checkup"})
                         return
-                    if path == "/v1/authorize/thermals":
-                        if not auth_ok(self.headers.get("Authorization"), api):
-                            throttler.record_auth_failure(client_ip)
-                            self._respond_json(
-                                HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "unauthorized"}
-                            )
-                            return
-                        throttler.record_auth_success(client_ip)
-                        auth_payload = authorize_temperature_sensors(force=True)
-                        self._respond_json(HTTPStatus.OK, auth_payload)
-                        return
                     if path == "/v1/snapshot":
                         if not auth_ok(self.headers.get("Authorization"), api):
                             throttler.record_auth_failure(client_ip)
@@ -109,7 +132,12 @@ def build_handler_factory(
                         self.send_header("X-Snapshot-Exit-Code", str(int(code)))
                         self.send_header("Content-Length", str(len(snapshot_json.encode("utf-8"))))
                         self.end_headers()
-                        self.wfile.write(snapshot_json.encode("utf-8"))
+                        try:
+                            self.wfile.write(snapshot_json.encode("utf-8"))
+                        except OSError as write_exc:
+                            if _is_client_disconnect(write_exc):
+                                return
+                            raise
                         return
                     if path == "/v1/section":
                         if not auth_ok(self.headers.get("Authorization"), api):
@@ -137,17 +165,29 @@ def build_handler_factory(
                         self.send_header("X-Snapshot-Exit-Code", str(int(code)))
                         self.send_header("Content-Length", str(len(section_json.encode("utf-8"))))
                         self.end_headers()
-                        self.wfile.write(section_json.encode("utf-8"))
+                        try:
+                            self.wfile.write(section_json.encode("utf-8"))
+                        except OSError as write_exc:
+                            if _is_client_disconnect(write_exc):
+                                return
+                            raise
                         return
                     self._respond_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
                 except (OSError, RuntimeError, ValueError, TypeError, AttributeError) as exc:
-                    self._respond_json(
-                        HTTPStatus.INTERNAL_SERVER_ERROR,
-                        {
-                            "ok": False,
-                            "error": format_error(MODULE_PATH, "_Handler.do_GET", "Request failed", exc),
-                        },
-                    )
+                    if _is_client_disconnect(exc):
+                        return
+                    try:
+                        self._respond_json(
+                            HTTPStatus.INTERNAL_SERVER_ERROR,
+                            {
+                                "ok": False,
+                                "error": format_error(MODULE_PATH, "_Handler.do_GET", "Request failed", exc),
+                            },
+                        )
+                    except OSError as write_exc:
+                        if _is_client_disconnect(write_exc):
+                            return
+                        raise
 
             def _respond_json(
                 self, status: HTTPStatus, payload: JsonDict, *, headers: Mapping[str, str] | None = None
@@ -171,7 +211,12 @@ def build_handler_factory(
                         for key, value in headers.items():
                             self.send_header(key, value)
                     self.end_headers()
-                    self.wfile.write(body)
+                    try:
+                        self.wfile.write(body)
+                    except OSError as write_exc:
+                        if _is_client_disconnect(write_exc):
+                            return
+                        raise
                 except (OSError, RuntimeError, ValueError, TypeError) as exc:
                     raise RuntimeError(
                         format_error(MODULE_PATH, "_Handler._respond_json", "Failed to write response", exc)

@@ -111,7 +111,7 @@ public struct RemoteBackendConfig: Sendable {
     }
 }
 
-public final class RemoteBackendClient: SnapshotBackend, TemperatureAccessBackend, Sendable {
+public final class RemoteBackendClient: SnapshotBackend, Sendable {
     /**
      Summary
      Fetch dashboard snapshots from a Mac agent API over HTTP.
@@ -275,54 +275,6 @@ public final class RemoteBackendClient: SnapshotBackend, TemperatureAccessBacken
             throw error
         } catch {
             throw AppError.context(#fileID, #function, "Failed to fetch remote snapshot", error)
-        }
-    }
-
-    public func requestTemperatureSensorAccess() async throws -> TemperatureAccessResponse {
-        /**
-         Summary
-         Request privileged temperature sensor access via the backend authorization endpoint.
-
-         Inputs
-         None.
-
-         Outputs
-         `TemperatureAccessResponse` containing the authorization result.
-
-         Side effects
-         Performs a network request that may trigger a macOS admin prompt on the host running the agent.
-
-         Error handling
-         Throws `AppError` when the request fails, returns a non-2xx response, or JSON decoding fails.
-
-         Ties to other methods
-         Called by `DashboardViewModel.requestTemperatureSensorAccess` (macOS settings flow).
-
-         Why this exists
-         Authorization must be explicit and user-initiated; snapshot refresh should not unexpectedly prompt.
-         */
-        let validated = try config.validated()
-        let url = _url(for: validated, path: "v1/authorize/thermals")
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.timeoutInterval = validated.timeoutSeconds
-        request.setValue("Bearer \(validated.authToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-
-        do {
-            let (data, response) = try await session.data(for: request)
-            let http = response as? HTTPURLResponse
-            let status = Int32(http?.statusCode ?? -1)
-            if status < 200 || status >= 300 {
-                let body = String(data: data, encoding: .utf8) ?? ""
-                throw AppError.context(#fileID, #function, "Remote temperature authorization HTTP \(status). body=\(body)")
-            }
-            return try JSONDecoder().decode(TemperatureAccessResponse.self, from: data)
-        } catch let error as AppError {
-            throw error
-        } catch {
-            throw AppError.context(#fileID, #function, "Failed to request temperature sensor access", error)
         }
     }
 

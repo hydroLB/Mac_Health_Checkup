@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import socket
 import threading
 import time
@@ -21,6 +22,33 @@ from mac_health_checkup.core.utils.errors import format_error
 MODULE_PATH = "mac_health_checkup/app/backend/server.py"
 
 SectionHandler = Callable[[SectionHost], JsonDict]
+
+
+class _ReusableThreadingHTTPServer(ThreadingHTTPServer):
+    """
+    Summary
+    ThreadingHTTPServer with safer socket reuse defaults.
+
+    Inputs
+    Same as ThreadingHTTPServer.
+
+    Outputs
+    HTTP server instance.
+
+    Side effects
+    Sets SO_REUSEADDR to allow quick restarts during development and tests.
+
+    Error handling
+    Inherits from ThreadingHTTPServer.
+
+    Ties to other methods
+    Used by `SnapshotApiServer.start`.
+
+    Why this exists
+    The agent is frequently restarted while iterating; socket reuse prevents transient bind failures.
+    """
+
+    allow_reuse_address = True
 
 
 class SnapshotApiServer:
@@ -47,6 +75,8 @@ class SnapshotApiServer:
             self._api = api
             self._httpd: ThreadingHTTPServer | None = None
             self._thread: threading.Thread | None = None
+            self._bound_host: str | None = None
+            self._bound_port: int | None = None
         except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
             raise RuntimeError(
                 format_error(MODULE_PATH, "SnapshotApiServer.__init__", "Failed to init server", exc)
@@ -66,7 +96,35 @@ class SnapshotApiServer:
                 return
             validate_api_config_for_server(self._api)
             handler_factory = build_handler_factory(self._handlers, self._api)
-            httpd = ThreadingHTTPServer((self._api.bind_host, self._api.port), handler_factory)
+            host = self._api.bind_host
+            preferred_port = int(self._api.port)
+            max_attempts = 20 if preferred_port != 0 else 1
+            last_exc: OSError | None = None
+
+            httpd: ThreadingHTTPServer | None = None
+            for attempt in range(max_attempts):
+                port = preferred_port if preferred_port == 0 else preferred_port + attempt
+                if port > 65535:
+                    break
+                try:
+                    httpd = _ReusableThreadingHTTPServer((host, port), handler_factory)
+                    break
+                except OSError as exc:
+                    last_exc = exc
+                    if preferred_port == 0:
+                        break
+                    if getattr(exc, "errno", None) != errno.EADDRINUSE:
+                        break
+
+            if httpd is None:
+                detail = f"Failed to bind server at {host}:{preferred_port}"
+                if preferred_port != 0:
+                    last_port = min(65535, preferred_port + max_attempts - 1)
+                    detail = f"{detail} (tried {preferred_port}-{last_port})"
+                if last_exc is not None:
+                    detail = f"{detail}: {last_exc}"
+                raise OSError(detail)
+
             httpd.daemon_threads = True
             if self._api.tls_enabled:
                 cert_path = Path(self._api.tls_cert_path).expanduser()
@@ -74,6 +132,9 @@ class SnapshotApiServer:
                 context = build_tls_server_context(cert_path, key_path)
                 httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
             self._httpd = httpd
+            bound_host, bound_port = httpd.server_address[:2]
+            self._bound_host = str(bound_host)
+            self._bound_port = int(bound_port)
             self._thread = threading.Thread(target=httpd.serve_forever, name="snapshot-api", daemon=True)
             self._thread.start()
         except (OSError, RuntimeError, ValueError, TypeError) as exc:
@@ -99,6 +160,8 @@ class SnapshotApiServer:
                 self._thread.join(timeout=2.0)
             self._httpd = None
             self._thread = None
+            self._bound_host = None
+            self._bound_port = None
         except (OSError, RuntimeError, ValueError, TypeError) as exc:
             raise RuntimeError(
                 format_error(MODULE_PATH, "SnapshotApiServer.stop", "Failed to stop server", exc)
@@ -114,11 +177,12 @@ class SnapshotApiServer:
         Why: Makes pairing instructions deterministic.
         """
         try:
-            host = self._api.bind_host
+            host = self._bound_host or self._api.bind_host
             if host == "0.0.0.0":
                 host = "127.0.0.1"
+            port = self._bound_port if self._bound_port is not None else int(self._api.port)
             scheme = "https" if self._api.tls_enabled else "http"
-            return f"{scheme}://{host}:{self._api.port}"
+            return f"{scheme}://{host}:{port}"
         except (RuntimeError, ValueError, TypeError) as exc:
             raise RuntimeError(
                 format_error(MODULE_PATH, "SnapshotApiServer.url", "Failed to build URL", exc)
