@@ -13,23 +13,52 @@ MODULE_PATH = "mac_health_checkup/diagnostics/display_transport.py"
 
 class DisplayTransportDiagnostics:
     """
-    Purpose: Estimate display transport labels from display output.
-    Ties: Used by display section to show transport per display.
-    Inputs: Optional base dict with raw display output.
-    Outputs: Dict with display transport list and raw.
-    Side effects: May execute system_profiler if raw not provided.
-    Why: Provides transport hints without extra tooling.
+    Summary
+    Estimate display transport labels from display output.
+
+    Inputs
+    Optional base dict with raw display output.
+
+    Outputs
+    Dict with display transport list and raw.
+
+    Side effects
+    May execute system_profiler if raw is not provided.
+
+    Error handling
+    Returns empty display lists when output is missing; raises `RuntimeError` with module and method context when
+    parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by the display section to show transport per display.
+
+    Why this exists
+    Provides transport hints without extra tooling.
     """
 
     @staticmethod
     def fetch(base: JsonDict | None = None) -> JsonDict:
         """
-        Purpose: Fetch display transport labels and bandwidth estimates.
-        Ties: Used by display section handler.
-        Inputs: base dict may contain raw display output.
-        Outputs: Dict with displays list and raw output.
-        Side effects: Executes system_profiler if raw not provided.
-        Why: Keeps transport estimates and parsing centralized.
+        Summary
+        Fetch display transport labels and bandwidth estimates.
+
+        Inputs
+        base: Optional dict that may contain raw display output.
+
+        Outputs
+        Dict with displays list and raw output.
+
+        Side effects
+        Executes system_profiler if raw is not provided.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when fetching or parsing fails.
+
+        Ties to other methods
+        Used by display section handler.
+
+        Why this exists
+        Keeps transport estimates and parsing centralized.
         """
         try:
             logger = get_diagnostics_logger()
@@ -62,12 +91,26 @@ class DisplayTransportDiagnostics:
 
 def _parse_transports(raw: str) -> list[str]:
     """
-    Purpose: Parse transport labels from display output.
-    Ties: Used by DisplayTransportDiagnostics.
-    Inputs: raw display output string.
-    Outputs: List of transport labels.
-    Side effects: None.
-    Why: Keeps transport parsing logic isolated and testable.
+    Summary
+    Parse transport labels from display output.
+
+    Inputs
+    raw: Display output string.
+
+    Outputs
+    List of transport labels.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by `DisplayTransportDiagnostics`.
+
+    Why this exists
+    Keeps transport parsing logic isolated and testable.
     """
     try:
         transports: list[str] = []
@@ -85,12 +128,26 @@ def _parse_transports(raw: str) -> list[str]:
 
 def _normalize_transport(label: str) -> str:
     """
-    Purpose: Normalize a connection label into a transport hint.
-    Ties: Used by _parse_transports.
-    Inputs: label is the raw connection label.
-    Outputs: Normalized transport label.
-    Side effects: None.
-    Why: Keeps transport labels consistent for the UI.
+    Summary
+    Normalize a connection label into a transport hint.
+
+    Inputs
+    label: Raw connection label.
+
+    Outputs
+    Normalized transport label.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when normalization fails unexpectedly.
+
+    Ties to other methods
+    Used by `_parse_transports`.
+
+    Why this exists
+    Keeps transport labels consistent for the UI.
     """
     try:
         lower = label.lower()
@@ -113,12 +170,26 @@ def _normalize_transport(label: str) -> str:
 
 def _estimate_bandwidths(raw: str) -> list[float | None]:
     """
-    Purpose: Estimate display bandwidth from resolution and refresh rate.
-    Ties: Used by DisplayTransportDiagnostics to enrich transport labels.
-    Inputs: raw display output string.
-    Outputs: List of bandwidth estimates in Gbps or None.
-    Side effects: None.
-    Why: Provides a tunable transport estimate using config values.
+    Summary
+    Estimate display bandwidth from resolution and refresh rate.
+
+    Inputs
+    raw: Display output string.
+
+    Outputs
+    List of bandwidth estimates in Gbps or None.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when estimation fails unexpectedly.
+
+    Ties to other methods
+    Used by `DisplayTransportDiagnostics` to enrich transport labels.
+
+    Why this exists
+    Provides a tunable transport estimate using config values.
     """
     try:
         cfg = get_config().display_transport
@@ -143,12 +214,27 @@ def _estimate_bandwidths(raw: str) -> list[float | None]:
 
 def _merge_transports(transports: list[str], estimates: list[float | None]) -> list[str]:
     """
-    Purpose: Merge transport labels with optional bandwidth estimates.
-    Ties: Used by DisplayTransportDiagnostics to format display strings.
-    Inputs: transports list and estimates list.
-    Outputs: List of merged transport labels.
-    Side effects: None.
-    Why: Keeps transport output readable while adding useful context.
+    Summary
+    Merge transport labels with optional bandwidth estimates.
+
+    Inputs
+    transports: Transport labels.
+    estimates: Bandwidth estimates aligned to transports.
+
+    Outputs
+    List of merged transport labels.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when merging fails unexpectedly.
+
+    Ties to other methods
+    Used by `DisplayTransportDiagnostics` to format display strings.
+
+    Why this exists
+    Keeps transport output readable while adding useful context.
     """
     try:
         merged: list[str] = []
@@ -167,12 +253,26 @@ def _merge_transports(transports: list[str], estimates: list[float | None]) -> l
 
 def _split_display_blocks(raw: str) -> list[str]:
     """
-    Purpose: Split display output into per display blocks.
-    Ties: Used by _estimate_bandwidths for parsing.
-    Inputs: raw display output string.
-    Outputs: List of display block strings.
-    Side effects: None.
-    Why: Keeps display parsing deterministic without external helpers.
+    Summary
+    Split display output into per-display blocks.
+
+    Inputs
+    raw: Display output string.
+
+    Outputs
+    List of display block strings.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when splitting fails unexpectedly.
+
+    Ties to other methods
+    Used by `_estimate_bandwidths` for parsing.
+
+    Why this exists
+    Keeps display parsing deterministic without external helpers.
     """
     try:
         starts = [match.start() for match in re.finditer(r"^\s{4}[^:\n]+:\s*$", raw, re.MULTILINE)]
@@ -191,12 +291,26 @@ def _split_display_blocks(raw: str) -> list[str]:
 
 def _parse_resolution(block: str) -> tuple[int | None, int | None]:
     """
-    Purpose: Parse resolution width and height from a display block.
-    Ties: Used by _estimate_bandwidths.
-    Inputs: block is a display block string.
-    Outputs: Tuple of (width, height) or (None, None).
-    Side effects: None.
-    Why: Provides resolution data for bandwidth estimation.
+    Summary
+    Parse resolution width and height from a display block.
+
+    Inputs
+    block: Display block string.
+
+    Outputs
+    Tuple of (width, height) or (None, None).
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by `_estimate_bandwidths`.
+
+    Why this exists
+    Provides resolution data for bandwidth estimation.
     """
     try:
         match = re.search(r"Resolution:\s*(\d+)\s*x\s*(\d+)", block)
@@ -211,12 +325,26 @@ def _parse_resolution(block: str) -> tuple[int | None, int | None]:
 
 def _parse_refresh_hz(block: str) -> float | None:
     """
-    Purpose: Parse refresh rate from a display block.
-    Ties: Used by _estimate_bandwidths.
-    Inputs: block is a display block string.
-    Outputs: Refresh rate as float or None.
-    Side effects: None.
-    Why: Provides refresh data for bandwidth estimation.
+    Summary
+    Parse refresh rate from a display block.
+
+    Inputs
+    block: Display block string.
+
+    Outputs
+    Refresh rate as float or None.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by `_estimate_bandwidths`.
+
+    Why this exists
+    Provides refresh data for bandwidth estimation.
     """
     try:
         match = re.search(r"Refresh Rate:\s*([0-9.]+)\s*Hz", block)

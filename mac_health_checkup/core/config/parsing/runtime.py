@@ -233,6 +233,16 @@ def parse_timeouts(raw: JsonDict) -> TimeoutConfig:
             power_sp_cache_ttl=require_int(1, 3600)(section.get("power_sp_cache_ttl")),
             power_ioreg_cache_ttl=require_int(1, 3600)(section.get("power_ioreg_cache_ttl")),
             istats_timeout=require_int(1, 120)(section.get("istats_timeout")),
+            softwareupdate_timeout=(
+                30
+                if section.get("softwareupdate_timeout") is None
+                else require_int(1, 600)(section.get("softwareupdate_timeout"))
+            ),
+            softwareupdate_cache_ttl=(
+                6 * 60 * 60
+                if section.get("softwareupdate_cache_ttl") is None
+                else require_int(60, 7 * 24 * 60 * 60)(section.get("softwareupdate_cache_ttl"))
+            ),
         )
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(

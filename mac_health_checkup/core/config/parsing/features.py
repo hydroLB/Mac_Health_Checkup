@@ -80,6 +80,11 @@ def parse_api(raw: JsonDict) -> ApiConfig:
             max_auth_failures_per_minute=require_int(1, 10_000)(section.get("max_auth_failures_per_minute")),
             auth_ban_seconds=require_int(1, 86_400)(section.get("auth_ban_seconds")),
             request_timeout_sec=require_int(1, 120)(section.get("request_timeout_sec")),
+            pairing_qr_enabled=(
+                True
+                if section.get("pairing_qr_enabled") is None
+                else require_bool(section.get("pairing_qr_enabled"))
+            ),
         )
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(format_error(MODULE_PATH, "parse_api", "Failed to parse api", exc)) from exc
@@ -184,11 +189,33 @@ def parse_thresholds(raw: JsonDict) -> ThresholdsConfig:
         rssi_bad_dbm = require_int(-120, 0)(section.get("rssi_bad_dbm"))
         if rssi_bad_dbm >= rssi_warn_dbm:
             raise ValueError("thresholds.rssi_bad_dbm must be less than thresholds.rssi_warn_dbm")
+        disk_free_warn = require_float(0.0, 100.0)(section.get("disk_free_warn_percent"))
+        disk_free_bad = require_float(0.0, 100.0)(section.get("disk_free_bad_percent"))
+        if disk_free_bad >= disk_free_warn:
+            raise ValueError(
+                "thresholds.disk_free_bad_percent must be less than thresholds.disk_free_warn_percent"
+            )
+        mem_free_warn = require_float(0.0, 100.0)(section.get("memory_free_warn_percent"))
+        mem_free_bad = require_float(0.0, 100.0)(section.get("memory_free_bad_percent"))
+        if mem_free_bad >= mem_free_warn:
+            raise ValueError(
+                "thresholds.memory_free_bad_percent must be less than thresholds.memory_free_warn_percent"
+            )
+        backup_warn_days = require_int(0, 3650)(section.get("backup_warn_days"))
+        backup_bad_days = require_int(0, 3650)(section.get("backup_bad_days"))
+        if backup_bad_days <= backup_warn_days:
+            raise ValueError("thresholds.backup_bad_days must be greater than thresholds.backup_warn_days")
         return ThresholdsConfig(
             temp_warn_c=temp_warn_c,
             temp_bad_c=temp_bad_c,
             rssi_warn_dbm=rssi_warn_dbm,
             rssi_bad_dbm=rssi_bad_dbm,
+            disk_free_warn_percent=disk_free_warn,
+            disk_free_bad_percent=disk_free_bad,
+            memory_free_warn_percent=mem_free_warn,
+            memory_free_bad_percent=mem_free_bad,
+            backup_warn_days=backup_warn_days,
+            backup_bad_days=backup_bad_days,
         )
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(
@@ -275,6 +302,16 @@ def parse_gui(raw: JsonDict) -> GuiConfig:
             table_row_height=require_int(10, 200)(section.get("table_row_height")),
             table_max_visible_rows=require_int(1, 50)(section.get("table_max_visible_rows")),
             table_min_col_width=require_int(10, 500)(section.get("table_min_col_width")),
+            processes_max_rows=(
+                10
+                if section.get("processes_max_rows") is None
+                else require_int(1, 200)(section.get("processes_max_rows"))
+            ),
+            startup_max_rows=(
+                30
+                if section.get("startup_max_rows") is None
+                else require_int(1, 2000)(section.get("startup_max_rows"))
+            ),
         )
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(format_error(MODULE_PATH, "parse_gui", "Failed to parse gui", exc)) from exc

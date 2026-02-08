@@ -18,12 +18,27 @@ MODULE_PATH = "mac_health_checkup/core/utils/loggers.py"
 @dataclass(frozen=True)
 class LogContext:
     """
-    Purpose: Carry structured logging context fields.
-    Ties: Used by StructuredLogger to stamp consistent metadata.
-    Inputs: component identifies the source, corr_id ties events together.
-    Outputs: Immutable context container.
-    Side effects: None.
-    Why: Ensures all logs carry consistent tracing metadata.
+    Summary
+    Carry structured logging context fields.
+
+    Inputs
+    component: Component identifier for the source of the event.
+    corr_id: Correlation id tying related events together.
+
+    Outputs
+    Immutable context container.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Consumed by `StructuredLogger` to stamp consistent metadata.
+
+    Why this exists
+    Ensures all logs carry consistent tracing metadata.
     """
 
     component: str
@@ -33,12 +48,28 @@ class LogContext:
 @dataclass(frozen=True)
 class LoggingFields:
     """
-    Purpose: Define field names for structured logging payloads.
-    Ties: Used by StructuredFormatter and StructuredLogger.
-    Inputs: event_field, corr_id_field, component_field.
-    Outputs: Immutable container for log field names.
-    Side effects: None.
-    Why: Keeps log field names configurable and consistent.
+    Summary
+    Define field names for structured logging payloads.
+
+    Inputs
+    event_field: Name of the field used for event ids.
+    corr_id_field: Name of the field used for correlation ids.
+    component_field: Name of the field used for component identifiers.
+
+    Outputs
+    Immutable container for log field names.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Used by `StructuredFormatter` and `StructuredLogger`.
+
+    Why this exists
+    Keeps log field names configurable and consistent.
     """
 
     event_field: str
@@ -48,22 +79,51 @@ class LoggingFields:
 
 class StructuredFormatter(logging.Formatter):
     """
-    Purpose: Render structured log records as JSON strings.
-    Ties: Used by configure_logging_once to standardize log output.
-    Inputs: Uses LogRecord data and a redaction config.
-    Outputs: JSON text for each log line.
-    Side effects: None.
-    Why: Structured logs are easier to parse and safer to ship to log pipelines.
+    Summary
+    Render structured log records as JSON strings.
+
+    Inputs
+    Uses `logging.LogRecord` data and a redaction config.
+
+    Outputs
+    JSON text for each log line.
+
+    Side effects
+    None.
+
+    Error handling
+    Never raises during formatting; returns a fallback JSON line when rendering fails.
+
+    Ties to other methods
+    Used by `configure_logging_once` to standardize log output.
+
+    Why this exists
+    Structured logs are easier to parse and safer to ship to log pipelines.
     """
 
     def __init__(self, redaction: RedactionConfig, fields: LoggingFields) -> None:
         """
-        Purpose: Initialize the formatter with redaction settings.
-        Ties: Used by StructuredLogger initialization.
-        Inputs: redaction config with keys and replacement text, fields controls log field names.
-        Outputs: None.
-        Side effects: None.
-        Why: Ensures secrets are redacted consistently.
+        Summary
+        Initialize the formatter with redaction settings.
+
+        Inputs
+        redaction: Redaction config with keys and replacement text.
+        fields: Field name configuration for structured logs.
+
+        Outputs
+        None.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when initialization fails.
+
+        Ties to other methods
+        Used by `configure_logging_once` and `StructuredLogger`.
+
+        Why this exists
+        Ensures secrets are redacted consistently.
         """
         try:
             super().__init__()
@@ -78,12 +138,26 @@ class StructuredFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         """
-        Purpose: Convert a LogRecord into a JSON string.
-        Ties: Called by logging handlers for each record.
-        Inputs: record contains message, level, and extra fields.
-        Outputs: JSON log line as string.
-        Side effects: None.
-        Why: Ensures consistent structured output for all logs.
+        Summary
+        Convert a LogRecord into a JSON string.
+
+        Inputs
+        record: Log record containing message, level, and extra fields.
+
+        Outputs
+        JSON log line as string.
+
+        Side effects
+        None.
+
+        Error handling
+        Never raises; returns a fallback JSON object when formatting fails.
+
+        Ties to other methods
+        Called by logging handlers for each record.
+
+        Why this exists
+        Ensures consistent structured output for all logs.
         """
         try:
             payload: dict[str, JsonValue] = {
@@ -114,22 +188,54 @@ class StructuredFormatter(logging.Formatter):
 
 class StructuredLogger:
     """
-    Purpose: Emit structured logs with consistent fields and redaction.
-    Ties: Used across diagnostics and app modules for observability.
-    Inputs: name for logger, redaction config for payloads, fields for log field names.
-    Outputs: Logging methods that emit JSON log records.
-    Side effects: Writes to configured logging handlers.
-    Why: Standardized logs support debugging and safe telemetry without secrets.
+    Summary
+    Emit structured logs with consistent fields and redaction.
+
+    Inputs
+    name: Logger name.
+    redaction: Redaction config for payloads.
+    fields: Log field name configuration.
+
+    Outputs
+    Logging methods that emit structured log records.
+
+    Side effects
+    Writes to configured logging handlers.
+
+    Error handling
+    Methods either raise `RuntimeError` with module and method context or fall back to plain error logs when needed.
+
+    Ties to other methods
+    Used across diagnostics and app modules for observability.
+
+    Why this exists
+    Standardized logs support debugging and safe telemetry without secrets.
     """
 
     def __init__(self, name: str, redaction: RedactionConfig, fields: LoggingFields) -> None:
         """
-        Purpose: Initialize a StructuredLogger instance.
-        Ties: Called by get_structured_logger.
-        Inputs: name is the logger name, redaction controls secret scrubbing, fields control log field names.
-        Outputs: None.
-        Side effects: None.
-        Why: Wraps a standard logger with structured logging helpers.
+        Summary
+        Initialize a StructuredLogger instance.
+
+        Inputs
+        name: Logger name.
+        redaction: Secret scrubbing rules.
+        fields: Log field name configuration.
+
+        Outputs
+        None.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when initialization fails.
+
+        Ties to other methods
+        Used by `get_diagnostics_logger` and other entrypoints to build loggers.
+
+        Why this exists
+        Wraps a standard logger with structured logging helpers.
         """
         try:
             self._logger = logging.getLogger(name)
@@ -150,12 +256,30 @@ class StructuredLogger:
         payload: Mapping[str, JsonValue] | None = None,
     ) -> None:
         """
-        Purpose: Emit a structured log record with context and payload.
-        Ties: Used by diagnostics and core utilities for consistent logging.
-        Inputs: level is logging level, message is text, event is event id, context holds metadata.
-        Outputs: None.
-        Side effects: Writes to logging handlers.
-        Why: Centralizes structured logging behavior for safety and consistency.
+        Summary
+        Emit a structured log record with context and payload.
+
+        Inputs
+        level: Logging level.
+        message: Log line message.
+        event: Stable event id.
+        context: Logging context metadata.
+        payload: Optional payload dict.
+
+        Outputs
+        None.
+
+        Side effects
+        Writes to logging handlers.
+
+        Error handling
+        Never raises; logs a fallback error message when emitting the structured record fails.
+
+        Ties to other methods
+        Used by diagnostics and core utilities for consistent logging.
+
+        Why this exists
+        Centralizes structured logging behavior for safety and consistency.
         """
         try:
             extra: dict[str, object] = {
@@ -179,12 +303,29 @@ class StructuredLogger:
         payload: Mapping[str, JsonValue] | None = None,
     ) -> None:
         """
-        Purpose: Emit a debug log entry.
-        Ties: Used by diagnostics to trace execution details.
-        Inputs: message text, event id, context metadata, optional payload.
-        Outputs: None.
-        Side effects: Writes to logging handlers.
-        Why: Debug logs aid deep troubleshooting without cluttering info logs.
+        Summary
+        Emit a debug log entry.
+
+        Inputs
+        message: Log line message.
+        event: Stable event id.
+        context: Logging context metadata.
+        payload: Optional payload dict.
+
+        Outputs
+        None.
+
+        Side effects
+        Writes to logging handlers.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when emitting fails unexpectedly.
+
+        Ties to other methods
+        Thin wrapper around `StructuredLogger.log`.
+
+        Why this exists
+        Debug logs aid deep troubleshooting without cluttering info logs.
         """
         try:
             self.log(logging.DEBUG, message, event=event, context=context, payload=payload)
@@ -202,12 +343,29 @@ class StructuredLogger:
         payload: Mapping[str, JsonValue] | None = None,
     ) -> None:
         """
-        Purpose: Emit an info log entry.
-        Ties: Used for high level state changes and key events.
-        Inputs: message text, event id, context metadata, optional payload.
-        Outputs: None.
-        Side effects: Writes to logging handlers.
-        Why: Info logs give a readable operational timeline.
+        Summary
+        Emit an info log entry.
+
+        Inputs
+        message: Log line message.
+        event: Stable event id.
+        context: Logging context metadata.
+        payload: Optional payload dict.
+
+        Outputs
+        None.
+
+        Side effects
+        Writes to logging handlers.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when emitting fails unexpectedly.
+
+        Ties to other methods
+        Thin wrapper around `StructuredLogger.log`.
+
+        Why this exists
+        Info logs give a readable operational timeline.
         """
         try:
             self.log(logging.INFO, message, event=event, context=context, payload=payload)
@@ -225,12 +383,29 @@ class StructuredLogger:
         payload: Mapping[str, JsonValue] | None = None,
     ) -> None:
         """
-        Purpose: Emit a warning log entry.
-        Ties: Used for recoverable problems.
-        Inputs: message text, event id, context metadata, optional payload.
-        Outputs: None.
-        Side effects: Writes to logging handlers.
-        Why: Warnings surface issues without aborting workflows.
+        Summary
+        Emit a warning log entry.
+
+        Inputs
+        message: Log line message.
+        event: Stable event id.
+        context: Logging context metadata.
+        payload: Optional payload dict.
+
+        Outputs
+        None.
+
+        Side effects
+        Writes to logging handlers.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when emitting fails unexpectedly.
+
+        Ties to other methods
+        Thin wrapper around `StructuredLogger.log`.
+
+        Why this exists
+        Warnings surface issues without aborting workflows.
         """
         try:
             self.log(logging.WARNING, message, event=event, context=context, payload=payload)
@@ -248,12 +423,29 @@ class StructuredLogger:
         payload: Mapping[str, JsonValue] | None = None,
     ) -> None:
         """
-        Purpose: Emit an error log entry.
-        Ties: Used for failures that require attention.
-        Inputs: message text, event id, context metadata, optional payload.
-        Outputs: None.
-        Side effects: Writes to logging handlers.
-        Why: Error logs capture actionable failure details.
+        Summary
+        Emit an error log entry.
+
+        Inputs
+        message: Log line message.
+        event: Stable event id.
+        context: Logging context metadata.
+        payload: Optional payload dict.
+
+        Outputs
+        None.
+
+        Side effects
+        Writes to logging handlers.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when emitting fails unexpectedly.
+
+        Ties to other methods
+        Thin wrapper around `StructuredLogger.log`.
+
+        Why this exists
+        Error logs capture actionable failure details.
         """
         try:
             self.log(logging.ERROR, message, event=event, context=context, payload=payload)
@@ -322,12 +514,26 @@ def configure_logging_once(
 
 def new_correlation_id() -> str:
     """
-    Purpose: Generate a new correlation id for traceable logging.
-    Ties: Used by entrypoints and diagnostics to correlate log lines.
-    Inputs: None.
-    Outputs: A new correlation id string.
-    Side effects: None.
-    Why: Correlation ids make it easy to follow workflows in logs.
+    Summary
+    Generate a new correlation id for traceable logging.
+
+    Inputs
+    None.
+
+    Outputs
+    A new correlation id string.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when uuid generation fails unexpectedly.
+
+    Ties to other methods
+    Used by entrypoints and diagnostics to correlate log lines.
+
+    Why this exists
+    Correlation ids make it easy to follow workflows in logs.
     """
     try:
         return uuid4().hex
@@ -339,12 +545,27 @@ def new_correlation_id() -> str:
 
 def _redact_dict(payload: Mapping[str, JsonValue], redaction: RedactionConfig) -> dict[str, JsonValue]:
     """
-    Purpose: Redact sensitive keys in a payload recursively.
-    Ties: Used by StructuredFormatter before logging payloads.
-    Inputs: payload mapping and redaction config.
-    Outputs: Redacted payload dict.
-    Side effects: None.
-    Why: Prevents secrets from reaching logs.
+    Summary
+    Redact sensitive keys in a payload recursively.
+
+    Inputs
+    payload: Payload mapping.
+    redaction: Redaction config.
+
+    Outputs
+    Redacted payload dict.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when redaction fails unexpectedly.
+
+    Ties to other methods
+    Used by `StructuredFormatter` before logging payloads.
+
+    Why this exists
+    Prevents secrets from reaching logs.
     """
     try:
         return _redact_mapping(dict(payload), redaction)
@@ -356,12 +577,27 @@ def _redact_dict(payload: Mapping[str, JsonValue], redaction: RedactionConfig) -
 
 def _redact_mapping(payload: dict[str, JsonValue], redaction: RedactionConfig) -> dict[str, JsonValue]:
     """
-    Purpose: Redact a mutable payload mapping.
-    Ties: Called by _redact_dict to process nested structures.
-    Inputs: payload dict and redaction config.
-    Outputs: Redacted payload dict.
-    Side effects: None.
-    Why: Keeps redaction logic separate and reusable.
+    Summary
+    Redact a mutable payload mapping.
+
+    Inputs
+    payload: Mutable payload dict.
+    redaction: Redaction config.
+
+    Outputs
+    Redacted payload dict.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when redaction fails unexpectedly.
+
+    Ties to other methods
+    Called by `_redact_dict` to process nested structures.
+
+    Why this exists
+    Keeps redaction logic separate and reusable.
     """
     try:
         out: dict[str, JsonValue] = {}
@@ -383,12 +619,27 @@ def _redact_mapping(payload: dict[str, JsonValue], redaction: RedactionConfig) -
 
 def _redact_list(values: list[JsonValue], redaction: RedactionConfig) -> list[JsonValue]:
     """
-    Purpose: Redact list payloads recursively.
-    Ties: Used by _redact_mapping to handle list values.
-    Inputs: values list and redaction config.
-    Outputs: Redacted list of JsonValue items.
-    Side effects: None.
-    Why: Ensures redaction applies to nested structures too.
+    Summary
+    Redact list payloads recursively.
+
+    Inputs
+    values: List of JsonValue items.
+    redaction: Redaction config.
+
+    Outputs
+    Redacted list of JsonValue items.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when redaction fails unexpectedly.
+
+    Ties to other methods
+    Used by `_redact_mapping` to handle list values.
+
+    Why this exists
+    Ensures redaction applies to nested structures too.
     """
     try:
         redacted: list[JsonValue] = []

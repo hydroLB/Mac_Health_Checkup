@@ -11,12 +11,26 @@ MODULE_PATH = "mac_health_checkup/app/gui/sections/display/parsing.py"
 
 def _parse_raw_display_rows(raw: str) -> list[tuple[str, str, str, str, str]]:
     """
-    Purpose: Parse raw display output into normalized row tuples.
-    Ties: Used by display section and tests.
-    Inputs: raw is system_profiler SPDisplaysDataType output.
-    Outputs: List of tuples (name, resolution, mirror, connection, refresh).
-    Side effects: None.
-    Why: Normalizes display output for consistent table rendering.
+    Summary
+    Parse raw display output into normalized row tuples.
+
+    Inputs
+    raw: system_profiler SPDisplaysDataType output.
+
+    Outputs
+    List of tuples (name, resolution, mirror, connection, refresh).
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by the display section and tests.
+
+    Why this exists
+    Normalizes display output for consistent table rendering.
     """
     try:
         rows: list[tuple[str, str, str, str, str]] = []
@@ -107,12 +121,26 @@ def _parse_raw_display_rows(raw: str) -> list[tuple[str, str, str, str, str]]:
 
 def _parse_raw_display_rows_legacy(raw: str) -> list[tuple[str, str, str, str, str]]:
     """
-    Purpose: Fallback parser for older/simplified system_profiler output that lacks a Displays: section.
-    Ties: Used by _parse_raw_display_rows when the primary parser yields no rows.
-    Inputs: raw text.
-    Outputs: Normalized display rows.
-    Side effects: None.
-    Why: Some macOS versions emit display blocks directly under Graphics/Displays without an explicit Displays header.
+    Summary
+    Fallback parser for older or simplified system_profiler output that lacks a Displays section.
+
+    Inputs
+    raw: Raw system_profiler text.
+
+    Outputs
+    Normalized display rows.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by `_parse_raw_display_rows` when the primary parser yields no rows.
+
+    Why this exists
+    Some macOS versions emit display blocks directly under Graphics/Displays without an explicit Displays header.
     """
     try:
         rows: list[tuple[str, str, str, str, str]] = []
@@ -191,12 +219,26 @@ def _parse_raw_display_rows_legacy(raw: str) -> list[tuple[str, str, str, str, s
 
 def _parse_ioreg_display_rows(raw: str) -> list[tuple[str, str, str, str, str, str]]:
     """
-    Purpose: Parse IORegistry display blocks into normalized row tuples.
-    Ties: Used by the display section when system_profiler does not expose per-display inventory.
-    Inputs: raw is `ioreg -lw0 -r -c IOMobileFramebufferShim` output.
-    Outputs: List of tuples (name, resolution, mirror, connection, refresh, transport).
-    Side effects: None.
-    Why: Newer macOS builds may omit display details from SPDisplaysDataType; IORegistry remains a reliable source.
+    Summary
+    Parse IORegistry display blocks into normalized row tuples.
+
+    Inputs
+    raw: `ioreg -lw0 -r -c IOMobileFramebufferShim` output.
+
+    Outputs
+    List of tuples (name, resolution, mirror, connection, refresh, transport).
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by the display section when system_profiler does not expose per-display inventory.
+
+    Why this exists
+    Newer macOS builds may omit display details from SPDisplaysDataType; IORegistry remains a reliable source.
     """
     try:
         blocks = _split_ioreg_blocks(raw, marker="IOMobileFramebufferShim")
@@ -232,12 +274,27 @@ def _parse_ioreg_display_rows(raw: str) -> list[tuple[str, str, str, str, str, s
 
 def _split_ioreg_blocks(raw: str, *, marker: str) -> list[str]:
     """
-    Purpose: Split ioreg output into per-object blocks by a marker string.
-    Ties: Used by ioreg parsing helpers.
-    Inputs: raw is ioreg output, marker identifies the service class to split on.
-    Outputs: List of per-object block strings.
-    Side effects: None.
-    Why: ioreg output is a text tree; splitting enables deterministic parsing without external dependencies.
+    Summary
+    Split ioreg output into per-object blocks by a marker string.
+
+    Inputs
+    raw: ioreg output.
+    marker: Service class marker used to split objects.
+
+    Outputs
+    List of per-object block strings.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when splitting fails unexpectedly.
+
+    Ties to other methods
+    Used by ioreg parsing helpers.
+
+    Why this exists
+    ioreg output is a text tree; splitting enables deterministic parsing without external dependencies.
     """
     try:
         blocks: list[list[str]] = []
@@ -261,12 +318,27 @@ def _split_ioreg_blocks(raw: str, *, marker: str) -> list[str]:
 
 def _extract_ioreg_int(block: str, needle: str) -> int | None:
     """
-    Purpose: Extract an integer property from an ioreg block using a simple substring needle.
-    Ties: Used by _parse_ioreg_display_rows.
-    Inputs: block string and needle prefix such as '"DisplayWidth" ='.
-    Outputs: Integer value or None.
-    Side effects: None.
-    Why: Avoids fragile full-grammar parsing of ioreg while remaining deterministic.
+    Summary
+    Extract an integer property from an ioreg block using a simple substring needle.
+
+    Inputs
+    block: Block string.
+    needle: Needle prefix such as '"DisplayWidth" ='.
+
+    Outputs
+    Integer value or None.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when extraction fails unexpectedly.
+
+    Ties to other methods
+    Used by `_parse_ioreg_display_rows`.
+
+    Why this exists
+    Avoids fragile full-grammar parsing of ioreg while remaining deterministic.
     """
     try:
         for line in block.splitlines():
@@ -285,12 +357,27 @@ def _extract_ioreg_int(block: str, needle: str) -> int | None:
 
 def _extract_ioreg_str(block: str, needle: str) -> str | None:
     """
-    Purpose: Extract a quoted string property from an ioreg block.
-    Ties: Used by _parse_ioreg_display_rows.
-    Inputs: block string and needle prefix such as '"EDID UUID" ='.
-    Outputs: String value or None.
-    Side effects: None.
-    Why: Provides a stable fallback identifier for external displays.
+    Summary
+    Extract a quoted string property from an ioreg block.
+
+    Inputs
+    block: Block string.
+    needle: Needle prefix such as '"EDID UUID" ='.
+
+    Outputs
+    String value or None.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when extraction fails unexpectedly.
+
+    Ties to other methods
+    Used by `_parse_ioreg_display_rows`.
+
+    Why this exists
+    Provides a stable fallback identifier for external displays.
     """
     try:
         for line in block.splitlines():
@@ -308,12 +395,27 @@ def _extract_ioreg_str(block: str, needle: str) -> str | None:
 
 def _extract_ioreg_yes_no(block: str, needle: str) -> bool | None:
     """
-    Purpose: Extract a Yes/No boolean property from an ioreg block.
-    Ties: Used by _parse_ioreg_display_rows.
-    Inputs: block string and needle prefix such as '"external" ='.
-    Outputs: True/False or None when missing.
-    Side effects: None.
-    Why: ioreg represents booleans as Yes/No in text mode; this normalizes for logic.
+    Summary
+    Extract a Yes/No boolean property from an ioreg block.
+
+    Inputs
+    block: Block string.
+    needle: Needle prefix such as '"external" ='.
+
+    Outputs
+    True, false, or None when missing.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when extraction fails unexpectedly.
+
+    Ties to other methods
+    Used by `_parse_ioreg_display_rows`.
+
+    Why this exists
+    ioreg represents booleans as Yes/No in text mode; this normalizes for logic.
     """
     try:
         for line in block.splitlines():
@@ -333,12 +435,26 @@ def _extract_ioreg_yes_no(block: str, needle: str) -> bool | None:
 
 def _extract_refresh_hz_from_ioreg_block(block: str) -> str | None:
     """
-    Purpose: Extract a refresh rate string from an ioreg display block.
-    Ties: Used by _parse_ioreg_display_rows.
-    Inputs: block string.
-    Outputs: Refresh string like "120 Hz" or None.
-    Side effects: None.
-    Why: ioreg timing elements encode refresh as fixed-point values; extracting it provides a useful UI column.
+    Summary
+    Extract a refresh rate string from an ioreg display block.
+
+    Inputs
+    block: Block string.
+
+    Outputs
+    Refresh string like "120 Hz" or None.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when extraction fails unexpectedly.
+
+    Ties to other methods
+    Used by `_parse_ioreg_display_rows`.
+
+    Why this exists
+    ioreg timing elements encode refresh as fixed-point values; extracting it provides a useful UI column.
     """
     try:
         anchor = block.find('"PreferredTimingElements"')

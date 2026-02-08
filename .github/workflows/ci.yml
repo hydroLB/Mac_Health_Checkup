@@ -4,10 +4,17 @@ on:
   push:
     branches: ["main"]
   pull_request:
+  merge_group:
+
+permissions:
+  contents: read
 
 jobs:
   quality:
     runs-on: macos-latest
+    env:
+      PYTHONPATH: .
+      PIP_AUDIT_CACHE_DIR: .local/pip-audit-cache
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,11 +38,31 @@ jobs:
       - name: Typecheck
         run: mypy mac_health_checkup tests
 
+      - name: Docstrings
+        run: python tools/check_docstring_headings.py mac_health_checkup tests
+
+      - name: Config reference
+        run: python tools/generate_config_reference.py --config config/config.json --out docs/config_reference.md --check
+
       - name: Tests
         run: pytest --cov=mac_health_checkup --cov-report=term-missing --cov-report=xml
 
+      - name: Visual regression baseline capture
+        run: python tools/gui_visual_regression.py capture --output-dir .local/visual-regression/baseline
+
+      - name: Visual regression candidate capture
+        run: python tools/gui_visual_regression.py capture --output-dir .local/visual-regression/candidate
+
+      - name: Visual regression diff gate
+        run: |
+          python tools/gui_visual_regression.py diff \
+            --before-dir .local/visual-regression/baseline \
+            --after-dir .local/visual-regression/candidate \
+            --diff-dir .local/visual-regression/diff \
+            --fail-on-change
+
       - name: Benchmarks
-        run: PYTHONPATH=. python benchmarks/run.py
+        run: python benchmarks/run.py
 
       - name: Security (Bandit)
         run: bandit -r mac_health_checkup

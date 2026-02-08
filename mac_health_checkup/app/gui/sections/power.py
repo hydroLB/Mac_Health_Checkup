@@ -12,12 +12,26 @@ MODULE_PATH = "mac_health_checkup/app/gui/sections/power.py"
 
 def update_section(host: SectionHost) -> JsonDict:
     """
-    Purpose: Update the Power section fields from diagnostics.
-    Ties: Used by dashboard section handler.
-    Inputs: host implements SectionHost.
-    Outputs: Diagnostics dict for the section.
-    Side effects: Updates host metrics table.
-    Why: Keeps power rendering logic isolated.
+    Summary
+    Update the Power section fields from diagnostics.
+
+    Inputs
+    host: SectionHost implementation.
+
+    Outputs
+    Diagnostics dict for the section.
+
+    Side effects
+    Updates host fields and metrics table.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when section rendering fails.
+
+    Ties to other methods
+    Used by the dashboard section handler.
+
+    Why this exists
+    Keeps power rendering logic isolated.
     """
     try:
         adapter = PowerAdapterDiagnostics.fetch()

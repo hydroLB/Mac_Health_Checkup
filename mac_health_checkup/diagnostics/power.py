@@ -14,12 +14,27 @@ MODULE_PATH = "mac_health_checkup/diagnostics/power.py"
 
 class ThermalDiagnostics:
     """
-    Purpose: Collect thermal state signals from the system.
-    Ties: Used by Performance section in the GUI.
-    Inputs: None. Executes pmset.
-    Outputs: Dict with thermal state and raw output.
-    Side effects: Executes pmset.
-    Why: Provides a lightweight thermal state signal.
+    Summary
+    Collect thermal state signals from the system.
+
+    Inputs
+    None. Executes pmset.
+
+    Outputs
+    Dict with thermal state and raw output.
+
+    Side effects
+    Executes pmset.
+
+    Error handling
+    Returns unknown state when output is missing; raises `RuntimeError` with module and method context when parsing
+    fails unexpectedly.
+
+    Ties to other methods
+    Used by the Performance section in the GUI.
+
+    Why this exists
+    Provides a lightweight thermal state signal.
     """
 
     _cache = Cache(get_config().timeouts.performance_cache_ttl)
@@ -27,12 +42,26 @@ class ThermalDiagnostics:
     @staticmethod
     def fetch() -> JsonDict:
         """
-        Purpose: Fetch thermal state with caching.
-        Ties: Used by performance section handler.
-        Inputs: None.
-        Outputs: Dict with thermal state and raw output.
-        Side effects: Executes pmset.
-        Why: Avoids repeated thermal polling.
+        Summary
+        Fetch thermal state with caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with thermal state and raw output.
+
+        Side effects
+        Executes pmset when the cache is stale.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when caching fails unexpectedly.
+
+        Ties to other methods
+        Used by performance section handler.
+
+        Why this exists
+        Avoids repeated thermal polling.
         """
         try:
             return cached_fetch(ThermalDiagnostics._cache, "thermal", ThermalDiagnostics._fetch_uncached)
@@ -44,12 +73,26 @@ class ThermalDiagnostics:
     @staticmethod
     def _fetch_uncached() -> JsonDict:
         """
-        Purpose: Fetch thermal state without caching.
-        Ties: Used by cached_fetch.
-        Inputs: None.
-        Outputs: Dict with thermal state and raw output.
-        Side effects: Executes pmset.
-        Why: Separates IO from caching logic for testing.
+        Summary
+        Fetch thermal state without caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with thermal state and raw output.
+
+        Side effects
+        Executes pmset.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+        Ties to other methods
+        Used by `cached_fetch`.
+
+        Why this exists
+        Separates IO from caching logic for testing.
         """
         try:
             logger = get_diagnostics_logger()
@@ -78,12 +121,27 @@ class ThermalDiagnostics:
 
 class PowerResidencyDiagnostics:
     """
-    Purpose: Collect power residency and power draw metrics.
-    Ties: Used by Performance section in the GUI.
-    Inputs: None. Executes powermetrics.
-    Outputs: Dict with CPU and GPU power stats.
-    Side effects: Executes powermetrics.
-    Why: Provides a snapshot of current power use.
+    Summary
+    Collect power residency and power draw metrics.
+
+    Inputs
+    None. Executes powermetrics.
+
+    Outputs
+    Dict with CPU and GPU power stats.
+
+    Side effects
+    Executes powermetrics.
+
+    Error handling
+    Returns ok=false and permission hints when output is missing; raises `RuntimeError` with module and method
+    context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by the Performance section in the GUI.
+
+    Why this exists
+    Provides a snapshot of current power use.
     """
 
     _cache = Cache(get_config().timeouts.performance_cache_ttl)
@@ -91,12 +149,26 @@ class PowerResidencyDiagnostics:
     @staticmethod
     def fetch() -> JsonDict:
         """
-        Purpose: Fetch power residency metrics with caching.
-        Ties: Used by performance section handler.
-        Inputs: None.
-        Outputs: Dict with power metrics.
-        Side effects: Executes powermetrics.
-        Why: Avoids repeated powermetrics calls.
+        Summary
+        Fetch power residency metrics with caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with power metrics.
+
+        Side effects
+        Executes powermetrics when the cache is stale.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when caching fails unexpectedly.
+
+        Ties to other methods
+        Used by the performance section handler.
+
+        Why this exists
+        Avoids repeated powermetrics calls.
         """
         try:
             return cached_fetch(
@@ -110,12 +182,26 @@ class PowerResidencyDiagnostics:
     @staticmethod
     def _fetch_uncached() -> JsonDict:
         """
-        Purpose: Fetch power residency metrics without caching.
-        Ties: Used by cached_fetch.
-        Inputs: None.
-        Outputs: Dict with power metrics.
-        Side effects: Executes powermetrics.
-        Why: Separates IO from caching logic for testing.
+        Summary
+        Fetch power residency metrics without caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with power metrics.
+
+        Side effects
+        Executes powermetrics.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+        Ties to other methods
+        Used by `cached_fetch`.
+
+        Why this exists
+        Separates IO from caching logic for testing.
         """
         try:
             logger = get_diagnostics_logger()
@@ -161,12 +247,27 @@ class PowerResidencyDiagnostics:
 
 class PowerAdapterDiagnostics:
     """
-    Purpose: Collect power adapter metrics from system_profiler.
-    Ties: Used by Power section in the GUI.
-    Inputs: None. Executes system_profiler.
-    Outputs: Dict with adapter watts, voltage, current, charging state.
-    Side effects: Executes system_profiler.
-    Why: Provides charging state and adapter capacity details.
+    Summary
+    Collect power adapter metrics from system_profiler.
+
+    Inputs
+    None. Executes system_profiler.
+
+    Outputs
+    Dict with adapter watts, voltage, current, charging state.
+
+    Side effects
+    Executes system_profiler.
+
+    Error handling
+    Returns unknown adapter values when output is missing; raises `RuntimeError` with module and method context when
+    parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by the Power section in the GUI.
+
+    Why this exists
+    Provides charging state and adapter capacity details.
     """
 
     _cache = Cache(get_config().timeouts.power_sp_cache_ttl)
@@ -174,12 +275,26 @@ class PowerAdapterDiagnostics:
     @staticmethod
     def fetch() -> JsonDict:
         """
-        Purpose: Fetch adapter data with caching.
-        Ties: Used by Power section handler.
-        Inputs: None.
-        Outputs: Dict with adapter metrics.
-        Side effects: Executes system_profiler.
-        Why: Avoids repeated adapter queries.
+        Summary
+        Fetch adapter data with caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with adapter metrics.
+
+        Side effects
+        Executes system_profiler when the cache is stale.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when caching fails unexpectedly.
+
+        Ties to other methods
+        Used by the Power section handler.
+
+        Why this exists
+        Avoids repeated adapter queries.
         """
         try:
             return cached_fetch(
@@ -193,12 +308,26 @@ class PowerAdapterDiagnostics:
     @staticmethod
     def _fetch_uncached() -> JsonDict:
         """
-        Purpose: Fetch adapter data without caching.
-        Ties: Used by cached_fetch.
-        Inputs: None.
-        Outputs: Dict with adapter metrics.
-        Side effects: Executes system_profiler.
-        Why: Separates IO from caching logic for testing.
+        Summary
+        Fetch adapter data without caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with adapter metrics.
+
+        Side effects
+        Executes system_profiler.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+        Ties to other methods
+        Used by `cached_fetch`.
+
+        Why this exists
+        Separates IO from caching logic for testing.
         """
         try:
             logger = get_diagnostics_logger()
@@ -239,12 +368,27 @@ class PowerAdapterDiagnostics:
 
 class USBPowerDiagnostics:
     """
-    Purpose: Collect USB power headroom from system_profiler.
-    Ties: Used by Power section in the GUI.
-    Inputs: None. Executes system_profiler.
-    Outputs: Dict with hub power headroom entries.
-    Side effects: Executes system_profiler.
-    Why: Provides visibility into USB power availability.
+    Summary
+    Collect USB power headroom from system_profiler.
+
+    Inputs
+    None. Executes system_profiler.
+
+    Outputs
+    Dict with hub power headroom entries.
+
+    Side effects
+    Executes system_profiler.
+
+    Error handling
+    Returns empty hubs when output is missing; raises `RuntimeError` with module and method context when parsing fails
+    unexpectedly.
+
+    Ties to other methods
+    Used by the Power section in the GUI.
+
+    Why this exists
+    Provides visibility into USB power availability.
     """
 
     _cache = Cache(get_config().timeouts.power_sp_cache_ttl)
@@ -252,12 +396,26 @@ class USBPowerDiagnostics:
     @staticmethod
     def fetch() -> JsonDict:
         """
-        Purpose: Fetch USB power info with caching.
-        Ties: Used by Power section handler.
-        Inputs: None.
-        Outputs: Dict with hub power info.
-        Side effects: Executes system_profiler.
-        Why: Avoids repeated USB power queries.
+        Summary
+        Fetch USB power info with caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with hub power info.
+
+        Side effects
+        Executes system_profiler when the cache is stale.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when caching fails unexpectedly.
+
+        Ties to other methods
+        Used by the Power section handler.
+
+        Why this exists
+        Avoids repeated USB power queries.
         """
         try:
             return cached_fetch(USBPowerDiagnostics._cache, "usb_power", USBPowerDiagnostics._fetch_uncached)
@@ -269,12 +427,26 @@ class USBPowerDiagnostics:
     @staticmethod
     def _fetch_uncached() -> JsonDict:
         """
-        Purpose: Fetch USB power info without caching.
-        Ties: Used by cached_fetch.
-        Inputs: None.
-        Outputs: Dict with hub power info.
-        Side effects: Executes system_profiler.
-        Why: Separates IO from caching logic for testing.
+        Summary
+        Fetch USB power info without caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with hub power info.
+
+        Side effects
+        Executes system_profiler.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+        Ties to other methods
+        Used by `cached_fetch`.
+
+        Why this exists
+        Separates IO from caching logic for testing.
         """
         try:
             logger = get_diagnostics_logger()
@@ -300,12 +472,26 @@ class USBPowerDiagnostics:
 
 def _parse_thermal_state(raw: str) -> str:
     """
-    Purpose: Parse thermal state from pmset output.
-    Ties: Used by ThermalDiagnostics.
-    Inputs: raw pmset output.
-    Outputs: Thermal state string.
-    Side effects: None.
-    Why: Keeps thermal parsing logic isolated.
+    Summary
+    Parse thermal state from pmset output.
+
+    Inputs
+    raw: pmset output.
+
+    Outputs
+    Thermal state string.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by `ThermalDiagnostics`.
+
+    Why this exists
+    Keeps thermal parsing logic isolated.
     """
     try:
         match = re.search(r"Thermal Level:\s*(\w+)", raw, re.IGNORECASE)
@@ -320,12 +506,26 @@ def _parse_thermal_state(raw: str) -> str:
 
 def _parse_charging_state(raw: str) -> bool | None:
     """
-    Purpose: Parse charging state from power output.
-    Ties: Used by PowerAdapterDiagnostics.
-    Inputs: raw system_profiler output.
-    Outputs: True if charging, False if not, None if unknown.
-    Side effects: None.
-    Why: Keeps charging parsing logic isolated.
+    Summary
+    Parse charging state from power output.
+
+    Inputs
+    raw: system_profiler output.
+
+    Outputs
+    True if charging, false if not, None if unknown.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by `PowerAdapterDiagnostics`.
+
+    Why this exists
+    Keeps charging parsing logic isolated.
     """
     try:
         match = re.search(r"Charging:\s*(Yes|No)", raw, re.IGNORECASE)
@@ -340,18 +540,37 @@ def _parse_charging_state(raw: str) -> bool | None:
 
 def _parse_usb_power(raw: str) -> list[JsonDict]:
     """
-    Purpose: Parse USB power headroom entries.
-    Ties: Used by USBPowerDiagnostics.
-    Inputs: raw system_profiler output.
-    Outputs: List of hub dicts with headroom and devices.
-    Side effects: None.
-    Why: Provides a readable USB power breakdown.
+    Summary
+    Parse USB power headroom entries.
+
+    Inputs
+    raw: system_profiler output.
+
+    Outputs
+    List of hub dicts with headroom and devices.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by `USBPowerDiagnostics`.
+
+    Why this exists
+    Provides a readable USB power breakdown.
     """
     try:
         hubs: list[JsonDict] = []
         current_hub: JsonDict | None = None
         current_devices: list[JsonDict] | None = None
         for line in raw.splitlines():
+            if re.match(r"^\s{12,}[^:\n]+:\s*$", line):
+                device_name = line.strip().rstrip(":")
+                if current_hub is not None and current_devices is not None:
+                    current_devices.append({"name": device_name})
+                continue
             if re.match(r"^\s{8,}[^:\n]+:\s*$", line):
                 name = line.strip().rstrip(":")
                 devices: list[JsonDict] = []
@@ -366,11 +585,10 @@ def _parse_usb_power(raw: str) -> list[JsonDict]:
             if available is not None:
                 current_hub["available_ma"] = available
             if required is not None:
-                current_hub["headroom_ma"] = available - required if available is not None else None
-            if re.match(r"^\s{12,}[^:\n]+:\s*$", line):
-                device_name = line.strip().rstrip(":")
-                if current_devices is not None:
-                    current_devices.append({"name": device_name})
+                avail_value = current_hub.get("available_ma")
+                avail_int = int(avail_value) if isinstance(avail_value, int) else None
+                current_hub["required_ma"] = required
+                current_hub["headroom_ma"] = avail_int - required if avail_int is not None else None
         return hubs
     except (RuntimeError, ValueError, TypeError, AttributeError, KeyError) as exc:
         raise RuntimeError(

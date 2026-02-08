@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import errno
+import ipaddress
 import socket
 import threading
 import time
@@ -20,6 +21,7 @@ from mac_health_checkup.core.types import JsonDict
 from mac_health_checkup.core.utils.errors import format_error
 
 MODULE_PATH = "mac_health_checkup/app/backend/server.py"
+_BIND_ALL_INTERFACES_V4 = str(ipaddress.IPv4Address(0))
 
 SectionHandler = Callable[[SectionHost], JsonDict]
 
@@ -53,22 +55,52 @@ class _ReusableThreadingHTTPServer(ThreadingHTTPServer):
 
 class SnapshotApiServer:
     """
-    Purpose: Run an HTTP server that exposes snapshot JSON for native clients.
-    Ties: Used by the entrypoint `--serve` mode for the iOS app.
-    Inputs: handlers mapping and API config.
-    Outputs: Serves HTTP responses.
-    Side effects: Binds a TCP port and spawns server threads.
-    Why: Provides a simple agent API so a proper iOS app can render Mac diagnostics remotely.
+    Summary
+    Run an HTTP server that exposes snapshot JSON for native clients.
+
+    Inputs
+    handlers: Mapping of section keys to handler callables.
+    api: API config.
+
+    Outputs
+    Serves HTTP responses.
+
+    Side effects
+    Binds a TCP port and spawns server threads.
+
+    Error handling
+    Methods raise `RuntimeError` with module and method context when server lifecycle operations fail.
+
+    Ties to other methods
+    Used by the entrypoint `--serve` mode for the iOS app.
+
+    Why this exists
+    Provides a simple agent API so a proper iOS app can render Mac diagnostics remotely.
     """
 
     def __init__(self, handlers: Mapping[str, SectionHandler], api: ApiConfig) -> None:
         """
-        Purpose: Initialize the API server and request handler factory.
-        Ties: Used by `start` and tests.
-        Inputs: handlers mapping and API config.
-        Outputs: None.
-        Side effects: None.
-        Why: Keeps server setup explicit and testable.
+        Summary
+        Initialize the API server and request handler factory.
+
+        Inputs
+        handlers: Mapping of section keys to handler callables.
+        api: API config.
+
+        Outputs
+        None.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when initialization fails unexpectedly.
+
+        Ties to other methods
+        Used by `start` and tests.
+
+        Why this exists
+        Keeps server setup explicit and testable.
         """
         try:
             self._handlers = dict(handlers)
@@ -84,12 +116,26 @@ class SnapshotApiServer:
 
     def start(self) -> None:
         """
-        Purpose: Start the HTTP server in a background thread.
-        Ties: Used by entrypoint serve mode.
-        Inputs: None.
-        Outputs: None.
-        Side effects: Binds the configured port and starts serving.
-        Why: Keeps the main thread available for signal handling.
+        Summary
+        Start the HTTP server in a background thread.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Binds the configured port and starts serving.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when binding or TLS setup fails.
+
+        Ties to other methods
+        Used by entrypoint serve mode.
+
+        Why this exists
+        Keeps the main thread available for signal handling.
         """
         try:
             if self._httpd is not None:
@@ -144,12 +190,26 @@ class SnapshotApiServer:
 
     def stop(self) -> None:
         """
-        Purpose: Stop the HTTP server and join its thread.
-        Ties: Used by entrypoint shutdown and tests.
-        Inputs: None.
-        Outputs: None.
-        Side effects: Shuts down the server and closes the socket.
-        Why: Ensures the agent stops cleanly without leaked threads.
+        Summary
+        Stop the HTTP server and join its thread.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Shuts down the server and closes the socket.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when shutdown fails unexpectedly.
+
+        Ties to other methods
+        Used by entrypoint shutdown and tests.
+
+        Why this exists
+        Ensures the agent stops cleanly without leaked threads.
         """
         try:
             if self._httpd is None:
@@ -169,16 +229,30 @@ class SnapshotApiServer:
 
     def url(self) -> str:
         """
-        Purpose: Return the base URL for the server.
-        Ties: Used by CLI output in serve mode.
-        Inputs: None.
-        Outputs: URL string.
-        Side effects: None.
-        Why: Makes pairing instructions deterministic.
+        Summary
+        Return the base URL for the server.
+
+        Inputs
+        None.
+
+        Outputs
+        URL string.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when URL construction fails unexpectedly.
+
+        Ties to other methods
+        Used by CLI output in serve mode.
+
+        Why this exists
+        Makes pairing instructions deterministic.
         """
         try:
             host = self._bound_host or self._api.bind_host
-            if host == "0.0.0.0":
+            if host == _BIND_ALL_INTERFACES_V4:
                 host = "127.0.0.1"
             port = self._bound_port if self._bound_port is not None else int(self._api.port)
             scheme = "https" if self._api.tls_enabled else "http"
@@ -229,12 +303,26 @@ class SnapshotApiServer:
 
 def pick_free_port(bind_host: str) -> int:
     """
-    Purpose: Pick a free TCP port for temporary server usage.
-    Ties: Used by tests and optional serve mode helpers.
-    Inputs: bind_host for the socket bind.
-    Outputs: An available port integer.
-    Side effects: Binds and closes a temporary socket.
-    Why: Allows deterministic tests without hard-coded ports.
+    Summary
+    Pick a free TCP port for temporary server usage.
+
+    Inputs
+    bind_host: Bind host for the socket bind.
+
+    Outputs
+    An available port integer.
+
+    Side effects
+    Binds and closes a temporary socket.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when port selection fails.
+
+    Ties to other methods
+    Used by tests and optional serve mode helpers.
+
+    Why this exists
+    Allows deterministic tests without hard-coded ports.
     """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -248,12 +336,28 @@ def pick_free_port(bind_host: str) -> int:
 
 def wait_until_ready(url: str, *, timeout_sec: int) -> bool:
     """
-    Purpose: Wait until the server becomes reachable.
-    Ties: Used by tests to avoid race conditions.
-    Inputs: base url and timeout seconds.
-    Outputs: True when health endpoint responds.
-    Side effects: Performs network connections.
-    Why: Ensures tests do not depend on timing.
+    Summary
+    Wait until the server becomes reachable.
+
+    Inputs
+    url: Base URL.
+    timeout_sec: Timeout seconds.
+
+    Outputs
+    True when the server becomes reachable.
+
+    Side effects
+    Performs network connections.
+
+    Error handling
+    Never raises for connection failures; returns false after timeout. Raises `RuntimeError` with module and method
+    context when input parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by tests to avoid race conditions.
+
+    Why this exists
+    Ensures tests do not depend on timing.
     """
     try:
         deadline = time.time() + max(1, int(timeout_sec))

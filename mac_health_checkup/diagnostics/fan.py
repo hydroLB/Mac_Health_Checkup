@@ -18,12 +18,27 @@ FAN_HEADER_RE = re.compile(r"^(\s+)([^:\n]+):\s*$")
 @dataclass(frozen=True)
 class FanReading:
     """
-    Purpose: Represent a fan reading with name and rpm.
-    Ties: Used by FanDiagnostics parsing.
-    Inputs: name label and rpm value.
-    Outputs: Immutable fan reading.
-    Side effects: None.
-    Why: Keeps parsed fan data strongly typed.
+    Summary
+    Represent a fan reading with name and rpm.
+
+    Inputs
+    name: Fan label.
+    rpm: Fan speed.
+
+    Outputs
+    Immutable fan reading.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Produced by `FanDiagnostics` parsing helpers.
+
+    Why this exists
+    Keeps parsed fan data strongly typed.
     """
 
     name: str
@@ -32,12 +47,27 @@ class FanReading:
 
 class FanDiagnostics:
     """
-    Purpose: Collect fan speed and status data.
-    Ties: Used by the Fan section in the GUI.
-    Inputs: None. Executes system_profiler and optional istats.
-    Outputs: Dict with fan list and status.
-    Side effects: Executes system_profiler, may run istats.
-    Why: Provides fan status summary for the dashboard.
+    Summary
+    Collect fan speed and status data.
+
+    Inputs
+    None. Executes system_profiler and optional istats.
+
+    Outputs
+    Dict with fan list and status.
+
+    Side effects
+    Executes system_profiler and may run istats.
+
+    Error handling
+    Returns empty fan lists when tools are unavailable; raises `RuntimeError` with module and method context when
+    parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by the Fan section in the GUI.
+
+    Why this exists
+    Provides fan status summary for the dashboard.
     """
 
     _cache = Cache(get_config().timeouts.performance_cache_ttl)
@@ -45,12 +75,26 @@ class FanDiagnostics:
     @staticmethod
     def fetch() -> JsonDict:
         """
-        Purpose: Fetch fan data with caching.
-        Ties: Used by Fan section handler.
-        Inputs: None.
-        Outputs: Dict with fans list and summary status.
-        Side effects: Executes system_profiler or istats.
-        Why: Avoids repeated IO while keeping fan data fresh.
+        Summary
+        Fetch fan data with caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with fans list and summary status.
+
+        Side effects
+        Executes system_profiler or istats when the cache is stale.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when caching fails unexpectedly.
+
+        Ties to other methods
+        Used by the Fan section handler.
+
+        Why this exists
+        Avoids repeated IO while keeping fan data fresh.
         """
         try:
             return cached_fetch(FanDiagnostics._cache, "fan", FanDiagnostics._fetch_uncached)
@@ -62,12 +106,26 @@ class FanDiagnostics:
     @staticmethod
     def _fetch_uncached() -> JsonDict:
         """
-        Purpose: Fetch fan data without caching.
-        Ties: Used by cached_fetch.
-        Inputs: None.
-        Outputs: Dict with fans list and status.
-        Side effects: Executes system_profiler or istats.
-        Why: Separates IO from caching logic for testing.
+        Summary
+        Fetch fan data without caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with fans list and status.
+
+        Side effects
+        Executes system_profiler or istats.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+        Ties to other methods
+        Used by `cached_fetch`.
+
+        Why this exists
+        Separates IO from caching logic for testing.
         """
         try:
             logger = get_diagnostics_logger()
@@ -91,12 +149,26 @@ class FanDiagnostics:
     @staticmethod
     def _parse_system_profiler(raw: str) -> list[FanReading]:
         """
-        Purpose: Parse fan readings from system_profiler output.
-        Ties: Used by _fetch_uncached.
-        Inputs: raw is system_profiler output.
-        Outputs: List of FanReading values.
-        Side effects: None.
-        Why: Extracts fan data without extra dependencies.
+        Summary
+        Parse fan readings from system_profiler output.
+
+        Inputs
+        raw: system_profiler output.
+
+        Outputs
+        List of FanReading values.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+        Ties to other methods
+        Used by `_fetch_uncached`.
+
+        Why this exists
+        Extracts fan data without extra dependencies.
         """
         try:
             readings: list[FanReading] = []
@@ -122,12 +194,26 @@ class FanDiagnostics:
     @staticmethod
     def _parse_istats() -> list[FanReading]:
         """
-        Purpose: Parse fan readings from istats if available.
-        Ties: Used by _fetch_uncached when system_profiler has no data.
-        Inputs: None.
-        Outputs: List of FanReading values.
-        Side effects: Executes istats.
-        Why: Provides a fallback for fan speed parsing.
+        Summary
+        Parse fan readings from istats if available.
+
+        Inputs
+        None.
+
+        Outputs
+        List of FanReading values.
+
+        Side effects
+        Executes istats.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+        Ties to other methods
+        Used by `_fetch_uncached` when system_profiler has no data.
+
+        Why this exists
+        Provides a fallback for fan speed parsing.
         """
         try:
             timeout = get_config().timeouts.istats_timeout
@@ -152,12 +238,26 @@ class FanDiagnostics:
     @staticmethod
     def _parse_istats_output(out: str) -> list[FanReading]:
         """
-        Purpose: Parse fan speed readings from an istats output blob.
-        Ties: Used by _parse_istats for multiple istats subcommands.
-        Inputs: out is istats stdout text.
-        Outputs: List of FanReading values.
-        Side effects: None.
-        Why: istats supports multiple output shapes (labeled and value-only) across versions.
+        Summary
+        Parse fan speed readings from an istats output blob.
+
+        Inputs
+        out: istats stdout text.
+
+        Outputs
+        List of FanReading values.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+        Ties to other methods
+        Used by `_parse_istats` for multiple istats subcommands.
+
+        Why this exists
+        istats supports multiple output shapes (labeled and value-only) across versions.
         """
         try:
             readings: list[FanReading] = []

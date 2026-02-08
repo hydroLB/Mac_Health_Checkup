@@ -9,12 +9,27 @@ MODULE_PATH = "mac_health_checkup/core/utils/text.py"
 
 def calc_col_widths(headers: tuple[str, ...], rows: Sequence[tuple[str, ...]]) -> tuple[int, ...]:
     """
-    Purpose: Calculate maximum column widths for table rendering.
-    Ties: Used by render_table_parts and GUI sections.
-    Inputs: headers and rows define table content.
-    Outputs: Tuple of integer column widths.
-    Side effects: None.
-    Why: Keeps table alignment consistent across sections.
+    Summary
+    Calculate maximum column widths for table rendering.
+
+    Inputs
+    headers: Header strings.
+    rows: Table rows.
+
+    Outputs
+    Tuple of integer column widths.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when width computation fails.
+
+    Ties to other methods
+    Used by `render_table_parts` and GUI sections.
+
+    Why this exists
+    Keeps table alignment consistent across sections.
     """
     try:
         widths = [len(header) for header in headers]
@@ -31,12 +46,27 @@ def calc_col_widths(headers: tuple[str, ...], rows: Sequence[tuple[str, ...]]) -
 
 def render_table_parts(headers: tuple[str, ...], rows: Sequence[tuple[str, ...]]) -> tuple[str, str]:
     """
-    Purpose: Render table headers and body as aligned text.
-    Ties: Used by display rendering and CLI table output.
-    Inputs: headers and rows are table content.
-    Outputs: Tuple of (header_line, body_text).
-    Side effects: None.
-    Why: Provides a consistent text table rendering utility.
+    Summary
+    Render table headers and body as aligned text.
+
+    Inputs
+    headers: Header strings.
+    rows: Table rows.
+
+    Outputs
+    Tuple of (header_line, body_text).
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when rendering fails.
+
+    Ties to other methods
+    Uses `calc_col_widths` and is used by display rendering and CLI table output.
+
+    Why this exists
+    Provides a consistent text table rendering utility.
     """
     try:
         widths = calc_col_widths(headers, rows)

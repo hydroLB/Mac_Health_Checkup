@@ -156,7 +156,21 @@ class EntrypointLoggingTests(unittest.TestCase):
         Keeps the CLI stdout channel clean for the rendered section summary.
         """
 
-        args = argparse.Namespace(cli=True, snapshot_json=False, snapshot_pretty=False, serve=False)
+        args = argparse.Namespace(
+            cli=True,
+            snapshot_json=False,
+            snapshot_json_out=None,
+            snapshot_pretty=False,
+            serve=False,
+            fail_on=None,
+            advice=False,
+            export=None,
+            export_path=None,
+            export_from_snapshot=None,
+            export_include_diagnostics=False,
+            diff_snapshots=None,
+            diff_against=None,
+        )
         captured: dict[str, object] = {}
 
         class _FakeLoggingConfig:

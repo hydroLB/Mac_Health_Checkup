@@ -1,67 +1,6 @@
 import Foundation
 import SwiftUI
 
-private enum TemperatureUnit: String {
-    case celsius = "C"
-    case fahrenheit = "F"
-
-    var toggled: TemperatureUnit {
-        switch self {
-        case .celsius: return .fahrenheit
-        case .fahrenheit: return .celsius
-        }
-    }
-}
-
-private struct ParsedTemperature {
-    let value: Double
-    let unit: TemperatureUnit
-    let hadDecimal: Bool
-}
-
-private func _parseTemperature(text: String) -> ParsedTemperature? {
-    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-    if trimmed.isEmpty { return nil }
-
-    let pattern = #"^\s*([+-]?\d+(?:\.\d+)?)\s*°?\s*([cCfF])\s*$"#
-    guard let re = try? NSRegularExpression(pattern: pattern, options: []) else { return nil }
-    let range = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
-    guard let match = re.firstMatch(in: trimmed, options: [], range: range) else { return nil }
-    guard match.numberOfRanges >= 3 else { return nil }
-
-    guard
-        let valueRange = Range(match.range(at: 1), in: trimmed),
-        let unitRange = Range(match.range(at: 2), in: trimmed)
-    else { return nil }
-
-    let valueText = String(trimmed[valueRange])
-    let unitText = String(trimmed[unitRange]).uppercased()
-    guard let value = Double(valueText) else { return nil }
-    let unit: TemperatureUnit = (unitText == "F") ? .fahrenheit : .celsius
-    let hadDecimal = valueText.contains(".")
-    return ParsedTemperature(value: value, unit: unit, hadDecimal: hadDecimal)
-}
-
-private func _formatTemperature(value: Double, hadDecimal: Bool) -> String {
-    if hadDecimal {
-        return String(format: "%.1f", value)
-    }
-    let rounded = Int(value.rounded())
-    return "\(rounded)"
-}
-
-private func _convert(value: Double, from: TemperatureUnit, to: TemperatureUnit) -> Double {
-    if from == to { return value }
-    switch (from, to) {
-    case (.celsius, .fahrenheit):
-        return (value * 9.0 / 5.0) + 32.0
-    case (.fahrenheit, .celsius):
-        return (value - 32.0) * 5.0 / 9.0
-    default:
-        return value
-    }
-}
-
 struct TemperatureValueView: View {
     /**
      Summary
@@ -95,9 +34,9 @@ struct TemperatureValueView: View {
 
     var body: some View {
         let preferred = TemperatureUnit(rawValue: preferredUnitRaw) ?? .celsius
-        if let parsed = _parseTemperature(text: raw) {
-            let converted = _convert(value: parsed.value, from: parsed.unit, to: preferred)
-            let formatted = _formatTemperature(value: converted, hadDecimal: parsed.hadDecimal)
+        if let parsed = TemperatureValueParsing.parseTemperature(text: raw) {
+            let converted = TemperatureValueFormatting.convert(value: parsed.value, from: parsed.unit, to: preferred)
+            let formatted = TemperatureValueFormatting.formatTemperature(value: converted, hadDecimal: parsed.hadDecimal)
             HStack(spacing: 0) {
                 Text(formatted)
                     .font(theme.fonts.mono)

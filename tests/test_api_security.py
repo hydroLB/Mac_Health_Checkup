@@ -11,12 +11,26 @@ MODULE_PATH = "tests/test_api_security.py"
 
 def _api_config(**overrides: object) -> ApiConfig:
     """
-    Purpose: Build a baseline ApiConfig for unit tests with secure defaults.
-    Ties: Used by tests in this module.
-    Inputs: overrides apply on top of the baseline config.
-    Outputs: ApiConfig instance.
-    Side effects: None.
-    Why: Keeps tests compact and deterministic while exercising validation behavior.
+    Summary
+    Build a baseline ApiConfig for unit tests with secure defaults.
+
+    Inputs
+    overrides apply on top of the baseline config.
+
+    Outputs
+    ApiConfig instance.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `AssertionError` with module and helper context when object construction fails.
+
+    Ties to other methods
+    Used by tests in this module.
+
+    Why this exists
+    Keeps tests compact and deterministic while exercising validation behavior.
     """
     try:
         base = ApiConfig(
@@ -35,6 +49,7 @@ def _api_config(**overrides: object) -> ApiConfig:
             max_auth_failures_per_minute=10,
             auth_ban_seconds=60,
             request_timeout_sec=10,
+            pairing_qr_enabled=True,
         )
         data = base.__dict__ | dict(overrides)
         return ApiConfig(**data)
@@ -53,12 +68,26 @@ def _api_config(**overrides: object) -> ApiConfig:
 
 def test_validate_api_config_rejects_placeholder_token() -> None:
     """
-    Purpose: Ensure enabling the API with a placeholder token fails fast.
-    Ties: Exercises validate_api_config_for_server.
-    Inputs: ApiConfig with a blocked placeholder token.
-    Outputs: Assertion that validation raises.
-    Side effects: None.
-    Why: Prevents accidental insecure exposure when users forget to set a token.
+    Summary
+    Ensure enabling the API with a placeholder token fails fast.
+
+    Inputs
+    ApiConfig with a blocked placeholder token.
+
+    Outputs
+    Assertion that validation raises.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `validate_api_config_for_server`.
+
+    Why this exists
+    Prevents accidental insecure exposure when users forget to set a token.
     """
     try:
         api = _api_config(auth_token="change-me")
@@ -81,12 +110,26 @@ def test_validate_api_config_rejects_placeholder_token() -> None:
 
 def test_validate_api_config_requires_allow_lan_for_non_loopback() -> None:
     """
-    Purpose: Ensure binding to non-loopback requires explicit LAN opt-in.
-    Ties: Exercises validate_api_config_for_server.
-    Inputs: ApiConfig binding to 0.0.0.0 without allow_lan.
-    Outputs: Assertion that validation raises.
-    Side effects: None.
-    Why: Makes unsafe exposure a deliberate action instead of an accident.
+    Summary
+    Ensure binding to non-loopback requires explicit LAN opt-in.
+
+    Inputs
+    ApiConfig binding to 0.0.0.0 without allow_lan.
+
+    Outputs
+    Assertion that validation raises.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `validate_api_config_for_server`.
+
+    Why this exists
+    Makes unsafe exposure a deliberate action instead of an accident.
     """
     try:
         api = _api_config(bind_host="0.0.0.0", allow_lan=False)
@@ -109,12 +152,26 @@ def test_validate_api_config_requires_allow_lan_for_non_loopback() -> None:
 
 def test_validate_api_config_requires_strong_token_for_lan() -> None:
     """
-    Purpose: Ensure LAN exposure requires a stronger token baseline.
-    Ties: Exercises validate_api_config_for_server.
-    Inputs: allow_lan enabled with a short token.
-    Outputs: Assertion that validation raises.
-    Side effects: None.
-    Why: Reduces the chance that a weak token can be guessed on shared networks.
+    Summary
+    Ensure LAN exposure requires a stronger token baseline.
+
+    Inputs
+    allow_lan enabled with a short token.
+
+    Outputs
+    Assertion that validation raises.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `validate_api_config_for_server`.
+
+    Why this exists
+    Reduces the chance that a weak token can be guessed on shared networks.
     """
     try:
         api = _api_config(
@@ -142,12 +199,26 @@ def test_validate_api_config_requires_strong_token_for_lan() -> None:
 
 def test_throttler_bans_after_failed_auths() -> None:
     """
-    Purpose: Ensure repeated auth failures trigger a temporary ban.
-    Ties: Exercises RequestThrottler.record_auth_failure and allow_request.
-    Inputs: Multiple auth failure records for the same IP.
-    Outputs: Assertion that allow_request denies after threshold is reached.
-    Side effects: Mutates the throttler's in-memory state.
-    Why: Protects the API from brute-force guessing and reduces noisy retries.
+    Summary
+    Ensure repeated auth failures trigger a temporary ban.
+
+    Inputs
+    Multiple auth failure records for the same IP.
+
+    Outputs
+    Assertion that allow_request denies after threshold is reached.
+
+    Side effects
+    Mutates the throttler's in-memory state.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `RequestThrottler.record_auth_failure` and `RequestThrottler.allow_request`.
+
+    Why this exists
+    Protects the API from brute-force guessing and reduces noisy retries.
     """
     try:
         api = _api_config(
@@ -181,12 +252,26 @@ def test_throttler_bans_after_failed_auths() -> None:
 
 def test_validate_api_config_rejects_tls_enabled_without_files() -> None:
     """
-    Purpose: Ensure TLS cannot be enabled without valid certificate and key files.
-    Ties: Exercises validate_api_config_for_server.
-    Inputs: ApiConfig with tls_enabled and non-existent paths.
-    Outputs: Assertion that validation raises.
-    Side effects: None.
-    Why: Prevents accidental misconfiguration that would otherwise fall back to insecure HTTP.
+    Summary
+    Ensure TLS cannot be enabled without valid certificate and key files.
+
+    Inputs
+    ApiConfig with tls_enabled and non-existent paths.
+
+    Outputs
+    Assertion that validation raises.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `validate_api_config_for_server`.
+
+    Why this exists
+    Prevents accidental misconfiguration that would otherwise fall back to insecure HTTP.
     """
     try:
         api = _api_config(

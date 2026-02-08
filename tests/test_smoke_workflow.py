@@ -25,28 +25,62 @@ from mac_health_checkup.diagnostics import (
     ThermalDiagnostics,
     USBPowerDiagnostics,
 )
+from mac_health_checkup.diagnostics.backups import TimeMachineDiagnostics
+from mac_health_checkup.diagnostics.processes import TopProcessesDiagnostics
+from mac_health_checkup.diagnostics.security import SecurityPostureDiagnostics
+from mac_health_checkup.diagnostics.startup import StartupItemsDiagnostics
+from mac_health_checkup.diagnostics.system import SystemPressureDiagnostics
+from mac_health_checkup.diagnostics.updates import SoftwareUpdateDiagnostics
 
 MODULE_PATH = "tests/test_smoke_workflow.py"
 
 
 class StubHost(SectionHost):
     """
-    Purpose: Minimal host to exercise section update functions without Tk.
-    Ties: Used by the smoke workflow test to capture rendered output.
-    Inputs: None. Initializes in-memory stores.
-    Outputs: None. Provides in-memory storage for fields and tables.
-    Side effects: Initializes in-memory collections.
-    Why: Enables deterministic section updates without GUI dependencies.
+    Summary
+    Minimal host to exercise section update functions without Tk.
+
+    Inputs
+    None. Initializes in-memory stores.
+
+    Outputs
+    In-memory storage for fields, metrics, and tables.
+
+    Side effects
+    Initializes in-memory collections.
+
+    Error handling
+    Constructor and helpers raise `RuntimeError` with module context on unexpected failures.
+
+    Ties to other methods
+    Used by `test_smoke_section_updates` to capture rendered output.
+
+    Why this exists
+    Enables deterministic section updates without GUI dependencies.
     """
 
     def __init__(self) -> None:
         """
-        Purpose: Initialize storage for rendered content.
-        Ties: Used by test_smoke_section_updates.
-        Inputs: None.
-        Outputs: None. Sets initial dictionaries.
-        Side effects: Initializes in-memory state.
-        Why: Keeps test state deterministic and inspectable.
+        Summary
+        Initialize storage for rendered content.
+
+        Inputs
+        None.
+
+        Outputs
+        None. Initializes dictionaries for captured output.
+
+        Side effects
+        Initializes in-memory state.
+
+        Error handling
+        Raises `RuntimeError` with module context if initialization fails.
+
+        Ties to other methods
+        Used by `test_smoke_section_updates`.
+
+        Why this exists
+        Keeps test state deterministic and inspectable.
         """
         try:
             self.fields: dict[str, str] = {}
@@ -68,12 +102,26 @@ class StubHost(SectionHost):
 
     def get_widget(self, key: str) -> Optional[Widget]:
         """
-        Purpose: Return no widget to force text fallback rendering.
-        Ties: Used by section helpers that check for text widgets.
-        Inputs: key is the widget identifier.
-        Outputs: None to indicate no widget instance.
-        Side effects: None.
-        Why: Avoids Tk dependencies in tests.
+        Summary
+        Return no widget to force text fallback rendering.
+
+        Inputs
+        `key` is the widget identifier.
+
+        Outputs
+        `None` to indicate no widget instance.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module context if the method fails.
+
+        Ties to other methods
+        Used by section helpers that check for text widgets.
+
+        Why this exists
+        Avoids Tk dependencies in tests.
         """
         try:
             return None
@@ -91,12 +139,26 @@ class StubHost(SectionHost):
 
     def set_field(self, key: str, text: str, fg: Optional[str] = None, tooltip: Optional[str] = None) -> None:
         """
-        Purpose: Store a simple field value for later assertions.
-        Ties: Used by section update functions in fallback paths.
-        Inputs: key is the field name, text is the content, fg and tooltip are ignored.
-        Outputs: None. Updates in-memory field values.
-        Side effects: Updates in-memory fields.
-        Why: Captures output without rendering a GUI.
+        Summary
+        Store a simple field value for later assertions.
+
+        Inputs
+        `key` is the field name; `text` is the content; `fg` and `tooltip` are ignored.
+
+        Outputs
+        None. Updates in-memory field values.
+
+        Side effects
+        Updates in-memory fields.
+
+        Error handling
+        Raises `RuntimeError` with module context if the method fails.
+
+        Ties to other methods
+        Used by section update functions in fallback paths.
+
+        Why this exists
+        Captures output without rendering a GUI.
         """
         try:
             _ = fg
@@ -122,12 +184,26 @@ class StubHost(SectionHost):
         columns: int = 2,
     ) -> None:
         """
-        Purpose: Capture metric table rows for assertions.
-        Ties: Used by battery, fan, and performance sections.
-        Inputs: key is the section key, rows are metrics, columns is ignored.
-        Outputs: None. Stores the metric rows.
-        Side effects: Updates in-memory metric rows.
-        Why: Records structured output without Tk widgets.
+        Summary
+        Capture metric table rows for assertions.
+
+        Inputs
+        `key` is the section key; `rows` are metrics; `columns` is ignored.
+
+        Outputs
+        None. Stores the metric rows.
+
+        Side effects
+        Updates in-memory metric rows.
+
+        Error handling
+        Raises `RuntimeError` with module context if the method fails.
+
+        Ties to other methods
+        Used by battery, fan, and performance sections.
+
+        Why this exists
+        Records structured output without Tk widgets.
         """
         try:
             _ = columns
@@ -152,12 +228,26 @@ class StubHost(SectionHost):
         max_col_chars: tuple[int | None, ...] | None = None,
     ) -> None:
         """
-        Purpose: Capture table headers and rows for assertions.
-        Ties: Used by display and devices sections.
-        Inputs: key is the section key, headers and rows define the table, max_col_chars is ignored.
-        Outputs: None. Stores the table data.
-        Side effects: Updates in-memory table data.
-        Why: Enables deterministic checks for tabular output.
+        Summary
+        Capture table headers and rows for assertions.
+
+        Inputs
+        `key` is the section key; `headers` and `rows` define the table; `max_col_chars` is ignored.
+
+        Outputs
+        None. Stores the table data.
+
+        Side effects
+        Updates in-memory table data.
+
+        Error handling
+        Raises `RuntimeError` with module context if the method fails.
+
+        Ties to other methods
+        Used by display and devices sections.
+
+        Why this exists
+        Enables deterministic checks for tabular output.
         """
         try:
             _ = max_col_chars
@@ -177,12 +267,26 @@ class StubHost(SectionHost):
 
     def section_container(self, key: str) -> Optional[Widget]:
         """
-        Purpose: Return no container to skip Tk rendering paths.
-        Ties: Used by the network section when building custom layouts.
-        Inputs: key is the section identifier.
-        Outputs: None to indicate no container is available.
-        Side effects: None.
-        Why: Avoids creating Tk widgets in tests.
+        Summary
+        Return no container to skip Tk rendering paths.
+
+        Inputs
+        `key` is the section identifier.
+
+        Outputs
+        `None` to indicate no container is available.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module context if the method fails.
+
+        Ties to other methods
+        Used by the network section when building custom layouts.
+
+        Why this exists
+        Avoids creating Tk widgets in tests.
         """
         try:
             _ = key
@@ -201,12 +305,26 @@ class StubHost(SectionHost):
 
     def run_on_ui(self, fn: Callable[[], None]) -> None:
         """
-        Purpose: Execute a callback immediately in the test context.
-        Ties: Used by network section rendering.
-        Inputs: fn is the callback to run.
-        Outputs: None. Executes the callback.
-        Side effects: Executes the callback.
-        Why: Keeps UI callbacks deterministic in tests.
+        Summary
+        Execute a callback immediately in the test context.
+
+        Inputs
+        `fn` is the callback to run.
+
+        Outputs
+        None. Executes the callback.
+
+        Side effects
+        Executes the callback.
+
+        Error handling
+        Raises `RuntimeError` with module context if the callback fails.
+
+        Ties to other methods
+        Used by network section rendering.
+
+        Why this exists
+        Keeps UI callbacks deterministic in tests.
         """
         try:
             fn()
@@ -224,12 +342,26 @@ class StubHost(SectionHost):
 
     def set_machine_hint(self, descriptor: str) -> None:
         """
-        Purpose: Store a machine hint derived from a descriptor string.
-        Ties: Used by the General section to inform other sections.
-        Inputs: descriptor is the model string.
-        Outputs: None. Updates internal hint state.
-        Side effects: Updates in-memory machine hint.
-        Why: Allows section logic to follow expected model branches.
+        Summary
+        Store a machine hint derived from a descriptor string.
+
+        Inputs
+        `descriptor` is the model string.
+
+        Outputs
+        None. Updates internal hint state.
+
+        Side effects
+        Updates in-memory machine hint.
+
+        Error handling
+        Raises `RuntimeError` with module context if the method fails.
+
+        Ties to other methods
+        Used by the General section to inform other sections.
+
+        Why this exists
+        Allows section logic to follow expected model branches.
         """
         try:
             desc = (descriptor or "").lower()
@@ -253,12 +385,26 @@ class StubHost(SectionHost):
 
     def machine_hint(self) -> str:
         """
-        Purpose: Return the stored machine hint.
-        Ties: Used by battery and SSD sections for tooltips.
-        Inputs: None.
-        Outputs: The machine hint string.
-        Side effects: None.
-        Why: Mirrors the behavior of the real UI host.
+        Summary
+        Return the stored machine hint.
+
+        Inputs
+        None.
+
+        Outputs
+        The machine hint string.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module context if the method fails.
+
+        Ties to other methods
+        Used by battery and SSD sections for tooltips.
+
+        Why this exists
+        Mirrors the behavior of the real UI host.
         """
         try:
             return self._machine_hint
@@ -277,12 +423,26 @@ class StubHost(SectionHost):
 
 def test_smoke_section_updates(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    Purpose: Exercise the full refresh workflow with deterministic diagnostics.
-    Ties: Uses SECTION_HANDLERS to mirror the dashboard refresh cycle.
-    Inputs: Monkeypatched diagnostics to avoid system calls.
-    Outputs: Assertions on captured host output.
-    Side effects: Mutates diagnostics functions via monkeypatch.
-    Why: Provides an end to end smoke test of the main workflow.
+    Summary
+    Exercise the full refresh workflow with deterministic diagnostics.
+
+    Inputs
+    Monkeypatched diagnostics to avoid system calls.
+
+    Outputs
+    Assertions on captured host output.
+
+    Side effects
+    Mutates diagnostics functions via monkeypatch.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Uses `SECTION_HANDLERS` to mirror the dashboard refresh cycle.
+
+    Why this exists
+    Provides an end-to-end smoke test of the main workflow.
     """
     try:
         monkeypatch.setattr(
@@ -432,15 +592,103 @@ def test_smoke_section_updates(monkeypatch: pytest.MonkeyPatch) -> None:
             "fetch",
             staticmethod(lambda: {"details": ["USB Keyboard"]}),
         )
+        monkeypatch.setattr(
+            SecurityPostureDiagnostics,
+            "fetch",
+            staticmethod(
+                lambda: {
+                    "ok": True,
+                    "filevault": {"enabled": True, "status": "on"},
+                    "sip": {"enabled": True, "status": "enabled"},
+                    "gatekeeper": {"enabled": True, "status": "enabled"},
+                    "firewall": {"enabled": True, "status": "on"},
+                }
+            ),
+        )
+        monkeypatch.setattr(
+            SystemPressureDiagnostics,
+            "fetch",
+            staticmethod(
+                lambda: {
+                    "ok": True,
+                    "disk": {"free_percent": 25.0, "used_percent": 75.0},
+                    "memory": {"free_percent": 55.0},
+                }
+            ),
+        )
+        monkeypatch.setattr(
+            TopProcessesDiagnostics,
+            "fetch",
+            staticmethod(
+                lambda: {
+                    "top_cpu": [
+                        {"pid": 1, "cpu_percent": 15.2, "mem_percent": 2.3, "command": "kernel_task"},
+                        {"pid": 123, "cpu_percent": 7.1, "mem_percent": 0.8, "command": "WindowServer"},
+                    ],
+                    "top_mem": [
+                        {"pid": 456, "cpu_percent": 0.5, "mem_percent": 9.7, "command": "Google Chrome"},
+                        {"pid": 789, "cpu_percent": 1.2, "mem_percent": 6.3, "command": "Slack"},
+                    ],
+                }
+            ),
+        )
+        monkeypatch.setattr(
+            StartupItemsDiagnostics,
+            "fetch",
+            staticmethod(
+                lambda: {
+                    "ok": True,
+                    "user_agents": ["com.test.user.agent"],
+                    "system_agents": ["com.test.system.agent"],
+                    "system_daemons": ["com.test.system.daemon"],
+                }
+            ),
+        )
+        monkeypatch.setattr(
+            TimeMachineDiagnostics,
+            "fetch",
+            staticmethod(
+                lambda: {
+                    "ok": True,
+                    "latest_backup_age_days": 2.2,
+                    "running": False,
+                }
+            ),
+        )
+        monkeypatch.setattr(
+            SoftwareUpdateDiagnostics,
+            "fetch",
+            staticmethod(
+                lambda: {
+                    "ok": True,
+                    "updates_available": False,
+                    "update_labels": [],
+                }
+            ),
+        )
 
         def _render_override(host: SectionHost, data: JsonDict, interface: Optional[str]) -> None:
             """
-            Purpose: Replace network render with a deterministic field update.
-            Ties: Used by test_smoke_section_updates to avoid Tk widgets.
-            Inputs: host is the test host, data is the diagnostics dict, interface is ignored.
-            Outputs: None. Writes a simple field value.
-            Side effects: Updates host fields.
-            Why: Keeps the network section deterministic in tests.
+            Summary
+            Replace network render with a deterministic field update.
+
+            Inputs
+            `host` is the test host; `data` is the diagnostics dict; `interface` is ignored.
+
+            Outputs
+            None. Writes a simple field value.
+
+            Side effects
+            Updates host fields.
+
+            Error handling
+            Raises `RuntimeError` with module context if the override fails.
+
+            Ties to other methods
+            Used by `test_smoke_section_updates` to avoid Tk widgets.
+
+            Why this exists
+            Keeps the network section deterministic in tests.
             """
             try:
                 _ = data

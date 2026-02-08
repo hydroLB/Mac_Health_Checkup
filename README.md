@@ -83,6 +83,40 @@ CLI only mode:
 python -m mac_health_checkup --cli
 ```
 
+Automation: fail on warn/bad:
+
+```sh
+# Exit non-zero if any section reports warn or bad status
+python -m mac_health_checkup --snapshot-json --fail-on warn >/tmp/snapshot.json
+python -m mac_health_checkup --cli --fail-on bad
+```
+
+CLI actionability (diagnosis + next steps):
+
+```sh
+python -m mac_health_checkup --cli --advice
+```
+
+Report export (Markdown / HTML):
+
+```sh
+# Export a fresh snapshot report (writes under .local/reports/ by default)
+python -m mac_health_checkup --export markdown
+python -m mac_health_checkup --export html
+
+# Export to an explicit path
+python -m mac_health_checkup --export markdown --export-path /tmp/mac-health-checkup.md
+
+# Save a snapshot JSON for later sharing / diffing
+python -m mac_health_checkup --snapshot-json-out /tmp/snapshot.json
+
+# Diff two saved snapshots (prints Markdown to stdout)
+python -m mac_health_checkup --diff-snapshots /tmp/before.json /tmp/after.json
+
+# Export a diff between two saved snapshots
+python -m mac_health_checkup --diff-snapshots /tmp/before.json /tmp/after.json --export html --export-path /tmp/diff.html
+```
+
 SwiftUI native UI (macOS):
 
 ```sh
@@ -180,6 +214,8 @@ Notes:
 
 All runtime knobs are centralized in `config/config.json`. Override the path with `MAC_HEALTH_CHECKUP_CONFIG`. The file size limit can be tightened using `MAC_HEALTH_CHECKUP_CONFIG_MAX_BYTES`.
 
+For a generated, searchable list of every knob (types + defaults), see `docs/config_reference.md` (regenerate via `python tools/generate_config_reference.py`).
+
 Key sections:
 
 - `logging` for structured log fields and redaction
@@ -224,6 +260,41 @@ make typecheck
 make lint
 ```
 
+## Visual regression baseline
+
+Deterministic GUI visual regression uses `tools/gui_visual_regression.py` and does not require a live Tk window.
+
+Capture or refresh the baseline set:
+
+```sh
+make visual-capture-baseline
+```
+
+Capture the candidate set from the current working tree:
+
+```sh
+make visual-capture-candidate
+```
+
+Compute before vs after image diffs and fail on drift:
+
+```sh
+make visual-diff
+```
+
+Key scenes cover:
+
+- small, medium, and large resize layouts
+- keyboard focus traversal states
+- vertical and horizontal scrolling states
+- refresh error injected and recovery states
+
+Artifacts are written under `.local/visual-regression/`:
+
+- `baseline/*.ppm` and `candidate/*.ppm` for captures
+- `diff/*.ppm` for highlighted pixel diffs
+- `diff/manifest.json` with changed pixel counts and ratios
+
 ## Troubleshooting
 
 - Tkinter errors on launch: confirm the system Python includes Tk or install a framework build of Python.
@@ -234,6 +305,14 @@ make lint
 ## Quality gates
 
 CI enforces formatting, linting, type checking, tests with coverage, benchmarks, and security scans. Pre commit hooks mirror the same gates locally.
+
+For strict merge enforcement with no bypass, configure branch protection or rulesets on `main` with:
+
+- require status checks: `ci / quality`
+- require branches to be up to date before merging
+- require pull requests before merging
+- disable force pushes and branch deletion
+- disable admin bypass for required pull request and status-check rules
 
 ## Security and privacy
 

@@ -8,12 +8,26 @@ MODULE_PATH = "mac_health_checkup/core/config/models/ui.py"
 @dataclass(frozen=True)
 class ColorsConfig:
     """
-    Purpose: Hold UI color configuration.
-    Ties: Used by GUI components for consistent theming.
-    Inputs: Hex color strings for UI roles.
-    Outputs: Immutable color configuration.
-    Side effects: None.
-    Why: Centralizes color tuning in a single config section.
+    Summary
+    Hold UI color configuration.
+
+    Inputs
+    Hex color strings for UI roles.
+
+    Outputs
+    Immutable color configuration.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Parsed by `parse_colors` and used by GUI components for consistent theming.
+
+    Why this exists
+    Centralizes color tuning in a single config section.
     """
 
     bg: str
@@ -32,12 +46,26 @@ class ColorsConfig:
 @dataclass(frozen=True)
 class FontsConfig:
     """
-    Purpose: Hold UI font configuration.
-    Ties: Used by GUI components to style text consistently.
-    Inputs: Font families, sizes, and weights.
-    Outputs: Immutable font configuration.
-    Side effects: None.
-    Why: Centralizes font tuning in a single config section.
+    Summary
+    Hold UI font configuration.
+
+    Inputs
+    Font families, sizes, and weights.
+
+    Outputs
+    Immutable font configuration.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Parsed by `parse_fonts` and used by GUI components to style text consistently.
+
+    Why this exists
+    Centralizes font tuning in a single config section.
     """
 
     family_default: str
@@ -55,12 +83,27 @@ class FontsConfig:
 @dataclass(frozen=True)
 class UiConfig:
     """
-    Purpose: Hold root UI window configuration.
-    Ties: Used by the GUI entrypoint to size the window.
-    Inputs: window_size string such as \"820x1180\", window_title label.
-    Outputs: Immutable UI configuration.
-    Side effects: None.
-    Why: Keeps UI sizing and title tunable without code edits.
+    Summary
+    Hold root UI window configuration.
+
+    Inputs
+    window_size: Window size string such as \"820x1180\".
+    window_title: Window title label.
+
+    Outputs
+    Immutable UI configuration.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Parsed by `parse_ui` and used by the GUI entrypoint to size and title the window.
+
+    Why this exists
+    Keeps UI sizing and title tunable without code edits.
     """
 
     window_size: str

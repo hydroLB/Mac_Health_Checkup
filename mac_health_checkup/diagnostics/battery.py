@@ -17,12 +17,26 @@ MODULE_PATH = "mac_health_checkup/diagnostics/battery.py"
 @dataclass(frozen=True)
 class BatteryStats:
     """
-    Purpose: Store parsed battery statistics.
-    Ties: Used by BatteryDiagnostics for formatting.
-    Inputs: Raw integer values from ioreg.
-    Outputs: Immutable stats container.
-    Side effects: None.
-    Why: Keeps parsed battery data strongly typed.
+    Summary
+    Store parsed battery statistics.
+
+    Inputs
+    Raw integer values from ioreg.
+
+    Outputs
+    Immutable stats container.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Used by `BatteryDiagnostics` for formatting.
+
+    Why this exists
+    Keeps parsed battery data strongly typed.
     """
 
     design_capacity: int
@@ -34,12 +48,26 @@ class BatteryStats:
 
     def percent_health(self) -> float:
         """
-        Purpose: Calculate battery health percent.
-        Ties: Used by BatteryDiagnostics formatting.
-        Inputs: None.
-        Outputs: Health percent as float.
-        Side effects: None.
-        Why: Makes health computation explicit and testable.
+        Summary
+        Calculate battery health percent.
+
+        Inputs
+        None.
+
+        Outputs
+        Health percent as float.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when computation fails (for example, division by zero).
+
+        Ties to other methods
+        Used by `BatteryDiagnostics` formatting.
+
+        Why this exists
+        Makes health computation explicit and testable.
         """
         try:
             return (self.max_capacity / self.design_capacity) * 100.0
@@ -50,12 +78,26 @@ class BatteryStats:
 
     def temperature_c(self) -> float | None:
         """
-        Purpose: Convert raw temperature units to Celsius.
-        Ties: Used by BatteryDiagnostics formatting.
-        Inputs: None.
-        Outputs: Celsius temperature or None.
-        Side effects: None.
-        Why: Keeps temperature conversion consistent.
+        Summary
+        Convert raw temperature units to Celsius.
+
+        Inputs
+        None.
+
+        Outputs
+        Celsius temperature or None.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when conversion fails unexpectedly.
+
+        Ties to other methods
+        Used by `BatteryDiagnostics` formatting.
+
+        Why this exists
+        Keeps temperature conversion consistent.
         """
         try:
             if self.temperature_raw is None:
@@ -69,12 +111,27 @@ class BatteryStats:
 
 class BatteryDiagnostics:
     """
-    Purpose: Collect battery health and usage details.
-    Ties: Used by the Battery section in the GUI.
-    Inputs: None. Reads ioreg output.
-    Outputs: Dict with battery stats and summary text.
-    Side effects: Executes ioreg command.
-    Why: Provides battery health and status in a single view.
+    Summary
+    Collect battery health and usage details.
+
+    Inputs
+    None. Reads ioreg output.
+
+    Outputs
+    Dict with battery stats and summary text.
+
+    Side effects
+    Executes ioreg command.
+
+    Error handling
+    Returns fallback values when ioreg output is missing; raises `RuntimeError` with module and method context when
+    parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by the Battery section in the GUI.
+
+    Why this exists
+    Provides battery health and status in a single view.
     """
 
     _cache = Cache(get_config().timeouts.cache_ttl)
@@ -82,12 +139,26 @@ class BatteryDiagnostics:
     @staticmethod
     def fetch() -> JsonDict:
         """
-        Purpose: Fetch battery details with caching.
-        Ties: Used by Battery section handler.
-        Inputs: None.
-        Outputs: Dict with battery fields and summary.
-        Side effects: Executes ioreg.
-        Why: Keeps battery details fresh while avoiding repeated IO.
+        Summary
+        Fetch battery details with caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with battery fields and summary.
+
+        Side effects
+        Executes ioreg when the cache is stale.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when caching fails unexpectedly.
+
+        Ties to other methods
+        Used by the Battery section handler.
+
+        Why this exists
+        Keeps battery details fresh while avoiding repeated IO.
         """
         try:
             return cached_fetch(BatteryDiagnostics._cache, "battery", BatteryDiagnostics._fetch_uncached)
@@ -99,12 +170,26 @@ class BatteryDiagnostics:
     @staticmethod
     def _fetch_uncached() -> JsonDict:
         """
-        Purpose: Fetch battery details without caching.
-        Ties: Used by cached_fetch.
-        Inputs: None.
-        Outputs: Dict with battery fields and summary.
-        Side effects: Executes ioreg.
-        Why: Separates IO from cache logic for testing.
+        Summary
+        Fetch battery details without caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with battery fields and summary.
+
+        Side effects
+        Executes ioreg.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+        Ties to other methods
+        Used by `cached_fetch`.
+
+        Why this exists
+        Separates IO from cache logic for testing.
         """
         try:
             logger = get_diagnostics_logger()
@@ -148,12 +233,26 @@ class BatteryDiagnostics:
     @staticmethod
     def _parse_stats(raw: str) -> BatteryStats | None:
         """
-        Purpose: Parse battery stats from ioreg output.
-        Ties: Used by _fetch_uncached.
-        Inputs: raw is ioreg output string.
-        Outputs: BatteryStats or None if required fields missing.
-        Side effects: None.
-        Why: Centralizes battery parsing logic.
+        Summary
+        Parse battery stats from ioreg output.
+
+        Inputs
+        raw: ioreg output string.
+
+        Outputs
+        BatteryStats or None when required fields are missing.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+        Ties to other methods
+        Used by `_fetch_uncached`.
+
+        Why this exists
+        Centralizes battery parsing logic.
         """
         try:
             design_capacity = regex_extract_int(raw, r"\"DesignCapacity\"\s*=\s*(\d+)")
@@ -184,23 +283,53 @@ class BatteryDiagnostics:
 
 class BatteryTempDiagnostics:
     """
-    Purpose: Provide a lightweight battery temperature summary.
-    Ties: Used by the Power section and tests.
-    Inputs: None. Reads ioreg output.
-    Outputs: Dict with temperature data.
-    Side effects: Executes ioreg.
-    Why: Provides a focused temperature signal for the UI.
+    Summary
+    Provide a lightweight battery temperature summary.
+
+    Inputs
+    None. Reads ioreg output.
+
+    Outputs
+    Dict with temperature data.
+
+    Side effects
+    Executes ioreg.
+
+    Error handling
+    Returns None temperatures when output is missing; raises `RuntimeError` with module and method context when
+    parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by the Power section and tests.
+
+    Why this exists
+    Provides a focused temperature signal for the UI.
     """
 
     @staticmethod
     def fetch() -> JsonDict:
         """
-        Purpose: Fetch battery temperature details.
-        Ties: Used by power related sections.
-        Inputs: None.
-        Outputs: Dict with temp_c, temp_f, and raw.
-        Side effects: Executes ioreg.
-        Why: Keeps temperature logic separate from full battery health.
+        Summary
+        Fetch battery temperature details.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with temp_c, temp_f, and raw.
+
+        Side effects
+        Executes ioreg.
+
+        Error handling
+        Returns None temperatures when output is missing; raises `RuntimeError` with module and method context when
+        parsing fails unexpectedly.
+
+        Ties to other methods
+        Used by power-related sections.
+
+        Why this exists
+        Keeps temperature logic separate from full battery health.
         """
         try:
             out, err = safe_run(

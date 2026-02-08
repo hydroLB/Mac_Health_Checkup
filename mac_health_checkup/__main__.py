@@ -8,12 +8,26 @@ MODULE_PATH = "mac_health_checkup/__main__.py"
 
 def _run() -> None:
     """
-    Purpose: Execute the main entrypoint and exit on failure.
-    Ties: Used by python -m mac_health_checkup.
-    Inputs: None.
-    Outputs: None. Exits with non zero on errors.
-    Side effects: Runs the application.
-    Why: Provides a standard module entrypoint for the package.
+    Summary
+    Execute the main entrypoint and exit on failure.
+
+    Inputs
+    None.
+
+    Outputs
+    None. Exits non-zero on errors.
+
+    Side effects
+    Runs the application entrypoint.
+
+    Error handling
+    Propagates `SystemExit` and raises `RuntimeError` with module and method context for unexpected failures.
+
+    Ties to other methods
+    Used by `python -m mac_health_checkup`.
+
+    Why this exists
+    Provides a standard module entrypoint for the package.
     """
     try:
         raise SystemExit(main())

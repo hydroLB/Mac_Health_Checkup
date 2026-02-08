@@ -11,12 +11,26 @@ MODULE_PATH = "mac_health_checkup/app/gui/sections/devices.py"
 
 def update_section(host: SectionHost) -> JsonDict:
     """
-    Purpose: Update the Devices section table from diagnostics.
-    Ties: Used by dashboard section handler.
-    Inputs: host implements SectionHost.
-    Outputs: Diagnostics dict for the section.
-    Side effects: Updates host table.
-    Why: Keeps devices rendering logic isolated.
+    Summary
+    Update the Devices section table from diagnostics.
+
+    Inputs
+    host: SectionHost implementation.
+
+    Outputs
+    Diagnostics dict for the section.
+
+    Side effects
+    Updates host table and field.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when section rendering fails.
+
+    Ties to other methods
+    Used by the dashboard section handler.
+
+    Why this exists
+    Keeps devices rendering logic isolated.
     """
     try:
         cfg = get_config().gui
@@ -64,12 +78,29 @@ def _filter_labels(
     labels: list[str], skip_keywords: list[str], allow_keywords: list[str], max_len: int
 ) -> list[str]:
     """
-    Purpose: Filter and normalize device labels based on config keywords.
-    Ties: Used by update_section to clean device lists.
-    Inputs: labels list, skip and allow keywords, max_len for truncation.
-    Outputs: Filtered list of device labels.
-    Side effects: None.
-    Why: Keeps device lists concise and focused on useful peripherals.
+    Summary
+    Filter and normalize device labels based on config keywords.
+
+    Inputs
+    labels: Label list.
+    skip_keywords: Keywords used to skip labels.
+    allow_keywords: Keywords that force-include labels.
+    max_len: Maximum label length.
+
+    Outputs
+    Filtered list of device labels.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when filtering fails unexpectedly.
+
+    Ties to other methods
+    Used by `update_section` to clean device lists.
+
+    Why this exists
+    Keeps device lists concise and focused on useful peripherals.
     """
     try:
         filtered: list[str] = []
@@ -94,12 +125,29 @@ def _filter_device_labels(
     labels: list[str], *, skip_keywords: list[str], allow_keywords: list[str], max_len: int
 ) -> list[str]:
     """
-    Purpose: Filter and normalize device labels for the Devices section.
-    Ties: Used by update_section to keep the Devices table useful and non-redundant with Ports.
-    Inputs: labels list, skip and allow keywords, max_len for truncation.
-    Outputs: Filtered list of device labels.
-    Side effects: None.
-    Why: Devices should favor real peripherals and adapters while hiding infrastructure nodes that belong in the Ports tree.
+    Summary
+    Filter and normalize device labels for the Devices section.
+
+    Inputs
+    labels: Label list.
+    skip_keywords: Keywords used to skip labels.
+    allow_keywords: Keywords that force-include labels.
+    max_len: Maximum label length.
+
+    Outputs
+    Filtered list of device labels.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when filtering fails unexpectedly.
+
+    Ties to other methods
+    Used by `update_section` to keep the Devices table useful and non-redundant with Ports.
+
+    Why this exists
+    Devices should favor real peripherals and adapters while hiding infrastructure nodes that belong in the Ports tree.
     """
     try:
         filtered: list[str] = []
@@ -130,12 +178,26 @@ def _filter_device_labels(
 
 def _is_infrastructure_label(lower_label: str) -> bool:
     """
-    Purpose: Detect bus and bridge nodes that should be hidden from the Devices list.
-    Ties: Used by _filter_device_labels.
-    Inputs: lower_label is the label lowercased.
-    Outputs: True when the label represents infrastructure rather than an end device.
-    Side effects: None.
-    Why: The Ports section already shows buses, hubs, and billboards with nesting; duplicating them in Devices makes it noisy.
+    Summary
+    Detect bus and bridge nodes that should be hidden from the Devices list.
+
+    Inputs
+    lower_label: Lowercased label.
+
+    Outputs
+    True when the label represents infrastructure rather than an end device.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when detection fails unexpectedly.
+
+    Ties to other methods
+    Used by `_filter_device_labels`.
+
+    Why this exists
+    The Ports section already shows buses, hubs, and billboards with nesting; duplicating them in Devices makes it noisy.
     """
     try:
         text = (lower_label or "").strip()
@@ -157,12 +219,27 @@ def _is_infrastructure_label(lower_label: str) -> bool:
 
 def _truncate_label(label: str, max_len: int) -> str:
     """
-    Purpose: Truncate a label to a maximum length if needed.
-    Ties: Used by _filter_labels for consistent label sizing.
-    Inputs: label is the original string, max_len is maximum length.
-    Outputs: Truncated label string.
-    Side effects: None.
-    Why: Keeps long labels from overwhelming the UI.
+    Summary
+    Truncate a label to a maximum length if needed.
+
+    Inputs
+    label: Original string.
+    max_len: Maximum length.
+
+    Outputs
+    Truncated label string.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when truncation fails unexpectedly.
+
+    Ties to other methods
+    Used by `_filter_labels` for consistent label sizing.
+
+    Why this exists
+    Keeps long labels from overwhelming the UI.
     """
     try:
         if max_len <= 0:

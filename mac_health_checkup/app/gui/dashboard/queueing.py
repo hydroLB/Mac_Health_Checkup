@@ -12,24 +12,52 @@ MODULE_PATH = "mac_health_checkup/app/gui/dashboard/queueing.py"
 @dataclass
 class RefreshLimiter:
     """
-    Purpose: Enforce minimum refresh intervals per section.
-    Ties: Used by dashboard section runner for backpressure.
-    Inputs: None. Reads config for minimum interval.
-    Outputs: None. Tracks timestamps internally.
-    Side effects: Stores timestamps in memory.
-    Why: Prevents refresh loops from overwhelming the system.
+    Summary
+    Enforce minimum refresh intervals per section.
+
+    Inputs
+    None. Reads config for minimum interval.
+
+    Outputs
+    None. Tracks timestamps internally.
+
+    Side effects
+    Stores timestamps in memory.
+
+    Error handling
+    Methods raise `RuntimeError` with module and method context when throttling computations fail unexpectedly.
+
+    Ties to other methods
+    Used by dashboard section runner for backpressure.
+
+    Why this exists
+    Prevents refresh loops from overwhelming the system.
     """
 
     _last_run: dict[str, float] = field(default_factory=dict)
 
     def allow(self, key: str) -> bool:
         """
-        Purpose: Check whether a section is allowed to run now.
-        Ties: Used by run_section to throttle refreshes.
-        Inputs: key is the section key.
-        Outputs: True if enough time has elapsed, False otherwise.
-        Side effects: None.
-        Why: Enforces a consistent refresh cadence.
+        Summary
+        Check whether a section is allowed to run now.
+
+        Inputs
+        key: Section key.
+
+        Outputs
+        True when enough time has elapsed, false otherwise.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when limit checks fail unexpectedly.
+
+        Ties to other methods
+        Used by `run_section` to throttle refreshes.
+
+        Why this exists
+        Enforces a consistent refresh cadence.
         """
         try:
             min_interval = get_config().rate_limits.refresh_min_interval_ms / 1000.0
@@ -44,12 +72,26 @@ class RefreshLimiter:
 
     def mark(self, key: str) -> None:
         """
-        Purpose: Record a section run timestamp.
-        Ties: Used by run_section after executing a handler.
-        Inputs: key is the section key.
-        Outputs: None.
-        Side effects: Updates timestamp tracking.
-        Why: Keeps refresh throttling accurate.
+        Summary
+        Record a section run timestamp.
+
+        Inputs
+        key: Section key.
+
+        Outputs
+        None.
+
+        Side effects
+        Updates timestamp tracking.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when timestamp updates fail unexpectedly.
+
+        Ties to other methods
+        Used by `run_section` after executing a handler.
+
+        Why this exists
+        Keeps refresh throttling accurate.
         """
         try:
             self._last_run[key] = time.time()
@@ -62,12 +104,26 @@ class RefreshLimiter:
 @dataclass
 class SectionQueue:
     """
-    Purpose: Queue section refresh work with a bounded size.
-    Ties: Used by the GUI to prevent unbounded refresh backlog.
-    Inputs: None. Uses config rate limits.
-    Outputs: None. Stores queued keys.
-    Side effects: Stores queued keys in memory.
-    Why: Provides simple backpressure for GUI refresh work.
+    Summary
+    Queue section refresh work with a bounded size.
+
+    Inputs
+    None. Uses config rate limits.
+
+    Outputs
+    None. Stores queued keys.
+
+    Side effects
+    Stores queued keys in memory.
+
+    Error handling
+    Methods raise `RuntimeError` with module and method context when queue operations fail unexpectedly.
+
+    Ties to other methods
+    Used by the GUI to prevent unbounded refresh backlog.
+
+    Why this exists
+    Provides simple backpressure for GUI refresh work.
     """
 
     _keys: list[str] = field(default_factory=list)
@@ -75,12 +131,26 @@ class SectionQueue:
 
     def enqueue(self, key: str) -> bool:
         """
-        Purpose: Add a section key to the queue if space allows.
-        Ties: Used by the GUI refresh loop.
-        Inputs: key is the section key.
-        Outputs: True if enqueued, False if queue is full.
-        Side effects: Updates queue state.
-        Why: Prevents unbounded refresh backlog.
+        Summary
+        Add a section key to the queue if space allows.
+
+        Inputs
+        key: Section key.
+
+        Outputs
+        True when enqueued, false when queue is full.
+
+        Side effects
+        Updates queue state.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when enqueueing fails unexpectedly.
+
+        Ties to other methods
+        Used by the GUI refresh loop.
+
+        Why this exists
+        Prevents unbounded refresh backlog.
         """
         try:
             limit = get_config().rate_limits.ui_queue_max_items
@@ -98,12 +168,26 @@ class SectionQueue:
 
     def drain(self) -> list[str]:
         """
-        Purpose: Drain all queued keys in FIFO order.
-        Ties: Used by the GUI refresh loop.
-        Inputs: None.
-        Outputs: List of queued section keys.
-        Side effects: Clears queue state.
-        Why: Allows the refresh loop to process bounded work.
+        Summary
+        Drain all queued keys in FIFO order.
+
+        Inputs
+        None.
+
+        Outputs
+        List of queued section keys.
+
+        Side effects
+        Clears queue state.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when draining fails unexpectedly.
+
+        Ties to other methods
+        Used by the GUI refresh loop.
+
+        Why this exists
+        Allows the refresh loop to process bounded work.
         """
         try:
             keys = list(self._keys)

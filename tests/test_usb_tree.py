@@ -9,22 +9,50 @@ MODULE_PATH = "tests/test_usb_tree.py"
 
 class UsbTreeParserTests(unittest.TestCase):
     """
-    Purpose: Validate USB tree parsing does not treat property lines as devices.
-    Ties: Exercises mac_health_checkup.core.utils.usb_tree._extract_usb_tree_items.
-    Inputs: None.
-    Outputs: Assertions on parsed labels.
-    Side effects: None.
-    Why: Prevents noisy, misleading device lists like "Host Controller Driver" appearing in the UI.
+    Summary
+    Validate USB tree parsing does not treat property lines as devices.
+
+    Inputs
+    None.
+
+    Outputs
+    Assertions on parsed labels.
+
+    Side effects
+    None.
+
+    Error handling
+    Failures bubble as unittest assertions with module context.
+
+    Ties to other methods
+    Exercises `mac_health_checkup.core.utils.usb_tree._extract_usb_tree_items`.
+
+    Why this exists
+    Prevents noisy, misleading device lists like "Host Controller Driver" appearing in the UI.
     """
 
     def test_extract_usb_tree_items_ignores_key_value_properties(self) -> None:
         """
-        Purpose: Ensure key:value properties are ignored while device header lines are preserved.
-        Ties: Exercises _strip_sysprop_prefix and _extract_usb_tree_items.
-        Inputs: None.
-        Outputs: None.
-        Side effects: None.
-        Why: system_profiler SPUSBDataType includes many properties that should not show as devices.
+        Summary
+        Ensure key:value properties are ignored while device header lines are preserved.
+
+        Inputs
+        None.
+
+        Outputs
+        Assertions on extracted device labels.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `AssertionError` with module and test context on unexpected outcomes.
+
+        Ties to other methods
+        Exercises `_extract_usb_tree_items`.
+
+        Why this exists
+        `system_profiler SPUSBDataType` includes many properties that should not show as devices.
         """
         try:
             raw = """

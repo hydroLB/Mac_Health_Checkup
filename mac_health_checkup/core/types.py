@@ -14,12 +14,27 @@ JsonDict = dict[str, JsonValue]
 @dataclass(frozen=True)
 class TableData:
     """
-    Purpose: Bundle headers and rows for table rendering.
-    Ties: Used by GUI sections and tests to pass table data around.
-    Inputs: headers are column labels, rows are row tuples.
-    Outputs: Immutable container with headers and rows.
-    Side effects: None.
-    Why: Keeps table output strongly typed and explicit.
+    Summary
+    Bundle headers and rows for table rendering.
+
+    Inputs
+    headers: Column labels.
+    rows: Row tuples.
+
+    Outputs
+    Immutable container with headers and rows.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Used by GUI sections and tests to pass table data around.
+
+    Why this exists
+    Keeps table output strongly typed and explicit.
     """
 
     headers: tuple[str, ...]
@@ -29,12 +44,27 @@ class TableData:
 @dataclass(frozen=True)
 class MetricsTable:
     """
-    Purpose: Bundle metric table rows and column count.
-    Ties: Used by metrics rendering in GUI sections.
-    Inputs: rows are (label, value, status) tuples, columns sets layout.
-    Outputs: Immutable container for metrics data.
-    Side effects: None.
-    Why: Keeps metric output strongly typed and consistent.
+    Summary
+    Bundle metric table rows and column count.
+
+    Inputs
+    rows: (label, value, status) tuples.
+    columns: Column count used by renderers.
+
+    Outputs
+    Immutable container for metrics data.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Used by metrics rendering in GUI sections.
+
+    Why this exists
+    Keeps metric output strongly typed and consistent.
     """
 
     rows: list[tuple[str, str, str]]
@@ -44,12 +74,27 @@ class MetricsTable:
 @dataclass(frozen=True)
 class RedactionConfig:
     """
-    Purpose: Carry redaction settings for structured logging.
-    Ties: Used by loggers to protect secrets.
-    Inputs: keys are case insensitive redaction keys, replacement is value string.
-    Outputs: Immutable config for redaction logic.
-    Side effects: None.
-    Why: Prevents secrets from leaking into logs.
+    Summary
+    Carry redaction settings for structured logging.
+
+    Inputs
+    keys: Case-insensitive redaction keys.
+    replacement: Replacement value string.
+
+    Outputs
+    Immutable config for redaction logic.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Used by loggers to protect secrets.
+
+    Why this exists
+    Prevents secrets from leaking into logs.
     """
 
     keys: tuple[str, ...]
@@ -58,12 +103,26 @@ class RedactionConfig:
 
 def normalize_redaction_keys(keys: Iterable[str]) -> tuple[str, ...]:
     """
-    Purpose: Normalize redaction keys to lowercase for matching.
-    Ties: Used by logging config parsing.
-    Inputs: keys is an iterable of raw redaction key strings.
-    Outputs: Tuple of lowercase keys with duplicates removed.
-    Side effects: None.
-    Why: Ensures consistent key matching across log payloads.
+    Summary
+    Normalize redaction keys to lowercase for matching.
+
+    Inputs
+    keys: Iterable of raw redaction key strings.
+
+    Outputs
+    Tuple of lowercase keys with duplicates removed.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `ValueError` when input elements are malformed.
+
+    Ties to other methods
+    Used by logging config parsing.
+
+    Why this exists
+    Ensures consistent key matching across log payloads.
     """
     try:
         normalized = {key.strip().lower() for key in keys if key.strip()}
@@ -74,12 +133,27 @@ def normalize_redaction_keys(keys: Iterable[str]) -> tuple[str, ...]:
 
 def merge_json_dicts(left: Mapping[str, JsonValue], right: Mapping[str, JsonValue]) -> JsonDict:
     """
-    Purpose: Merge two JSON compatible dicts with right side precedence.
-    Ties: Used by config parsing when overlays are applied.
-    Inputs: left is the base mapping, right overrides keys from left.
-    Outputs: New merged dict with combined keys.
-    Side effects: None.
-    Why: Provides deterministic override behavior for config merges.
+    Summary
+    Merge two JSON compatible dicts with right-side precedence.
+
+    Inputs
+    left: Base mapping.
+    right: Mapping whose keys override values from left.
+
+    Outputs
+    New merged dict with combined keys.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `ValueError` when inputs are malformed.
+
+    Ties to other methods
+    Used by config parsing when overlays are applied.
+
+    Why this exists
+    Provides deterministic override behavior for config merges.
     """
     try:
         merged: JsonDict = dict(left)

@@ -12,22 +12,50 @@ MODULE_PATH = "mac_health_checkup/app/backend/security/throttling.py"
 
 class RequestThrottler:
     """
-    Purpose: Enforce per-client rate limits and temporary bans for the agent API.
-    Ties: Used by the HTTP handler to keep the API safe on local networks.
-    Inputs: ApiConfig with request and auth throttling knobs.
-    Outputs: Allow/deny decisions and retry hints.
-    Side effects: Tracks in-memory per-IP request and auth failure windows.
-    Why: Prevents accidental exposure and basic brute forcing from degrading the host.
+    Summary
+    Enforce per-client rate limits and temporary bans for the agent API.
+
+    Inputs
+    ApiConfig with request and auth throttling knobs.
+
+    Outputs
+    Allow/deny decisions and retry hints.
+
+    Side effects
+    Tracks in-memory per-IP request and auth failure windows.
+
+    Error handling
+    Methods raise `RuntimeError` with module and method context when throttling bookkeeping fails unexpectedly.
+
+    Ties to other methods
+    Used by the HTTP handler to keep the API safe on local networks.
+
+    Why this exists
+    Prevents accidental exposure and basic brute forcing from degrading the host.
     """
 
     def __init__(self, api: ApiConfig) -> None:
         """
-        Purpose: Initialize the throttler from config.
-        Ties: Used by handler factories.
-        Inputs: api config.
-        Outputs: None.
-        Side effects: Initializes tracking state.
-        Why: Keeps throttling logic centralized and testable.
+        Summary
+        Initialize the throttler from config.
+
+        Inputs
+        api: API config.
+
+        Outputs
+        None.
+
+        Side effects
+        Initializes tracking state.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when initialization fails unexpectedly.
+
+        Ties to other methods
+        Used by handler factories.
+
+        Why this exists
+        Keeps throttling logic centralized and testable.
         """
         try:
             self._api = api
@@ -43,13 +71,27 @@ class RequestThrottler:
 
     def allow_request(self, client_ip: str) -> tuple[bool, int]:
         """
-        Purpose: Decide whether a request should be processed.
-        Ties: Called by the handler for every request.
-        Inputs: client_ip from the connection tuple.
-        Outputs: (allowed, retry_after_seconds).
-        Side effects: Records request timestamps.
-        Error handling: Never raises on missing or malformed IP; treats it as a single shared bucket.
-        Why: Provides a deterministic throttling gate for every endpoint.
+        Summary
+        Decide whether a request should be processed.
+
+        Inputs
+        client_ip: Client IP from the connection tuple.
+
+        Outputs
+        (allowed, retry_after_seconds).
+
+        Side effects
+        Records request timestamps.
+
+        Error handling
+        Never raises on missing or malformed IP; treats it as a single shared bucket. Raises `RuntimeError` with
+        module and method context when throttling fails unexpectedly.
+
+        Ties to other methods
+        Called by the handler for every request.
+
+        Why this exists
+        Provides a deterministic throttling gate for every endpoint.
         """
         try:
             ip = client_ip if isinstance(client_ip, str) and client_ip else "unknown"
@@ -77,13 +119,27 @@ class RequestThrottler:
 
     def record_auth_failure(self, client_ip: str) -> None:
         """
-        Purpose: Record an auth failure and potentially ban the client.
-        Ties: Called by the handler when auth fails.
-        Inputs: client_ip from the connection tuple.
-        Outputs: None.
-        Side effects: Updates failure windows and ban state.
-        Error handling: Never raises on missing or malformed IP; treats it as a single shared bucket.
-        Why: Discourages brute-force guessing and reduces log spam on shared networks.
+        Summary
+        Record an auth failure and potentially ban the client.
+
+        Inputs
+        client_ip: Client IP from the connection tuple.
+
+        Outputs
+        None.
+
+        Side effects
+        Updates failure windows and ban state.
+
+        Error handling
+        Never raises on missing or malformed IP; treats it as a single shared bucket. Raises `RuntimeError` with
+        module and method context when bookkeeping fails unexpectedly.
+
+        Ties to other methods
+        Called by the handler when auth fails.
+
+        Why this exists
+        Discourages brute-force guessing and reduces log spam on shared networks.
         """
         try:
             ip = client_ip if isinstance(client_ip, str) and client_ip else "unknown"
@@ -109,13 +165,26 @@ class RequestThrottler:
 
     def record_auth_success(self, client_ip: str) -> None:
         """
-        Purpose: Clear auth failure counters for a client after a successful auth.
-        Ties: Called by the handler when auth succeeds.
-        Inputs: client_ip from the connection tuple.
-        Outputs: None.
-        Side effects: Clears the auth failure bucket for the IP.
-        Error handling: None.
-        Why: Avoids punishing a client after transient typing errors during pairing.
+        Summary
+        Clear auth failure counters for a client after a successful auth.
+
+        Inputs
+        client_ip: Client IP from the connection tuple.
+
+        Outputs
+        None.
+
+        Side effects
+        Clears the auth failure bucket for the IP.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when bookkeeping fails unexpectedly.
+
+        Ties to other methods
+        Called by the handler when auth succeeds.
+
+        Why this exists
+        Avoids punishing a client after transient typing errors during pairing.
         """
         try:
             ip = client_ip if isinstance(client_ip, str) and client_ip else "unknown"
@@ -135,26 +204,54 @@ class RequestThrottler:
 
     def _prune(self, bucket: deque[float], now: float) -> None:
         """
-        Purpose: Prune timestamps older than the sliding window.
-        Ties: Used by allow_request and record_auth_failure.
-        Inputs: bucket deque and current monotonic timestamp.
-        Outputs: None.
-        Side effects: Mutates the deque by removing old entries.
-        Error handling: None.
-        Why: Keeps memory bounded while preserving deterministic behavior.
+        Summary
+        Prune timestamps older than the sliding window.
+
+        Inputs
+        bucket: Deque of monotonic timestamps.
+        now: Current monotonic timestamp.
+
+        Outputs
+        None.
+
+        Side effects
+        Mutates the deque by removing old entries.
+
+        Error handling
+        None.
+
+        Ties to other methods
+        Used by `allow_request` and `record_auth_failure`.
+
+        Why this exists
+        Keeps memory bounded while preserving deterministic behavior.
         """
         while bucket and (now - bucket[0]) > self._window_sec:
             bucket.popleft()
 
     def _retry_after(self, bucket: deque[float], now: float) -> int:
         """
-        Purpose: Compute a conservative Retry-After value for a full bucket.
-        Ties: Used by allow_request for 429 responses.
-        Inputs: bucket deque and current monotonic timestamp.
-        Outputs: Retry-After seconds as int.
-        Side effects: None.
-        Error handling: None.
-        Why: Helps clients back off deterministically.
+        Summary
+        Compute a conservative Retry-After value for a full bucket.
+
+        Inputs
+        bucket: Deque of monotonic timestamps.
+        now: Current monotonic timestamp.
+
+        Outputs
+        Retry-After seconds as int.
+
+        Side effects
+        None.
+
+        Error handling
+        None.
+
+        Ties to other methods
+        Used by `allow_request` for 429 responses.
+
+        Why this exists
+        Helps clients back off deterministically.
         """
         if not bucket:
             return 1

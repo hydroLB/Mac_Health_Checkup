@@ -7,12 +7,26 @@ MODULE_PATH = "mac_health_checkup/core/utils/health.py"
 
 def health_from_percent(value: float) -> str:
     """
-    Purpose: Map a health percentage to a qualitative label.
-    Ties: Used by battery and SSD diagnostics.
-    Inputs: value is a percent from 0 to 100.
-    Outputs: Health label string.
-    Side effects: None.
-    Why: Provides a consistent human readable health label.
+    Summary
+    Map a health percentage to a qualitative label.
+
+    Inputs
+    value: Percent value from 0 to 100.
+
+    Outputs
+    Health label string.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when mapping fails.
+
+    Ties to other methods
+    Used by battery and SSD diagnostics.
+
+    Why this exists
+    Provides a consistent human readable health label.
     """
     try:
         if value >= 90:

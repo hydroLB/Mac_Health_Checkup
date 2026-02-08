@@ -17,22 +17,50 @@ MODULE_PATH = "mac_health_checkup/app/gui/sections/types.py"
 
 class SectionHost(Protocol):
     """
-    Purpose: Define the interface for section render hosts.
-    Ties: Used by GUI and tests to decouple rendering logic.
-    Inputs: Implementations provide storage or UI widgets.
-    Outputs: Protocol definition only.
-    Side effects: None.
-    Why: Keeps section logic independent from GUI implementation details.
+    Summary
+    Define the interface for section render hosts.
+
+    Inputs
+    Implementations provide storage or UI widgets.
+
+    Outputs
+    Protocol definition only.
+
+    Side effects
+    None.
+
+    Error handling
+    Protocol methods include guard implementations that raise `NotImplementedError` when invoked directly.
+
+    Ties to other methods
+    Used by GUI and tests to decouple rendering logic.
+
+    Why this exists
+    Keeps section logic independent from GUI implementation details.
     """
 
     def get_widget(self, key: str) -> Optional[Widget]:
         """
-        Purpose: Return a widget by key if one exists.
-        Ties: Used by sections that check for optional widget support.
-        Inputs: key identifies the widget.
-        Outputs: Widget object or None.
-        Side effects: None.
-        Why: Allows sections to render to widgets or fallback to text.
+        Summary
+        Return a widget by key if one exists.
+
+        Inputs
+        key: Widget identifier.
+
+        Outputs
+        Widget object or None.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `NotImplementedError` when invoked on the protocol guard implementation.
+
+        Ties to other methods
+        Used by sections that check for optional widget support.
+
+        Why this exists
+        Allows sections to render to widgets or fall back to text.
         """
         try:
             raise NotImplementedError("SectionHost.get_widget protocol guard")
@@ -43,12 +71,29 @@ class SectionHost(Protocol):
 
     def set_field(self, key: str, text: str, fg: Optional[str] = None, tooltip: Optional[str] = None) -> None:
         """
-        Purpose: Set a text field value with optional styling and tooltip.
-        Ties: Used by sections for summary values.
-        Inputs: key identifies field, text is content, fg and tooltip are optional.
-        Outputs: None.
-        Side effects: Updates UI or storage.
-        Why: Standardizes field rendering across sections.
+        Summary
+        Set a text field value with optional styling and tooltip.
+
+        Inputs
+        key: Field identifier.
+        text: Content.
+        fg: Optional foreground color.
+        tooltip: Optional tooltip text.
+
+        Outputs
+        None.
+
+        Side effects
+        Updates UI or storage.
+
+        Error handling
+        Raises `NotImplementedError` when invoked on the protocol guard implementation.
+
+        Ties to other methods
+        Used by sections for summary values.
+
+        Why this exists
+        Standardizes field rendering across sections.
         """
         try:
             raise NotImplementedError("SectionHost.set_field protocol guard")
@@ -61,12 +106,28 @@ class SectionHost(Protocol):
         self, key: str, rows: Sequence[tuple[str, str, str]], *, columns: int = 2
     ) -> None:
         """
-        Purpose: Render a metrics table into the host.
-        Ties: Used by battery and fan sections.
-        Inputs: key identifies the section, rows are metrics, columns sets layout.
-        Outputs: None.
-        Side effects: Updates UI or storage.
-        Why: Provides a consistent metrics table interface.
+        Summary
+        Render a metrics table into the host.
+
+        Inputs
+        key: Section key.
+        rows: Metrics rows.
+        columns: Column count.
+
+        Outputs
+        None.
+
+        Side effects
+        Updates UI or storage.
+
+        Error handling
+        Raises `NotImplementedError` when invoked on the protocol guard implementation.
+
+        Ties to other methods
+        Used by battery and fan sections.
+
+        Why this exists
+        Provides a consistent metrics table interface.
         """
         try:
             raise NotImplementedError("SectionHost.render_metrics_table protocol guard")
@@ -83,12 +144,29 @@ class SectionHost(Protocol):
         max_col_chars: tuple[int | None, ...] | None = None,
     ) -> None:
         """
-        Purpose: Render a general table into the host.
-        Ties: Used by display and devices sections.
-        Inputs: key identifies the section, headers and rows define the table.
-        Outputs: None.
-        Side effects: Updates UI or storage.
-        Why: Provides a consistent table interface.
+        Summary
+        Render a general table into the host.
+
+        Inputs
+        key: Section key.
+        headers: Column headers.
+        rows: Table rows.
+        max_col_chars: Optional per-column truncation limits.
+
+        Outputs
+        None.
+
+        Side effects
+        Updates UI or storage.
+
+        Error handling
+        Raises `NotImplementedError` when invoked on the protocol guard implementation.
+
+        Ties to other methods
+        Used by display and devices sections.
+
+        Why this exists
+        Provides a consistent table interface.
         """
         try:
             raise NotImplementedError("SectionHost.render_table protocol guard")
@@ -99,12 +177,26 @@ class SectionHost(Protocol):
 
     def section_container(self, key: str) -> Optional[Widget]:
         """
-        Purpose: Return a section container if one exists.
-        Ties: Used by sections that build custom layouts.
-        Inputs: key identifies the section.
-        Outputs: Container object or None.
-        Side effects: None.
-        Why: Allows sections to optionally render custom widgets.
+        Summary
+        Return a section container if one exists.
+
+        Inputs
+        key: Section key.
+
+        Outputs
+        Container object or None.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `NotImplementedError` when invoked on the protocol guard implementation.
+
+        Ties to other methods
+        Used by sections that build custom layouts.
+
+        Why this exists
+        Allows sections to optionally render custom widgets.
         """
         try:
             raise NotImplementedError("SectionHost.section_container protocol guard")
@@ -115,12 +207,26 @@ class SectionHost(Protocol):
 
     def run_on_ui(self, fn: Callable[[], None]) -> None:
         """
-        Purpose: Execute a callback on the UI thread.
-        Ties: Used by sections for safe UI updates.
-        Inputs: fn is a callback.
-        Outputs: None.
-        Side effects: Executes callback.
-        Why: Keeps UI updates thread safe.
+        Summary
+        Execute a callback on the UI thread.
+
+        Inputs
+        fn: Callback.
+
+        Outputs
+        None.
+
+        Side effects
+        Executes callback.
+
+        Error handling
+        Raises `NotImplementedError` when invoked on the protocol guard implementation.
+
+        Ties to other methods
+        Used by sections for safe UI updates.
+
+        Why this exists
+        Keeps UI updates thread safe.
         """
         try:
             raise NotImplementedError("SectionHost.run_on_ui protocol guard")
@@ -131,12 +237,26 @@ class SectionHost(Protocol):
 
     def set_machine_hint(self, descriptor: str) -> None:
         """
-        Purpose: Store a machine hint derived from the model description.
-        Ties: Used by sections that adapt behavior based on machine type.
-        Inputs: descriptor is the model string.
-        Outputs: None.
-        Side effects: Updates host state.
-        Why: Provides a shared machine hint across sections.
+        Summary
+        Store a machine hint derived from the model description.
+
+        Inputs
+        descriptor: Model string.
+
+        Outputs
+        None.
+
+        Side effects
+        Updates host state.
+
+        Error handling
+        Raises `NotImplementedError` when invoked on the protocol guard implementation.
+
+        Ties to other methods
+        Used by sections that adapt behavior based on machine type.
+
+        Why this exists
+        Provides a shared machine hint across sections.
         """
         try:
             raise NotImplementedError("SectionHost.set_machine_hint protocol guard")
@@ -147,12 +267,26 @@ class SectionHost(Protocol):
 
     def machine_hint(self) -> str:
         """
-        Purpose: Return the current machine hint.
-        Ties: Used by sections that tailor tooltips.
-        Inputs: None.
-        Outputs: Machine hint string.
-        Side effects: None.
-        Why: Provides a shared machine hint across sections.
+        Summary
+        Return the current machine hint.
+
+        Inputs
+        None.
+
+        Outputs
+        Machine hint string.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `NotImplementedError` when invoked on the protocol guard implementation.
+
+        Ties to other methods
+        Used by sections that tailor tooltips.
+
+        Why this exists
+        Provides a shared machine hint across sections.
         """
         try:
             raise NotImplementedError("SectionHost.machine_hint protocol guard")

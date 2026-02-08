@@ -13,12 +13,26 @@ MODULE_PATH = "tests/test_config.py"
 
 def test_get_config_value_reads_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    Purpose: Verify config overrides are loaded from the environment path.
-    Ties: Exercises get_config_value and reset_config_cache.
-    Inputs: Temporary config file and monkeypatched env var.
-    Outputs: Assertions on override and fallback values.
-    Side effects: Writes a temp file and updates env vars.
-    Why: Ensures config lookup respects explicit config files.
+    Summary
+    Verify config overrides are loaded from the environment path.
+
+    Inputs
+    Temporary config file and monkeypatched env var.
+
+    Outputs
+    Assertions on override and fallback values.
+
+    Side effects
+    Writes a temp file and updates env vars.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `get_config_value` and `reset_config_cache`.
+
+    Why this exists
+    Ensures config lookup respects explicit config files.
     """
     try:
         payload = {"logging": {"max_lines": 900}}
@@ -45,12 +59,26 @@ def test_get_config_value_reads_override(tmp_path: Path, monkeypatch: pytest.Mon
 
 def test_api_port_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    Purpose: Verify the API port can be overridden via env var and supports ephemeral port 0.
-    Ties: Exercises parse_api env override logic.
-    Inputs: Monkeypatched env var and a minimal raw config dict.
-    Outputs: Assertions on the parsed ApiConfig port value.
-    Side effects: Updates environment variables for the duration of the test.
-    Why: Prevents port-collision issues and enables safe ephemeral port binding in dev and tests.
+    Summary
+    Verify the API port can be overridden via env var and supports ephemeral port 0.
+
+    Inputs
+    Monkeypatched env var and a minimal raw config dict.
+
+    Outputs
+    Assertions on the parsed ApiConfig port value.
+
+    Side effects
+    Updates environment variables for the duration of the test.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `parse_api` env override logic.
+
+    Why this exists
+    Prevents port-collision issues and enables safe ephemeral port binding in dev and tests.
     """
     try:
         raw = {
@@ -70,6 +98,7 @@ def test_api_port_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
                 "max_auth_failures_per_minute": 10,
                 "auth_ban_seconds": 60,
                 "request_timeout_sec": 5,
+                "pairing_qr_enabled": True,
             }
         }
 

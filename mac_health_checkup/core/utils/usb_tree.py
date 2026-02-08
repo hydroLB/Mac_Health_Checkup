@@ -22,12 +22,26 @@ _USB_PROPERTY_PREFIXES: Final[tuple[str, ...]] = (
 
 def _strip_sysprop_prefix(line: str) -> str:
     """
-    Purpose: Remove system property prefixes from USB tree lines.
-    Ties: Used by USB parsing helpers to isolate device labels.
-    Inputs: line is a raw USB tree line.
-    Outputs: Cleaned label or empty string if line is metadata.
-    Side effects: None.
-    Why: Keeps device label extraction noise free.
+    Summary
+    Remove system property prefixes from USB tree lines.
+
+    Inputs
+    line: Raw USB tree line.
+
+    Outputs
+    Cleaned label or empty string when the line is metadata.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by USB parsing helpers to isolate device labels.
+
+    Why this exists
+    Keeps device label extraction noise free.
     """
     try:
         stripped = line.strip()
@@ -51,12 +65,26 @@ def _strip_sysprop_prefix(line: str) -> str:
 
 def _is_usb_tree_device_line(label: str) -> bool:
     """
-    Purpose: Determine whether a line label represents a USB device.
-    Ties: Used by USB tree parser to filter metadata lines.
-    Inputs: label is a cleaned line string.
-    Outputs: True if the label should be treated as a device.
-    Side effects: None.
-    Why: Prevents metadata from polluting device lists.
+    Summary
+    Determine whether a line label represents a USB device.
+
+    Inputs
+    label: Cleaned line string.
+
+    Outputs
+    True when the label should be treated as a device.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when classification fails unexpectedly.
+
+    Ties to other methods
+    Used by USB tree parser to filter metadata lines.
+
+    Why this exists
+    Prevents metadata from polluting device lists.
     """
     try:
         candidate = label.strip().lower()
@@ -75,12 +103,26 @@ def _is_usb_tree_device_line(label: str) -> bool:
 
 def _extract_usb_tree_items(raw: str) -> list[dict[str, int | str]]:
     """
-    Purpose: Extract labeled USB tree items from raw system_profiler output.
-    Ties: Used by device parsing and benchmarks.
-    Inputs: raw text from system_profiler.
-    Outputs: List of dicts with label and indent keys.
-    Side effects: None.
-    Why: Produces stable device labels for UI rendering and tests.
+    Summary
+    Extract labeled USB tree items from raw system_profiler output.
+
+    Inputs
+    raw: Raw text from system_profiler.
+
+    Outputs
+    List of dicts with label and indent keys.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by device parsing and benchmarks.
+
+    Why this exists
+    Produces stable device labels for UI rendering and tests.
     """
     try:
         items: list[dict[str, int | str]] = []

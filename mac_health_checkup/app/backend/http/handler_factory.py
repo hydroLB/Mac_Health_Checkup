@@ -91,12 +91,26 @@ def build_handler_factory(
 
             def do_GET(self) -> None:  # noqa: N802
                 """
-                Purpose: Handle GET requests for health and snapshot endpoints.
-                Ties: Served by SnapshotApiServer.
-                Inputs: HTTP request data via BaseHTTPRequestHandler.
-                Outputs: Writes an HTTP response.
-                Side effects: Writes to network socket.
-                Why: Exposes read-only diagnostics snapshots for native clients.
+                Summary
+                Handle GET requests for health and snapshot endpoints.
+
+                Inputs
+                HTTP request data via BaseHTTPRequestHandler.
+
+                Outputs
+                Writes an HTTP response.
+
+                Side effects
+                Writes to the network socket.
+
+                Error handling
+                Best-effort responds with JSON error bodies. Returns silently when the client disconnects.
+
+                Ties to other methods
+                Served by `SnapshotApiServer`.
+
+                Why this exists
+                Exposes read-only diagnostics snapshots for native clients.
                 """
                 try:
                     client_ip = str(self.client_address[0]) if self.client_address else "unknown"
@@ -193,12 +207,28 @@ def build_handler_factory(
                 self, status: HTTPStatus, payload: JsonDict, *, headers: Mapping[str, str] | None = None
             ) -> None:
                 """
-                Purpose: Write a JSON response with headers.
-                Ties: Used by do_GET for structured responses.
-                Inputs: status code and JSON payload.
-                Outputs: Writes the HTTP response.
-                Side effects: Writes to the socket.
-                Why: Keeps response formatting consistent.
+                Summary
+                Write a JSON response with headers.
+
+                Inputs
+                status: HTTP status code.
+                payload: JSON-serializable dict.
+                headers: Optional additional response headers.
+
+                Outputs
+                Writes the HTTP response.
+
+                Side effects
+                Writes to the socket.
+
+                Error handling
+                Raises `RuntimeError` with module and method context when response writing fails.
+
+                Ties to other methods
+                Used by `do_GET` for structured responses.
+
+                Why this exists
+                Keeps response formatting consistent.
                 """
                 try:
                     body = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")

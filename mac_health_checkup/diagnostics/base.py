@@ -30,12 +30,26 @@ MODULE_PATH = "mac_health_checkup/diagnostics/base.py"
 @dataclass
 class Cache:
     """
-    Purpose: Simple TTL cache for diagnostics results.
-    Ties: Used by diagnostics to avoid repeated system calls.
-    Inputs: ttl seconds for cache entries.
-    Outputs: Cached values by key.
-    Side effects: Stores cached data in memory.
-    Why: Reduces repeated system calls while keeping data fresh.
+    Summary
+    Simple TTL cache for diagnostics results.
+
+    Inputs
+    ttl_seconds: TTL in seconds for cache entries.
+
+    Outputs
+    Cached values by key.
+
+    Side effects
+    Stores cached data in memory.
+
+    Error handling
+    Methods raise `RuntimeError` with module and method context when cache operations fail unexpectedly.
+
+    Ties to other methods
+    Used by diagnostics to avoid repeated system calls.
+
+    Why this exists
+    Reduces repeated system calls while keeping data fresh.
     """
 
     ttl_seconds: int
@@ -44,12 +58,26 @@ class Cache:
 
     def get(self, key: str) -> JsonDict | None:
         """
-        Purpose: Retrieve a cached value if it is still valid.
-        Ties: Used by diagnostics fetch methods.
-        Inputs: key is the cache key.
-        Outputs: Cached dict or None if expired or missing.
-        Side effects: None.
-        Why: Avoids redundant system calls within a TTL window.
+        Summary
+        Retrieve a cached value if it is still valid.
+
+        Inputs
+        key: Cache key.
+
+        Outputs
+        Cached dict or None when expired or missing.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when cache reads fail unexpectedly.
+
+        Ties to other methods
+        Used by diagnostics fetch methods.
+
+        Why this exists
+        Avoids redundant system calls within a TTL window.
         """
         try:
             with self._lock:
@@ -65,12 +93,27 @@ class Cache:
 
     def set(self, key: str, value: JsonDict) -> None:
         """
-        Purpose: Store a value in the cache with current timestamp.
-        Ties: Used by diagnostics fetch methods.
-        Inputs: key is cache key, value is data to store.
-        Outputs: None.
-        Side effects: Updates cache.
-        Why: Keeps recent diagnostics results available.
+        Summary
+        Store a value in the cache with current timestamp.
+
+        Inputs
+        key: Cache key.
+        value: Data to store.
+
+        Outputs
+        None.
+
+        Side effects
+        Updates the cache.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when cache writes fail unexpectedly.
+
+        Ties to other methods
+        Used by diagnostics fetch methods.
+
+        Why this exists
+        Keeps recent diagnostics results available.
         """
         try:
             with self._lock:
@@ -81,12 +124,26 @@ class Cache:
 
 def get_diagnostics_logger() -> StructuredLogger:
     """
-    Purpose: Return a structured logger for diagnostics modules.
-    Ties: Used by diagnostics classes for logging.
-    Inputs: None.
-    Outputs: StructuredLogger instance.
-    Side effects: Configures logging once if not configured.
-    Why: Ensures diagnostics logs are consistent and structured.
+    Summary
+    Return a structured logger for diagnostics modules.
+
+    Inputs
+    None.
+
+    Outputs
+    StructuredLogger instance.
+
+    Side effects
+    Configures logging once if not configured.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when logger configuration fails.
+
+    Ties to other methods
+    Used by diagnostics classes for logging.
+
+    Why this exists
+    Ensures diagnostics logs are consistent and structured.
     """
     try:
         cfg = get_config()
@@ -105,12 +162,26 @@ def get_diagnostics_logger() -> StructuredLogger:
 
 def new_context(component: str) -> LogContext:
     """
-    Purpose: Build a new log context for diagnostics.
-    Ties: Used by diagnostics fetch methods.
-    Inputs: component is the diagnostics component name.
-    Outputs: LogContext with component and correlation id.
-    Side effects: None.
-    Why: Provides consistent metadata for diagnostics logs.
+    Summary
+    Build a new log context for diagnostics.
+
+    Inputs
+    component: Diagnostics component name.
+
+    Outputs
+    LogContext with component and correlation id.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when context creation fails.
+
+    Ties to other methods
+    Used by diagnostics fetch methods.
+
+    Why this exists
+    Provides consistent metadata for diagnostics logs.
     """
     try:
         return LogContext(component=component, corr_id=new_correlation_id())
@@ -120,12 +191,28 @@ def new_context(component: str) -> LogContext:
 
 def cached_fetch(cache: Cache, key: str, fetcher: Callable[[], JsonDict]) -> JsonDict:
     """
-    Purpose: Fetch data with caching applied.
-    Ties: Used by diagnostics classes to wrap fetch logic.
-    Inputs: cache instance, cache key, fetcher callable.
-    Outputs: Result dict from cache or fetcher.
-    Side effects: Updates cache.
-    Why: Centralizes caching logic to keep diagnostics simple.
+    Summary
+    Fetch data with caching applied.
+
+    Inputs
+    cache: Cache instance.
+    key: Cache key.
+    fetcher: Callable producing a JsonDict on cache miss.
+
+    Outputs
+    Result dict from cache or fetcher.
+
+    Side effects
+    Updates the cache on cache miss.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when caching or fetching fails unexpectedly.
+
+    Ties to other methods
+    Used by diagnostics classes to wrap fetch logic.
+
+    Why this exists
+    Centralizes caching logic to keep diagnostics simple.
     """
     try:
         cached = cache.get(key)
@@ -142,12 +229,27 @@ def cached_fetch(cache: Cache, key: str, fetcher: Callable[[], JsonDict]) -> Jso
 
 def coalesce_str(value: str | None, fallback: str) -> str:
     """
-    Purpose: Return a fallback string when value is empty.
-    Ties: Used by diagnostics formatting helpers.
-    Inputs: value is optional string, fallback is default.
-    Outputs: Chosen string value.
-    Side effects: None.
-    Why: Simplifies formatting of optional strings.
+    Summary
+    Return a fallback string when value is empty.
+
+    Inputs
+    value: Optional string.
+    fallback: Fallback string.
+
+    Outputs
+    Chosen string value.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when string handling fails unexpectedly.
+
+    Ties to other methods
+    Used by diagnostics formatting helpers.
+
+    Why this exists
+    Simplifies formatting of optional strings.
     """
     try:
         if value and value.strip():

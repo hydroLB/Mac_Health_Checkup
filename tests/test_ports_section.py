@@ -13,22 +13,50 @@ MODULE_PATH = "tests/test_ports_section.py"
 
 class PortsSectionHelpersTests(unittest.TestCase):
     """
-    Purpose: Validate Ports section helpers produce stable nesting and user-friendly labels.
-    Ties: Exercises mac_health_checkup.app.gui.sections.ports helpers used by the Ports section.
-    Inputs: None.
-    Outputs: Assertions on computed depths and annotations.
-    Side effects: None.
-    Why: Ports rendering must be correct and understandable, especially when system_profiler indentation varies.
+    Summary
+    Validate Ports section helpers produce stable nesting and user-friendly labels.
+
+    Inputs
+    None.
+
+    Outputs
+    Assertions on computed depths and annotations.
+
+    Side effects
+    None.
+
+    Error handling
+    Test methods raise `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises Ports section helper functions.
+
+    Why this exists
+    Ports rendering must be correct and understandable, especially when system_profiler indentation varies.
     """
 
     def test_compute_depths_handles_irregular_indentation(self) -> None:
         """
-        Purpose: Ensure depth computation does not rely on a fixed indent step.
-        Ties: Exercises _compute_depths.
-        Inputs: None.
-        Outputs: None.
-        Side effects: None.
-        Why: system_profiler mixes indentation widths, and a fixed step can flatten the USB topology.
+        Summary
+        Ensure depth computation does not rely on a fixed indent step.
+
+        Inputs
+        None.
+
+        Outputs
+        Assertions on computed depths.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `AssertionError` with module and test context when expectations are not met.
+
+        Ties to other methods
+        Exercises `_compute_depths`.
+
+        Why this exists
+        system_profiler mixes indentation widths, and a fixed step can flatten the USB topology.
         """
         try:
             items: list[dict[str, int | str]] = [
@@ -49,12 +77,26 @@ class PortsSectionHelpersTests(unittest.TestCase):
 
     def test_annotate_usb_tree_labels_marks_display_ports_and_billboard_nodes(self) -> None:
         """
-        Purpose: Ensure display hints show up for USB-C billboard devices and their root bus.
-        Ties: Exercises _annotate_usb_tree_labels.
-        Inputs: None.
-        Outputs: None.
-        Side effects: None.
-        Why: Users should immediately understand which USB port is carrying the external display.
+        Summary
+        Ensure display hints show up for USB-C billboard devices and their root bus.
+
+        Inputs
+        None.
+
+        Outputs
+        Assertions on annotated labels.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `AssertionError` with module and test context when expectations are not met.
+
+        Ties to other methods
+        Exercises `_annotate_usb_tree_labels`.
+
+        Why this exists
+        Users should immediately understand which USB port is carrying the external display.
         """
         try:
             labels = [
@@ -78,12 +120,26 @@ class PortsSectionHelpersTests(unittest.TestCase):
 
     def test_extract_external_display_names_ignores_gpu_headers_and_builtin_panels(self) -> None:
         """
-        Purpose: Extract external display names without picking up GPU headers.
-        Ties: Exercises _extract_external_display_names.
-        Inputs: None.
-        Outputs: None.
-        Side effects: None.
-        Why: SPDisplaysDataType includes GPU blocks that should never be treated as display devices.
+        Summary
+        Extract external display names without picking up GPU headers.
+
+        Inputs
+        None.
+
+        Outputs
+        Assertions on extracted names.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `AssertionError` with module and test context when expectations are not met.
+
+        Ties to other methods
+        Exercises `_extract_external_display_names`.
+
+        Why this exists
+        SPDisplaysDataType includes GPU blocks that should never be treated as display devices.
         """
         try:
             raw = """

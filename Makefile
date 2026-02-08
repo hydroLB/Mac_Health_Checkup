@@ -1,4 +1,4 @@
-.PHONY: build setup run serve tls-selfsigned test lint format typecheck bench profile swift-test swift-run
+.PHONY: build setup run serve tls-selfsigned test lint format typecheck docstrings config-ref config-ref-check bench profile swift-test swift-run visual-capture-baseline visual-capture-candidate visual-diff visual-regression
 
 VENV ?= .venv
 PYTHON ?= $(VENV)/bin/python
@@ -6,6 +6,9 @@ SWIFT_PACKAGE_PATH ?= swift-ui
 SWIFT_CACHE_DIR ?= .local/swiftpm
 SWIFT ?= swift
 SWIFT_APP_ARGS ?=
+VISUAL_BASELINE_DIR ?= .local/visual-regression/baseline
+VISUAL_CANDIDATE_DIR ?= .local/visual-regression/candidate
+VISUAL_DIFF_DIR ?= .local/visual-regression/diff
 
 SWIFT_COMMON_FLAGS = --package-path $(SWIFT_PACKAGE_PATH) --manifest-cache local --disable-sandbox \
 	--scratch-path $(SWIFT_CACHE_DIR)/scratch --cache-path $(SWIFT_CACHE_DIR)/cache \
@@ -45,6 +48,15 @@ format:
 typecheck:
 	$(PYTHON) -m mypy mac_health_checkup tests
 
+docstrings:
+	$(PYTHON) tools/check_docstring_headings.py mac_health_checkup tests
+
+config-ref:
+	$(PYTHON) tools/generate_config_reference.py --config config/config.json --out docs/config_reference.md
+
+config-ref-check:
+	$(PYTHON) tools/generate_config_reference.py --config config/config.json --out docs/config_reference.md --check
+
 bench:
 	PYTHONPATH=. $(PYTHON) benchmarks/run.py
 
@@ -58,3 +70,14 @@ swift-test:
 swift-run:
 	mkdir -p $(SWIFT_CACHE_DIR)/scratch $(SWIFT_CACHE_DIR)/cache $(SWIFT_CACHE_DIR)/config $(SWIFT_CACHE_DIR)/security $(SWIFT_CACHE_DIR)/clang-module-cache
 	$(SWIFT_ENV) $(SWIFT) run $(SWIFT_COMMON_FLAGS) mac-health-checkup-ui -- $(SWIFT_APP_ARGS)
+
+visual-capture-baseline:
+	PYTHONPATH=. $(PYTHON) tools/gui_visual_regression.py capture --output-dir $(VISUAL_BASELINE_DIR)
+
+visual-capture-candidate:
+	PYTHONPATH=. $(PYTHON) tools/gui_visual_regression.py capture --output-dir $(VISUAL_CANDIDATE_DIR)
+
+visual-diff:
+	PYTHONPATH=. $(PYTHON) tools/gui_visual_regression.py diff --before-dir $(VISUAL_BASELINE_DIR) --after-dir $(VISUAL_CANDIDATE_DIR) --diff-dir $(VISUAL_DIFF_DIR) --fail-on-change
+
+visual-regression: visual-capture-candidate visual-diff

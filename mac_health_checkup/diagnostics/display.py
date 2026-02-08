@@ -11,12 +11,27 @@ MODULE_PATH = "mac_health_checkup/diagnostics/display.py"
 
 class DisplayDiagnostics:
     """
-    Purpose: Collect raw display information.
-    Ties: Used by display parsing in the GUI.
-    Inputs: None. Executes system_profiler.
-    Outputs: Dict with raw display output.
-    Side effects: Executes system_profiler.
-    Why: Provides the raw source used for parsing display details.
+    Summary
+    Collect raw display information.
+
+    Inputs
+    None. Executes system_profiler.
+
+    Outputs
+    Dict with raw display output (and optional IORegistry fallback output).
+
+    Side effects
+    Executes system_profiler and may execute ioreg as a fallback.
+
+    Error handling
+    Returns empty raw output when tools are unavailable; raises `RuntimeError` with module and method context when
+    parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by display parsing in the GUI.
+
+    Why this exists
+    Provides the raw source used for parsing display details.
     """
 
     _cache = Cache(get_config().timeouts.display_cache_ttl)
@@ -24,12 +39,26 @@ class DisplayDiagnostics:
     @staticmethod
     def fetch() -> JsonDict:
         """
-        Purpose: Fetch display output with caching.
-        Ties: Used by display section handler.
-        Inputs: None.
-        Outputs: Dict with raw display output.
-        Side effects: Executes system_profiler.
-        Why: Avoids repeated display queries while keeping data fresh.
+        Summary
+        Fetch display output with caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with raw display output.
+
+        Side effects
+        Executes system_profiler when the cache is stale.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when caching fails unexpectedly.
+
+        Ties to other methods
+        Used by display section handler.
+
+        Why this exists
+        Avoids repeated display queries while keeping data fresh.
         """
         try:
             return cached_fetch(DisplayDiagnostics._cache, "display", DisplayDiagnostics._fetch_uncached)
@@ -41,12 +70,26 @@ class DisplayDiagnostics:
     @staticmethod
     def _fetch_uncached() -> JsonDict:
         """
-        Purpose: Fetch display output without caching.
-        Ties: Used by cached_fetch.
-        Inputs: None.
-        Outputs: Dict with raw display output.
-        Side effects: Executes system_profiler.
-        Why: Separates IO from caching logic for testing.
+        Summary
+        Fetch display output without caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with raw display output.
+
+        Side effects
+        Executes system_profiler and may execute ioreg as a fallback.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when fetching or parsing fails unexpectedly.
+
+        Ties to other methods
+        Used by `cached_fetch`.
+
+        Why this exists
+        Separates IO from caching logic for testing.
         """
         try:
             logger = get_diagnostics_logger()
@@ -88,12 +131,26 @@ class DisplayDiagnostics:
 
 def _looks_like_display_inventory(raw: str) -> bool:
     """
-    Purpose: Decide whether system_profiler output contains per-display inventory details.
-    Ties: Used by DisplayDiagnostics to decide when to fall back to IORegistry parsing.
-    Inputs: raw is system_profiler output.
-    Outputs: True when the output appears to include at least one display block.
-    Side effects: None.
-    Why: Newer macOS builds can omit display blocks from SPDisplaysDataType; IORegistry provides a reliable fallback.
+    Summary
+    Decide whether system_profiler output contains per-display inventory details.
+
+    Inputs
+    raw: system_profiler output.
+
+    Outputs
+    True when the output appears to include at least one display block.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when inspection fails unexpectedly.
+
+    Ties to other methods
+    Used by `DisplayDiagnostics` to decide when to fall back to IORegistry parsing.
+
+    Why this exists
+    Newer macOS builds can omit display blocks from SPDisplaysDataType; IORegistry provides a reliable fallback.
     """
     try:
         if not raw:
