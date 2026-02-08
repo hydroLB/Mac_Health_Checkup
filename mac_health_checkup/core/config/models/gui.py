@@ -8,29 +8,64 @@ MODULE_PATH = "mac_health_checkup/core/config/models/gui.py"
 @dataclass(frozen=True)
 class ThresholdsConfig:
     """
-    Purpose: Hold health threshold values for classifying metrics.
-    Ties: Used by diagnostics collectors to map raw values to ok/warn/bad.
-    Inputs: Temperature thresholds in Celsius and Wi-Fi RSSI thresholds in dBm.
-    Outputs: Immutable thresholds configuration.
-    Side effects: None.
-    Why: Keeps status bucketing consistent and centrally tunable.
+    Summary
+    Hold health threshold values for classifying metrics.
+
+    Inputs
+    Temperature thresholds in Celsius, Wi‑Fi RSSI thresholds in dBm, and maintenance thresholds for disk, memory,
+    and backup recency.
+
+    Outputs
+    Immutable thresholds configuration.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Parsed by `parse_thresholds` and used by diagnostics and UI renderers to map signals to ok/warn/bad.
+
+    Why this exists
+    Keeps status bucketing consistent and centrally tunable.
     """
 
     temp_warn_c: float
     temp_bad_c: float
     rssi_warn_dbm: int
     rssi_bad_dbm: int
+    disk_free_warn_percent: float
+    disk_free_bad_percent: float
+    memory_free_warn_percent: float
+    memory_free_bad_percent: float
+    backup_warn_days: int
+    backup_bad_days: int
 
 
 @dataclass(frozen=True)
 class GuiConfig:
     """
-    Purpose: Hold detailed GUI configuration.
-    Ties: Used across GUI sections and layout management.
-    Inputs: Section layout, rendering limits, and helper tunables.
-    Outputs: Immutable GUI configuration.
-    Side effects: None.
-    Why: Keeps UI behavior fully configurable.
+    Summary
+    Hold detailed GUI configuration.
+
+    Inputs
+    Section layout, rendering limits, and helper tunables.
+
+    Outputs
+    Immutable GUI configuration.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Parsed by `parse_gui` and consumed by GUI sections, layout, and rendering helpers.
+
+    Why this exists
+    Keeps UI behavior fully configurable.
     """
 
     section_rows: list[tuple[str, str, str]]
@@ -73,17 +108,33 @@ class GuiConfig:
     table_row_height: int
     table_max_visible_rows: int
     table_min_col_width: int
+    processes_max_rows: int
+    startup_max_rows: int
 
 
 @dataclass(frozen=True)
 class DisplayTransportConfig:
     """
-    Purpose: Hold display transport estimation configuration.
-    Ties: Used by display transport diagnostics.
-    Inputs: Overhead factor and default bits per pixel.
-    Outputs: Immutable display transport configuration.
-    Side effects: None.
-    Why: Makes transport estimation tunable and testable.
+    Summary
+    Hold display transport estimation configuration.
+
+    Inputs
+    Overhead factor and default bits per pixel.
+
+    Outputs
+    Immutable display transport configuration.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Parsed by `parse_display_transport` and used by display transport diagnostics.
+
+    Why this exists
+    Makes transport estimation tunable and testable.
     """
 
     overhead_factor: float

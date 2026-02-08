@@ -10,12 +10,27 @@ MODULE_PATH = "mac_health_checkup/core/utils/regex_utils.py"
 
 def regex_extract_int(text: str, pattern: str) -> Optional[int]:
     """
-    Purpose: Extract the first integer matching a regex pattern.
-    Ties: Used by diagnostics parsing helpers.
-    Inputs: text is input string, pattern is regex with a capture group.
-    Outputs: Parsed int or None if not found or invalid.
-    Side effects: None.
-    Why: Centralizes safe integer extraction for diagnostics output.
+    Summary
+    Extract the first integer matching a regex pattern.
+
+    Inputs
+    text: Input string.
+    pattern: Regex with a capture group for the value.
+
+    Outputs
+    Parsed int or None when not found.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when the regex is invalid or conversion fails.
+
+    Ties to other methods
+    Used by diagnostics parsing helpers.
+
+    Why this exists
+    Centralizes safe integer extraction for diagnostics output.
     """
     try:
         match = re.search(pattern, text)
@@ -31,12 +46,27 @@ def regex_extract_int(text: str, pattern: str) -> Optional[int]:
 
 def regex_extract_float(text: str, pattern: str) -> Optional[float]:
     """
-    Purpose: Extract the first float matching a regex pattern.
-    Ties: Used by diagnostics parsing helpers.
-    Inputs: text is input string, pattern is regex with a capture group.
-    Outputs: Parsed float or None if not found or invalid.
-    Side effects: None.
-    Why: Centralizes safe float extraction for diagnostics output.
+    Summary
+    Extract the first float matching a regex pattern.
+
+    Inputs
+    text: Input string.
+    pattern: Regex with a capture group for the value.
+
+    Outputs
+    Parsed float or None when not found.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when the regex is invalid or conversion fails.
+
+    Ties to other methods
+    Used by diagnostics parsing helpers.
+
+    Why this exists
+    Centralizes safe float extraction for diagnostics output.
     """
     try:
         match = re.search(pattern, text)
@@ -52,12 +82,27 @@ def regex_extract_float(text: str, pattern: str) -> Optional[float]:
 
 def regex_extract_str(text: str, pattern: str) -> Optional[str]:
     """
-    Purpose: Extract the first string matching a regex pattern.
-    Ties: Used by diagnostics parsing helpers.
-    Inputs: text is input string, pattern is regex with a capture group.
-    Outputs: Extracted string or None if not found.
-    Side effects: None.
-    Why: Centralizes safe string extraction for diagnostics output.
+    Summary
+    Extract the first string matching a regex pattern.
+
+    Inputs
+    text: Input string.
+    pattern: Regex with a capture group for the value.
+
+    Outputs
+    Extracted string or None when not found.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when the regex is invalid.
+
+    Ties to other methods
+    Used by diagnostics parsing helpers.
+
+    Why this exists
+    Centralizes safe string extraction for diagnostics output.
     """
     try:
         match = re.search(pattern, text)
@@ -72,12 +117,26 @@ def regex_extract_str(text: str, pattern: str) -> Optional[str]:
 
 def hz_from_text(text: str) -> str:
     """
-    Purpose: Normalize refresh rate strings into a compact Hz label.
-    Ties: Used by display parsing and benchmarks.
-    Inputs: text contains a refresh rate substring.
-    Outputs: Normalized string like "60Hz" or "?" if not found.
-    Side effects: None.
-    Why: Keeps refresh rate formatting consistent across the UI.
+    Summary
+    Normalize refresh rate strings into a compact Hz label.
+
+    Inputs
+    text: String containing a refresh rate substring.
+
+    Outputs
+    Normalized string like "60Hz", or "?" when not found.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by display parsing and benchmarks.
+
+    Why this exists
+    Keeps refresh rate formatting consistent across the UI.
     """
     try:
         match = re.search(r"(\d+(?:\.\d+)?)\s*Hz", text, re.IGNORECASE)

@@ -7,12 +7,29 @@ MODULE_PATH = "mac_health_checkup/core/utils/errors.py"
 
 def format_error(module: str, func: str, message: str, exc: Optional[BaseException] = None) -> str:
     """
-    Purpose: Build a consistent error message with module and function context.
-    Ties: Used across utilities and diagnostics for precise error reporting.
-    Inputs: module is the module path, func is the function name, message is the detail, exc is optional.
-    Outputs: A formatted error string suitable for logs or raised exceptions.
-    Side effects: None.
-    Why: Standardized errors make debugging and support much faster.
+    Summary
+    Build a consistent error message with module and function context.
+
+    Inputs
+    module: Module path string.
+    func: Function or method name.
+    message: Detail string describing the failure.
+    exc: Optional exception to include (type and message).
+
+    Outputs
+    A formatted error string suitable for logs or raised exceptions.
+
+    Side effects
+    None.
+
+    Error handling
+    Never raises; returns a fallback message when formatting fails unexpectedly.
+
+    Ties to other methods
+    Used across utilities and diagnostics for precise error reporting.
+
+    Why this exists
+    Standardized errors make debugging and support much faster.
     """
     try:
         base = f"{module}:{func} {message}"

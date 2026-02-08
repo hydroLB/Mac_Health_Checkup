@@ -291,7 +291,7 @@ class TooltipManager:
         try:
             self._root.after_cancel(self._after_id)
         except Exception:
-            pass
+            return
         finally:
             self._after_id = None
 
@@ -357,7 +357,7 @@ class TooltipManager:
             y = int(event.y_root) + 18
             self._tip.geometry(f"+{x}+{y}")
         except Exception:
-            pass
+            self.hide()
 
     def _destroy_tip(self) -> None:
         if self._tip is None:
@@ -367,7 +367,7 @@ class TooltipManager:
         try:
             self._tip.destroy()
         except Exception:
-            pass
+            return
         finally:
             self._tip = None
             self._label = None

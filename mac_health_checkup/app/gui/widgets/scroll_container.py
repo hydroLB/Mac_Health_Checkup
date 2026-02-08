@@ -116,6 +116,71 @@ class ScrollContainer(tk.Frame):
                 format_error(MODULE_PATH, "ScrollContainer.scroll_to_top", "Failed to scroll to top", exc)
             ) from exc
 
+    def scroll_to_bottom(self) -> None:
+        """
+        Summary
+        Scroll the container to the bottom.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Moves the canvas viewport.
+
+        Error handling
+        Raises `RuntimeError` if the canvas cannot scroll.
+
+        Ties to other methods
+        Used by keyboard navigation shortcuts in the dashboard.
+
+        Why this exists
+        Supports efficient navigation for long dashboards without requiring drag gestures.
+        """
+        try:
+            self._canvas.yview_moveto(1.0)
+        except (tk.TclError, RuntimeError, ValueError, TypeError) as exc:
+            raise RuntimeError(
+                format_error(
+                    MODULE_PATH, "ScrollContainer.scroll_to_bottom", "Failed to scroll to bottom", exc
+                )
+            ) from exc
+
+    def scroll_pages(self, pages: int) -> None:
+        """
+        Summary
+        Scroll by a whole number of pages.
+
+        Inputs
+        pages: Positive values scroll down, negative values scroll up.
+
+        Outputs
+        None.
+
+        Side effects
+        Moves the canvas viewport in page increments.
+
+        Error handling
+        Raises `RuntimeError` when the input is invalid or scrolling fails.
+
+        Ties to other methods
+        Used by keyboard page navigation handlers in the dashboard.
+
+        Why this exists
+        Page stepping gives predictable navigation compared with small unit scrolling.
+        """
+        try:
+            steps = int(pages)
+            if steps == 0:
+                return
+            self._canvas.yview_scroll(steps, "pages")
+        except (tk.TclError, RuntimeError, ValueError, TypeError) as exc:
+            raise RuntimeError(
+                format_error(MODULE_PATH, "ScrollContainer.scroll_pages", "Failed to scroll pages", exc)
+            ) from exc
+
     def _on_content_configure(self, _event: tk.Event[tk.Misc]) -> None:
         """
         Summary

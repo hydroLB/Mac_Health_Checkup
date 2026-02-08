@@ -5,6 +5,7 @@ from typing import Callable
 
 from mac_health_checkup.app.gui.dashboard.queueing import RefreshLimiter
 from mac_health_checkup.app.gui.sections import (
+    backups,
     battery,
     devices,
     fan,
@@ -12,7 +13,12 @@ from mac_health_checkup.app.gui.sections import (
     network,
     performance,
     power,
+    processes,
+    security,
     ssd,
+    startup,
+    system,
+    updates,
 )
 from mac_health_checkup.app.gui.sections.display.section import update_section as display_section
 from mac_health_checkup.app.gui.sections.input import update_section as input_section
@@ -29,6 +35,12 @@ SectionHandler = Callable[[SectionHost], JsonDict]
 SECTION_RENDERERS: dict[str, SectionHandler] = {
     "performance": performance.update_section,
     "general": general.update_section,
+    "security": security.update_section,
+    "system": system.update_section,
+    "processes": processes.update_section,
+    "startup": startup.update_section,
+    "backups": backups.update_section,
+    "updates": updates.update_section,
     "power": power.update_section,
     "fan": fan.update_section,
     "battery": battery.update_section,
@@ -43,12 +55,26 @@ SECTION_RENDERERS: dict[str, SectionHandler] = {
 
 def _build_section_handlers() -> dict[str, SectionHandler]:
     """
-    Purpose: Build ordered section handlers from config-defined rows.
-    Ties: Used by SECTION_HANDLERS at import time.
-    Inputs: None.
-    Outputs: Ordered dict of section handlers.
-    Side effects: Reads config values.
-    Why: Keeps section order and membership configurable.
+    Summary
+    Build ordered section handlers from config-defined rows.
+
+    Inputs
+    None.
+
+    Outputs
+    Ordered dict of section handlers.
+
+    Side effects
+    Reads config values.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when section rows are malformed or refer to unknown keys.
+
+    Ties to other methods
+    Used by `SECTION_HANDLERS` at import time.
+
+    Why this exists
+    Keeps section order and membership configurable.
     """
     try:
         ordered: OrderedDict[str, SectionHandler] = OrderedDict()
@@ -69,12 +95,27 @@ _RATE_LIMITER = RefreshLimiter()
 
 def run_section(host: SectionHost, key: str) -> JsonDict:
     """
-    Purpose: Run a section handler by key.
-    Ties: Used by refresh loops and tests.
-    Inputs: host implements SectionHost, key is section key.
-    Outputs: Diagnostics dict for the section.
-    Side effects: Updates host via handler.
-    Why: Provides a consistent entrypoint for section execution.
+    Summary
+    Run a section handler by key.
+
+    Inputs
+    host: SectionHost implementation.
+    key: Section key.
+
+    Outputs
+    Diagnostics dict for the section.
+
+    Side effects
+    Updates host via handler.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when the section fails or the key is unknown.
+
+    Ties to other methods
+    Used by refresh loops and tests.
+
+    Why this exists
+    Provides a consistent entrypoint for section execution.
     """
     try:
         handler = SECTION_HANDLERS[key]

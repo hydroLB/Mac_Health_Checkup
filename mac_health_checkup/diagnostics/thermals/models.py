@@ -8,12 +8,28 @@ MODULE_PATH = "mac_health_checkup/diagnostics/thermals/models.py"
 @dataclass(frozen=True)
 class TemperatureReading:
     """
-    Purpose: Represent a temperature sensor reading.
-    Ties: Produced by ThermalSensorsDiagnostics parsing and rendered in the Performance section.
-    Inputs: label is the sensor name, celsius is the numeric temperature.
-    Outputs: Immutable temperature reading.
-    Side effects: None.
-    Why: Keeps parsed temperature readings strongly typed and easy to validate.
+    Summary
+    Represent a temperature sensor reading.
+
+    Inputs
+    label: Sensor name.
+    celsius: Numeric temperature.
+    status: UI status label.
+
+    Outputs
+    Immutable temperature reading.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Produced by thermal diagnostics parsing and rendered in the Performance section.
+
+    Why this exists
+    Keeps parsed temperature readings strongly typed and easy to validate.
     """
 
     label: str
@@ -24,12 +40,27 @@ class TemperatureReading:
 @dataclass(frozen=True)
 class FanSpeedReading:
     """
-    Purpose: Represent a fan speed reading.
-    Ties: Produced by ThermalSensorsDiagnostics parsing and rendered in the Fans section.
-    Inputs: label is the fan name, rpm is the current fan RPM.
-    Outputs: Immutable fan reading.
-    Side effects: None.
-    Why: Keeps parsed fan readings strongly typed and easy to validate.
+    Summary
+    Represent a fan speed reading.
+
+    Inputs
+    label: Fan name.
+    rpm: Current fan RPM.
+
+    Outputs
+    Immutable fan reading.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Produced by thermal diagnostics parsing and rendered in the Fans section.
+
+    Why this exists
+    Keeps parsed fan readings strongly typed and easy to validate.
     """
 
     label: str

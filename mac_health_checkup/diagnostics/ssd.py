@@ -20,12 +20,27 @@ MODULE_PATH = "mac_health_checkup/diagnostics/ssd.py"
 
 class SSDDiagnostics:
     """
-    Purpose: Collect SSD health and lifetime details.
-    Ties: Used by the SSD section in the GUI.
-    Inputs: None. Executes smartctl.
-    Outputs: Dict with SSD health and telemetry fields.
-    Side effects: Executes smartctl, may use sudo.
-    Why: Provides SSD health insight and lifetime estimates.
+    Summary
+    Collect SSD health and lifetime details.
+
+    Inputs
+    None. Executes smartctl.
+
+    Outputs
+    Dict with SSD health and telemetry fields.
+
+    Side effects
+    Executes smartctl and may use sudo (depending on config and tool behavior).
+
+    Error handling
+    Returns fallback values when smartctl output is missing; raises `RuntimeError` with module and method context
+    when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by the SSD section in the GUI.
+
+    Why this exists
+    Provides SSD health insight and lifetime estimates.
     """
 
     _cache = Cache(get_config().timeouts.cache_ttl)
@@ -33,12 +48,26 @@ class SSDDiagnostics:
     @staticmethod
     def fetch() -> JsonDict:
         """
-        Purpose: Fetch SSD details with caching.
-        Ties: Used by SSD section handler.
-        Inputs: None.
-        Outputs: Dict with SSD fields and summary.
-        Side effects: Executes smartctl.
-        Why: Keeps SSD details fresh while avoiding repeated IO.
+        Summary
+        Fetch SSD details with caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with SSD fields and summary.
+
+        Side effects
+        Executes smartctl when the cache is stale.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when caching fails unexpectedly.
+
+        Ties to other methods
+        Used by the SSD section handler.
+
+        Why this exists
+        Keeps SSD details fresh while avoiding repeated IO.
         """
         try:
             return cached_fetch(SSDDiagnostics._cache, "ssd", SSDDiagnostics._fetch_uncached)
@@ -50,12 +79,26 @@ class SSDDiagnostics:
     @staticmethod
     def _fetch_uncached() -> JsonDict:
         """
-        Purpose: Fetch SSD details without caching.
-        Ties: Used by cached_fetch.
-        Inputs: None.
-        Outputs: Dict with SSD fields and summary.
-        Side effects: Executes smartctl.
-        Why: Separates IO from caching logic for testing.
+        Summary
+        Fetch SSD details without caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with SSD fields and summary.
+
+        Side effects
+        Executes smartctl.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+        Ties to other methods
+        Used by `cached_fetch`.
+
+        Why this exists
+        Separates IO from caching logic for testing.
         """
         try:
             logger = get_diagnostics_logger()

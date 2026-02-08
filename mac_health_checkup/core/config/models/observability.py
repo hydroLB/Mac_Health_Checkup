@@ -11,12 +11,26 @@ MODULE_PATH = "mac_health_checkup/core/config/models/observability.py"
 @dataclass(frozen=True)
 class LoggingConfig:
     """
-    Purpose: Hold structured logging configuration.
-    Ties: Used by logging setup to control format and redaction.
-    Inputs: log format fields, redaction settings, and sizing limits.
-    Outputs: Immutable logging configuration.
-    Side effects: None.
-    Why: Keeps logging behavior and redaction rules configurable.
+    Summary
+    Hold structured logging configuration.
+
+    Inputs
+    Log format fields, redaction settings, and sizing limits.
+
+    Outputs
+    Immutable logging configuration.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Parsed by `parse_logging` and consumed by logging setup and structured loggers.
+
+    Why this exists
+    Keeps logging behavior and redaction rules configurable.
     """
 
     max_lines: int

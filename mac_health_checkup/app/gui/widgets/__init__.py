@@ -20,3 +20,17 @@ Used by `mac_health_checkup.app.gui.app.DashboardApp` to compose UI layout.
 Why this exists
 Keeps GUI composition readable by isolating low level Tk widget patterns.
 """
+
+from mac_health_checkup.app.gui.widgets.controls import (
+    ButtonTheme,
+    InlineStatusBadge,
+    InteractiveButton,
+    StatusTheme,
+)
+
+__all__ = [
+    "ButtonTheme",
+    "InlineStatusBadge",
+    "InteractiveButton",
+    "StatusTheme",
+]

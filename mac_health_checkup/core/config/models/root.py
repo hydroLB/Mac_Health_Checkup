@@ -21,12 +21,26 @@ MODULE_PATH = "mac_health_checkup/core/config/models/root.py"
 @dataclass(frozen=True)
 class Config:
     """
-    Purpose: Central typed config registry for all tunable settings.
-    Ties: Used across the application to fetch config values.
-    Inputs: Section configs parsed from JSON.
-    Outputs: Immutable config container.
-    Side effects: None.
-    Why: Provides a single source of truth for configuration.
+    Summary
+    Central typed config registry for all tunable settings.
+
+    Inputs
+    Section configs parsed from JSON.
+
+    Outputs
+    Immutable config container.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Produced by `parse_config` and returned by `get_config` as the runtime config source of truth.
+
+    Why this exists
+    Provides a single source of truth for configuration.
     """
 
     colors: ColorsConfig

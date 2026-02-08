@@ -14,12 +14,26 @@ MODULE_PATH = "mac_health_checkup/diagnostics/general.py"
 
 class GeneralDiagnostics:
     """
-    Purpose: Collect general system information for display.
-    Ties: Used by the General section in the GUI.
-    Inputs: None. Reads system_profiler output.
-    Outputs: Dict with model, chip, os, serial, and raw data.
-    Side effects: Executes system_profiler.
-    Why: Provides core identity data for the dashboard.
+    Summary
+    Collect general system information for display.
+
+    Inputs
+    None. Reads system_profiler output.
+
+    Outputs
+    Dict with model, chip, os, serial, and raw data.
+
+    Side effects
+    Executes system_profiler.
+
+    Error handling
+    Returns fallback identity values when system_profiler output is missing.
+
+    Ties to other methods
+    Used by the General section in the GUI.
+
+    Why this exists
+    Provides core identity data for the dashboard.
     """
 
     _cache = Cache(get_config().timeouts.cache_ttl)
@@ -27,12 +41,26 @@ class GeneralDiagnostics:
     @staticmethod
     def fetch() -> JsonDict:
         """
-        Purpose: Fetch general system details with caching.
-        Ties: Called by General section handler.
-        Inputs: None.
-        Outputs: Dict with model, chip, os, serial, raw.
-        Side effects: Reads system_profiler output.
-        Why: Provides core machine information for the UI.
+        Summary
+        Fetch general system details with caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with model, chip, os, serial, raw.
+
+        Side effects
+        Reads system_profiler output when the cache is stale.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when caching fails unexpectedly.
+
+        Ties to other methods
+        Called by the General section handler.
+
+        Why this exists
+        Provides core machine information for the UI.
         """
         try:
             return cached_fetch(GeneralDiagnostics._cache, "general", GeneralDiagnostics._fetch_uncached)
@@ -44,12 +72,26 @@ class GeneralDiagnostics:
     @staticmethod
     def _fetch_uncached() -> JsonDict:
         """
-        Purpose: Fetch general system details without caching.
-        Ties: Used by cached_fetch.
-        Inputs: None.
-        Outputs: Dict with model, chip, os, serial, raw.
-        Side effects: Executes system_profiler.
-        Why: Separates IO from caching logic for testing.
+        Summary
+        Fetch general system details without caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with model, chip, os, serial, raw.
+
+        Side effects
+        Executes system_profiler.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+        Ties to other methods
+        Used by `cached_fetch`.
+
+        Why this exists
+        Separates IO from caching logic for testing.
         """
         try:
             logger = get_diagnostics_logger()

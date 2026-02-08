@@ -7,12 +7,26 @@ MODULE_PATH = "tests/test_display_section_order.py"
 
 def test_display_internal_row_sorted_first() -> None:
     """
-    Purpose: Ensure the built-in display ("Color LCD") is sorted to the top of the display list.
-    Ties: Exercises mac_health_checkup.app.gui.sections.display.section._display_row_sort_key.
-    Inputs: Representative display rows.
-    Outputs: Assertion that internal display sorts first.
-    Side effects: None.
-    Why: Makes the built-in display easy to find when multiple displays are connected.
+    Summary
+    Ensure the built-in display (Color LCD) sorts to the top of the display list.
+
+    Inputs
+    Representative display rows.
+
+    Outputs
+    Assertion that internal display sorts first.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `_display_row_sort_key`.
+
+    Why this exists
+    Makes the built-in display easy to find when multiple displays are connected.
     """
     try:
         rows = [

@@ -8,12 +8,26 @@ MODULE_PATH = "mac_health_checkup/core/config/models/backend.py"
 @dataclass(frozen=True)
 class ApiConfig:
     """
-    Purpose: Hold backend API server configuration for native frontends.
-    Ties: Used by the Python backend server to expose snapshot endpoints.
-    Inputs: enabled flag, bind host, port, allow_lan, auth token, and rate limit knobs.
-    Outputs: Immutable API configuration.
-    Side effects: None.
-    Why: Keeps API behavior tunable and centrally validated.
+    Summary
+    Hold backend API server configuration for native frontends.
+
+    Inputs
+    Enabled flag, bind host, port, LAN access, TLS settings, auth token, and request throttling knobs.
+
+    Outputs
+    Immutable API configuration.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Parsed by `parse_api` and consumed by the backend server and entrypoint.
+
+    Why this exists
+    Keeps API behavior tunable and centrally validated.
     """
 
     enabled: bool
@@ -31,17 +45,32 @@ class ApiConfig:
     max_auth_failures_per_minute: int
     auth_ban_seconds: int
     request_timeout_sec: int
+    pairing_qr_enabled: bool
 
 
 @dataclass(frozen=True)
 class FansConfig:
     """
-    Purpose: Hold fan diagnostics configuration.
-    Ties: Used by SSD and fan diagnostics for sudo behavior.
-    Inputs: use_sudo flag.
-    Outputs: Immutable fan configuration.
-    Side effects: None.
-    Why: Controls when sudo escalation is allowed.
+    Summary
+    Hold fan diagnostics configuration.
+
+    Inputs
+    use_sudo: Whether collectors may attempt sudo escalation when supported.
+
+    Outputs
+    Immutable fan configuration.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Parsed by `parse_fans` and consumed by fan and SSD diagnostics.
+
+    Why this exists
+    Controls when sudo escalation is allowed.
     """
 
     use_sudo: bool

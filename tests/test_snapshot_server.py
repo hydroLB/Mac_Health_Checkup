@@ -15,35 +15,88 @@ MODULE_PATH = "tests/test_snapshot_server.py"
 
 def _handler_ok(host: SectionHost) -> JsonDict:
     """
-    Purpose: Provide a deterministic handler for server tests.
-    Ties: Used by SnapshotServerTests.
-    Inputs: host receives field output.
-    Outputs: Minimal diagnostics dict.
-    Side effects: Writes field output.
-    Why: Avoids invoking macOS system commands in unit tests.
+    Summary
+    Provide a deterministic handler for snapshot server tests.
+
+    Inputs
+    `host` receives field output.
+
+    Outputs
+    A minimal diagnostics dict.
+
+    Side effects
+    Writes field output on the host.
+
+    Error handling
+    Raises `RuntimeError` with module context if the handler fails.
+
+    Ties to other methods
+    Used by `SnapshotServerTests`.
+
+    Why this exists
+    Avoids invoking macOS system commands in unit tests.
     """
-    host.set_field("test", "hello")
-    return {"ok": True}
+    try:
+        host.set_field("test", "hello")
+        return {"ok": True}
+    except (
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
+        raise RuntimeError(f"{MODULE_PATH}:_handler_ok failed: {exc}") from exc
 
 
 class SnapshotServerTests(unittest.TestCase):
     """
-    Purpose: Validate the local snapshot API server endpoints and auth behavior.
-    Ties: Exercises SnapshotApiServer and the HTTP handler logic.
-    Inputs: None.
-    Outputs: Assertions on endpoint responses and JSON payload shape.
-    Side effects: Binds a local TCP port and performs HTTP requests.
-    Why: Protects the iOS client contract and prevents regressions in token auth.
+    Summary
+    Validate the local snapshot API server endpoints and auth behavior.
+
+    Inputs
+    None.
+
+    Outputs
+    Assertions on endpoint responses and JSON payload shape.
+
+    Side effects
+    Binds a local TCP port and performs HTTP requests.
+
+    Error handling
+    Failures bubble as test assertions with module context.
+
+    Ties to other methods
+    Exercises `SnapshotApiServer`, `wait_until_ready`, and HTTP handler logic.
+
+    Why this exists
+    Protects the iOS client contract and prevents regressions in token auth.
     """
 
     def test_snapshot_endpoint_auth_and_shape(self) -> None:
         """
-        Purpose: Verify the snapshot endpoint requires auth and returns JSON.
-        Ties: Validates SnapshotApiServer and request handler behavior.
-        Inputs: None.
-        Outputs: Assertions on status codes and JSON schema fields.
-        Side effects: Binds a local TCP port and performs HTTP requests.
-        Why: Ensures the iOS client API contract is stable and protected by a token.
+        Summary
+        Verify the snapshot endpoint requires auth and returns JSON.
+
+        Inputs
+        None.
+
+        Outputs
+        Assertions on status codes and JSON schema fields.
+
+        Side effects
+        Binds a local TCP port and performs HTTP requests.
+
+        Error handling
+        Raises `AssertionError` with module and test context on unexpected outcomes.
+
+        Ties to other methods
+        Validates `SnapshotApiServer` and request handler behavior.
+
+        Why this exists
+        Ensures the iOS client API contract is stable and protected by a token.
         """
         server: SnapshotApiServer | None = None
         try:
@@ -69,6 +122,7 @@ class SnapshotServerTests(unittest.TestCase):
                 max_auth_failures_per_minute=10,
                 auth_ban_seconds=60,
                 request_timeout_sec=5,
+                pairing_qr_enabled=False,
             )
             server = SnapshotApiServer({"test": _handler_ok}, api)
             server.start()

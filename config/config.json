@@ -1,13 +1,13 @@
 {
   "colors": {
-    "bg": "#23272e",
-    "fg": "#ffffff",
-    "ok": "#2ecc40",
-    "warn": "#ffdc00",
-    "bad": "#ff4136",
-    "section": "#339af0",
-    "label": "#f1c40f",
-    "field": "#daf6ff",
+    "bg": "#12181f",
+    "fg": "#f3f7fb",
+    "ok": "#2fbf71",
+    "warn": "#d8a13a",
+    "bad": "#e05d5d",
+    "section": "#58a6ff",
+    "label": "#a8b3c4",
+    "field": "#e3eaf4",
     "banner_good": "#28a745",
     "banner_warn": "#ffc107",
     "banner_bad": "#dc3545"
@@ -21,8 +21,8 @@
     "size_tooltip": 10,
     "weight_bold": "bold",
     "weight_normal": "normal",
-    "tooltip_bg": "#1a1c20",
-    "tooltip_fg": "#f0f0f0"
+    "tooltip_bg": "#0f141a",
+    "tooltip_fg": "#eef3f9"
   },
   "ui": {
     "window_size": "820x1180",
@@ -77,7 +77,9 @@
     "display_cache_ttl": 8,
     "power_sp_cache_ttl": 8,
     "power_ioreg_cache_ttl": 5,
-    "istats_timeout": 5
+    "istats_timeout": 5,
+    "softwareupdate_timeout": 30,
+    "softwareupdate_cache_ttl": 21600
   },
   "api": {
     "enabled": false,
@@ -94,7 +96,8 @@
     "rate_limit_requests_per_minute": 120,
     "max_auth_failures_per_minute": 10,
     "auth_ban_seconds": 120,
-    "request_timeout_sec": 15
+    "request_timeout_sec": 15,
+    "pairing_qr_enabled": true
   },
   "fans": {
     "use_sudo": false
@@ -103,12 +106,24 @@
     "temp_warn_c": 75.0,
     "temp_bad_c": 90.0,
     "rssi_warn_dbm": -70,
-    "rssi_bad_dbm": -80
+    "rssi_bad_dbm": -80,
+    "disk_free_warn_percent": 15.0,
+    "disk_free_bad_percent": 5.0,
+    "memory_free_warn_percent": 20.0,
+    "memory_free_bad_percent": 10.0,
+    "backup_warn_days": 7,
+    "backup_bad_days": 30
   },
   "gui": {
     "section_rows": [
       ["Performance", "Thermals / Load", "performance"],
       ["General Info", "Model / OS", "general"],
+      ["Security", "FileVault / SIP", "security"],
+      ["System", "Storage / Memory", "system"],
+      ["Processes", "Top CPU / MEM", "processes"],
+      ["Startup", "Launch Agents", "startup"],
+      ["Backups", "Time Machine", "backups"],
+      ["Updates", "Software Update", "updates"],
       ["Power", "Adapter / Temps", "power"],
       ["Fans", "Status", "fan"],
       ["Battery", "Health", "battery"],
@@ -120,7 +135,9 @@
       ["Input", "Keyboards / Mice", "input"]
     ],
     "scrollable_rows": {
-      "devices": 14
+      "devices": 14,
+      "processes": 12,
+      "startup": 14
     },
     "peripheral_skip_keywords": ["hub", "billboard", "bus"],
     "peripheral_allow_keywords": ["keyboard", "mouse", "trackpad", "receiver", "gamepad", "controller"],
@@ -167,8 +184,8 @@
     "refresh_helper_target_samples": 5,
     "disp_body_min_rows": 8,
     "disp_body_max_rows": 16,
-    "card_bg": "#1b2027",
-    "card_border": "#2a313c",
+    "card_bg": "#1a212a",
+    "card_border": "#313d4b",
     "section_padx": 4,
     "section_pady": 3,
     "content_wrap": 760,
@@ -189,7 +206,9 @@
     "history_enabled": true,
     "history_retention_minutes": 60,
     "history_max_points_per_series": 3600,
-    "history_save_interval_sec": 10
+    "history_save_interval_sec": 10,
+    "processes_max_rows": 10,
+    "startup_max_rows": 30
   },
   "display_transport": {
     "overhead_factor": 1.15,

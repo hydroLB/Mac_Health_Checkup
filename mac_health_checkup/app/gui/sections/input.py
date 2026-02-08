@@ -10,12 +10,26 @@ MODULE_PATH = "mac_health_checkup/app/gui/sections/input.py"
 
 def update_section(host: SectionHost) -> JsonDict:
     """
-    Purpose: Update the Input section from diagnostics.
-    Ties: Used by dashboard section handler.
-    Inputs: host implements SectionHost.
-    Outputs: Diagnostics dict for the section.
-    Side effects: Updates host fields.
-    Why: Keeps input rendering logic isolated.
+    Summary
+    Update the Input section from diagnostics.
+
+    Inputs
+    host: SectionHost implementation.
+
+    Outputs
+    Diagnostics dict for the section.
+
+    Side effects
+    Updates host fields and table output.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when section rendering fails.
+
+    Ties to other methods
+    Used by the dashboard section handler.
+
+    Why this exists
+    Keeps input rendering logic isolated.
     """
     try:
         data = InputDiagnostics.fetch()
@@ -45,6 +59,7 @@ def update_section(host: SectionHost) -> JsonDict:
             host.render_table("input", ("Type", "Device", "Transport"), rows)
         else:
             host.set_field("input", "None detected")
+            host.render_table("input", ("Type", "Device", "Transport"), [])
         return data
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(

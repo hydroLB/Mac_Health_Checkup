@@ -13,12 +13,26 @@ MODULE_PATH = "mac_health_checkup/app/gui/sections/network.py"
 
 def update_section(host: SectionHost) -> JsonDict:
     """
-    Purpose: Update the Network section from diagnostics.
-    Ties: Used by dashboard section handler.
-    Inputs: host implements SectionHost.
-    Outputs: Diagnostics dict for the section.
-    Side effects: Updates host fields.
-    Why: Keeps network rendering logic isolated.
+    Summary
+    Update the Network section from diagnostics.
+
+    Inputs
+    host: SectionHost implementation.
+
+    Outputs
+    Diagnostics dict for the section.
+
+    Side effects
+    Updates host fields.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when section rendering fails.
+
+    Ties to other methods
+    Used by the dashboard section handler.
+
+    Why this exists
+    Keeps network rendering logic isolated.
     """
     try:
         data = NetworkQualityDiagnostics.fetch()
@@ -34,12 +48,28 @@ def update_section(host: SectionHost) -> JsonDict:
 
 def _render(host: SectionHost, data: JsonDict, interface: Optional[str]) -> None:
     """
-    Purpose: Render network data into the host.
-    Ties: Used by update_section and tests.
-    Inputs: host implements SectionHost, data is diagnostics dict, interface is optional.
-    Outputs: None.
-    Side effects: Updates host fields.
-    Why: Separates rendering from data fetch for testability.
+    Summary
+    Render network data into the host.
+
+    Inputs
+    host: SectionHost implementation.
+    data: Diagnostics dict.
+    interface: Optional interface name.
+
+    Outputs
+    None.
+
+    Side effects
+    Updates host fields and metrics.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when rendering fails.
+
+    Ties to other methods
+    Used by `update_section` and tests.
+
+    Why this exists
+    Separates rendering from data fetch for testability.
     """
     try:
         iface_str = interface or "unknown"

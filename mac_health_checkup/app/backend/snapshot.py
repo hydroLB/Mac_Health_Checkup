@@ -402,12 +402,29 @@ class SnapshotBuilder:
             rows = host.tables.get(key)
             if headers is not None and rows is not None:
                 table = SnapshotTable(headers=headers, rows=rows)
+            diag = dict(diagnostics)
+            try:
+                from mac_health_checkup.app.actionability import build_section_advice
+
+                diag["advice"] = build_section_advice(
+                    key,
+                    field=field,
+                    metrics=metrics,
+                    diagnostics=diag,
+                )
+            except (ImportError, RuntimeError, ValueError, TypeError, AttributeError, KeyError) as exc:
+                diag["advice_error"] = format_error(
+                    MODULE_PATH,
+                    "SnapshotBuilder._build_section_payload",
+                    "Failed to build section advice",
+                    exc,
+                )
             return SnapshotSection(
                 key=key,
                 field=field,
                 metrics=metrics,
                 table=table,
-                diagnostics=_coerce_json_dict(diagnostics),
+                diagnostics=_coerce_json_dict(diag),
             )
         except Exception as exc:
             raise RuntimeError(

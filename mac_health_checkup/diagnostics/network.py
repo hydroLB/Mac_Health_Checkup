@@ -21,12 +21,27 @@ _IFCONFIG_INET_RE = re.compile(r"^\s*inet\s+([0-9.]+)\s+", re.MULTILINE)
 
 class NetworkQualityDiagnostics:
     """
-    Purpose: Collect network diagnostics with fast local metrics and optional networkQuality capacity.
-    Ties: Used by Network section in the GUI.
-    Inputs: None. Executes local networking commands and may run networkQuality.
-    Outputs: Dict with interface, IP, Wi-Fi stats, and optional capacity numbers.
-    Side effects: Executes subprocess commands.
-    Why: The UI needs reliable, instant network visibility even when Internet speed tests are slow or blocked.
+    Summary
+    Collect network diagnostics with fast local metrics and optional networkQuality capacity.
+
+    Inputs
+    None. Executes local networking commands and may run networkQuality.
+
+    Outputs
+    Dict with interface, IP, Wi‑Fi stats, and optional capacity numbers.
+
+    Side effects
+    Executes subprocess commands.
+
+    Error handling
+    Returns partial signals when some commands are unavailable; raises `RuntimeError` with module and method context
+    when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by the Network section in the GUI.
+
+    Why this exists
+    The UI needs reliable, instant network visibility even when Internet speed tests are slow or blocked.
     """
 
     _cache = Cache(get_config().timeouts.network_cache_ttl)
@@ -35,12 +50,26 @@ class NetworkQualityDiagnostics:
     @staticmethod
     def fetch() -> JsonDict:
         """
-        Purpose: Fetch network quality metrics with caching.
-        Ties: Used by Network section handler.
-        Inputs: None.
-        Outputs: Dict with network metrics.
-        Side effects: Executes networkQuality.
-        Why: Avoids running networkQuality too frequently.
+        Summary
+        Fetch network quality metrics with caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with network metrics.
+
+        Side effects
+        Executes networkQuality when the cache is stale.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when caching fails unexpectedly.
+
+        Ties to other methods
+        Used by Network section handler.
+
+        Why this exists
+        Avoids running networkQuality too frequently.
         """
         try:
             return cached_fetch(
@@ -54,12 +83,26 @@ class NetworkQualityDiagnostics:
     @staticmethod
     def _fetch_uncached() -> JsonDict:
         """
-        Purpose: Fetch network diagnostics without caching.
-        Ties: Used by cached_fetch.
-        Inputs: None.
-        Outputs: Dict with network diagnostics and optional networkQuality capacity.
-        Side effects: Executes subprocess commands.
-        Why: Separates IO from caching logic for testing and keeps fast paths deterministic.
+        Summary
+        Fetch network diagnostics without caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with network diagnostics and optional networkQuality capacity.
+
+        Side effects
+        Executes subprocess commands.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+        Ties to other methods
+        Used by `cached_fetch`.
+
+        Why this exists
+        Separates IO from caching logic for testing and keeps fast paths deterministic.
         """
         try:
             logger = get_diagnostics_logger()
@@ -116,12 +159,27 @@ class NetworkQualityDiagnostics:
 
 def _extract_float(pattern: re.Pattern[str], text: str) -> float | None:
     """
-    Purpose: Extract a float from regex match.
-    Ties: Used by NetworkQualityDiagnostics parsing.
-    Inputs: pattern regex and text to search.
-    Outputs: Float value or None.
-    Side effects: None.
-    Why: Keeps float extraction logic consistent.
+    Summary
+    Extract a float from regex match.
+
+    Inputs
+    pattern: Regex pattern.
+    text: Text to search.
+
+    Outputs
+    Float value or None.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by `NetworkQualityDiagnostics` parsing.
+
+    Why this exists
+    Keeps float extraction logic consistent.
     """
     try:
         match = pattern.search(text)
@@ -134,12 +192,27 @@ def _extract_float(pattern: re.Pattern[str], text: str) -> float | None:
 
 def _extract_str(pattern: re.Pattern[str], text: str) -> str | None:
     """
-    Purpose: Extract a string from regex match.
-    Ties: Used by NetworkQualityDiagnostics parsing.
-    Inputs: pattern regex and text to search.
-    Outputs: String value or None.
-    Side effects: None.
-    Why: Keeps string extraction logic consistent.
+    Summary
+    Extract a string from regex match.
+
+    Inputs
+    pattern: Regex pattern.
+    text: Text to search.
+
+    Outputs
+    String value or None.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by `NetworkQualityDiagnostics` parsing.
+
+    Why this exists
+    Keeps string extraction logic consistent.
     """
     try:
         match = pattern.search(text)
@@ -152,12 +225,26 @@ def _extract_str(pattern: re.Pattern[str], text: str) -> str | None:
 
 def _default_route_interface() -> str | None:
     """
-    Purpose: Determine the primary outbound interface from the default route.
-    Ties: Used by NetworkQualityDiagnostics fast path.
-    Inputs: None.
-    Outputs: Interface name like "en0" or None.
-    Side effects: Executes route(8).
-    Why: The default route is the most reliable way to identify the interface in use without guessing.
+    Summary
+    Determine the primary outbound interface from the default route.
+
+    Inputs
+    None.
+
+    Outputs
+    Interface name like "en0" or None.
+
+    Side effects
+    Executes route(8).
+
+    Error handling
+    Raises `RuntimeError` with module and method context when command execution or parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by `NetworkQualityDiagnostics` fast path.
+
+    Why this exists
+    The default route is the most reliable way to identify the interface in use without guessing.
     """
     try:
         out, _err = safe_run(
@@ -175,12 +262,26 @@ def _default_route_interface() -> str | None:
 
 def _primary_interface_and_ipv4() -> tuple[str | None, str | None]:
     """
-    Purpose: Determine the primary active interface and its IPv4 address.
-    Ties: Used by NetworkQualityDiagnostics as a fast, non-privileged path.
-    Inputs: None.
-    Outputs: Tuple (interface, ipv4) or (None, None).
-    Side effects: Executes route(8) and ifconfig(8).
-    Why: Some environments restrict route sockets; ifconfig parsing provides a reliable fallback for the UI.
+    Summary
+    Determine the primary active interface and its IPv4 address.
+
+    Inputs
+    None.
+
+    Outputs
+    Tuple (interface, ipv4) or (None, None).
+
+    Side effects
+    Executes route(8) and ifconfig(8).
+
+    Error handling
+    Raises `RuntimeError` with module and method context when command execution or parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by `NetworkQualityDiagnostics` as a fast, non-privileged path.
+
+    Why this exists
+    Some environments restrict route sockets; ifconfig parsing provides a reliable fallback for the UI.
     """
     try:
         iface = _default_route_interface()
@@ -216,12 +317,26 @@ def _primary_interface_and_ipv4() -> tuple[str | None, str | None]:
 
 def _interface_priority(name: str) -> int:
     """
-    Purpose: Rank interfaces so primary Ethernet/Wi‑Fi interfaces are preferred.
-    Ties: Used by _primary_interface_and_ipv4.
-    Inputs: Interface name.
-    Outputs: Integer priority (lower is better).
-    Side effects: None.
-    Why: Systems often have many `en*` interfaces; prefer en0/en1 to avoid choosing inactive virtual adapters.
+    Summary
+    Rank interfaces so primary Ethernet and Wi‑Fi interfaces are preferred.
+
+    Inputs
+    name: Interface name.
+
+    Outputs
+    Integer priority (lower is better).
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when ranking fails unexpectedly.
+
+    Ties to other methods
+    Used by `_primary_interface_and_ipv4`.
+
+    Why this exists
+    Systems often have many `en*` interfaces; prefer en0/en1 to avoid choosing inactive virtual adapters.
     """
     try:
         lower = (name or "").lower()
@@ -238,12 +353,26 @@ def _interface_priority(name: str) -> int:
 
 def _airport_info() -> dict[str, object | None]:
     """
-    Purpose: Read Wi-Fi SSID, RSSI, and transmit rate when available.
-    Ties: Used by NetworkQualityDiagnostics.
-    Inputs: None.
-    Outputs: Dict with ssid, rssi_dbm, tx_rate_mbps (values may be None).
-    Side effects: Executes the private airport(8) helper.
-    Why: RSSI and transmit rate are critical for diagnosing Wi-Fi issues without running speed tests.
+    Summary
+    Read Wi‑Fi SSID, RSSI, and transmit rate when available.
+
+    Inputs
+    None.
+
+    Outputs
+    Dict with ssid, rssi_dbm, tx_rate_mbps (values may be None).
+
+    Side effects
+    Executes the private airport helper.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when command execution or parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by `NetworkQualityDiagnostics`.
+
+    Why this exists
+    RSSI and transmit rate are critical for diagnosing Wi‑Fi issues without running speed tests.
     """
     try:
         airport = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
@@ -268,12 +397,26 @@ def _airport_info() -> dict[str, object | None]:
 
 def _interface_bytes(interface: str | None) -> tuple[int | None, int | None]:
     """
-    Purpose: Read cumulative receive/transmit bytes for an interface.
-    Ties: Used by NetworkQualityDiagnostics to compute rates between refreshes.
-    Inputs: interface name or None.
-    Outputs: Tuple (rx_bytes, tx_bytes) or (None, None).
-    Side effects: Executes netstat(1).
-    Why: Byte counters enable deterministic throughput graphs without external services.
+    Summary
+    Read cumulative receive and transmit bytes for an interface.
+
+    Inputs
+    interface: Interface name or None.
+
+    Outputs
+    Tuple (rx_bytes, tx_bytes) or (None, None).
+
+    Side effects
+    Executes netstat(1).
+
+    Error handling
+    Raises `RuntimeError` with module and method context when command execution or parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by `NetworkQualityDiagnostics` to compute rates between refreshes.
+
+    Why this exists
+    Byte counters enable deterministic throughput graphs without external services.
     """
     try:
         if not interface:
@@ -313,12 +456,27 @@ def _interface_bytes(interface: str | None) -> tuple[int | None, int | None]:
 
 def _rate_mbps_from_bytes(rx_bytes: int | None, tx_bytes: int | None) -> tuple[float | None, float | None]:
     """
-    Purpose: Compute Mbps rates from cumulative byte counters.
-    Ties: Used by NetworkQualityDiagnostics.
-    Inputs: rx_bytes and tx_bytes counters.
-    Outputs: Tuple (rx_mbps, tx_mbps) or (None, None).
-    Side effects: Mutates an internal last-sample cache.
-    Why: Presents a live throughput estimate without requiring external network tests.
+    Summary
+    Compute Mbps rates from cumulative byte counters.
+
+    Inputs
+    rx_bytes: Receive byte counter.
+    tx_bytes: Transmit byte counter.
+
+    Outputs
+    Tuple (rx_mbps, tx_mbps) or (None, None).
+
+    Side effects
+    Mutates an internal last-sample cache.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when computation fails unexpectedly.
+
+    Ties to other methods
+    Used by `NetworkQualityDiagnostics`.
+
+    Why this exists
+    Presents a live throughput estimate without requiring external network tests.
     """
     try:
         if rx_bytes is None or tx_bytes is None:
@@ -344,12 +502,26 @@ def _rate_mbps_from_bytes(rx_bytes: int | None, tx_bytes: int | None) -> tuple[f
 
 def _try_int(value: str | None) -> int | None:
     """
-    Purpose: Parse an integer from a string safely.
-    Ties: Used by network parsing helpers.
-    Inputs: value string or None.
-    Outputs: Integer value or None.
-    Side effects: None.
-    Why: Keeps parsing helpers resilient to missing or malformed command output.
+    Summary
+    Parse an integer from a string safely.
+
+    Inputs
+    value: Value string or None.
+
+    Outputs
+    Integer value or None.
+
+    Side effects
+    None.
+
+    Error handling
+    Never raises; returns None on malformed values.
+
+    Ties to other methods
+    Used by network parsing helpers.
+
+    Why this exists
+    Keeps parsing helpers resilient to missing or malformed command output.
     """
     try:
         if value is None:

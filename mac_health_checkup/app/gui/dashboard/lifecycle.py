@@ -15,12 +15,26 @@ MODULE_PATH = "mac_health_checkup/app/gui/dashboard/lifecycle.py"
 @dataclass
 class ShutdownManager:
     """
-    Purpose: Coordinate graceful shutdown for the application.
-    Ties: Used by entrypoints to ensure cleanup on signals.
-    Inputs: None. Uses config for timeouts.
-    Outputs: None. Manages shutdown state.
-    Side effects: Installs signal handlers and runs cleanup callbacks.
-    Why: Ensures resources are cleaned up and work is not lost on exit.
+    Summary
+    Coordinate graceful shutdown for the application.
+
+    Inputs
+    None. Uses config for timeouts.
+
+    Outputs
+    None. Manages shutdown state.
+
+    Side effects
+    Installs signal handlers and runs cleanup callbacks.
+
+    Error handling
+    Methods raise `RuntimeError` with module and method context when shutdown coordination fails unexpectedly.
+
+    Ties to other methods
+    Used by entrypoints to ensure cleanup on signals.
+
+    Why this exists
+    Ensures resources are cleaned up and work is not lost on exit.
     """
 
     _shutdown_event: threading.Event = field(default_factory=threading.Event)
@@ -28,12 +42,26 @@ class ShutdownManager:
 
     def install_handlers(self) -> None:
         """
-        Purpose: Install SIGINT and SIGTERM handlers for graceful shutdown.
-        Ties: Used by entrypoints at startup.
-        Inputs: None.
-        Outputs: None.
-        Side effects: Registers signal handlers.
-        Why: Ensures the app shuts down cleanly on termination signals.
+        Summary
+        Install SIGINT and SIGTERM handlers for graceful shutdown.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Registers signal handlers.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when handler installation fails.
+
+        Ties to other methods
+        Used by entrypoints at startup.
+
+        Why this exists
+        Ensures the app shuts down cleanly on termination signals.
         """
         try:
             signal.signal(signal.SIGINT, self._handle_signal)
@@ -47,12 +75,26 @@ class ShutdownManager:
 
     def register_cleanup(self, callback: Callable[[], None]) -> None:
         """
-        Purpose: Register a cleanup callback to run on shutdown.
-        Ties: Used by components that need cleanup steps.
-        Inputs: callback is a no arg callable.
-        Outputs: None.
-        Side effects: Adds a callback to the internal list.
-        Why: Centralizes cleanup execution on shutdown.
+        Summary
+        Register a cleanup callback to run on shutdown.
+
+        Inputs
+        callback: No-arg callable.
+
+        Outputs
+        None.
+
+        Side effects
+        Adds a callback to the internal list.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when registration fails unexpectedly.
+
+        Ties to other methods
+        Used by components that need cleanup steps.
+
+        Why this exists
+        Centralizes cleanup execution on shutdown.
         """
         try:
             self._callbacks.append(callback)
@@ -65,12 +107,26 @@ class ShutdownManager:
 
     def wait_for_shutdown(self) -> None:
         """
-        Purpose: Block until a shutdown signal is received.
-        Ties: Used by entrypoints to keep the app running.
-        Inputs: None.
-        Outputs: None.
-        Side effects: Blocks on shutdown event.
-        Why: Provides a clean waiting loop with an exit path.
+        Summary
+        Block until a shutdown signal is received.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Blocks on shutdown event.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when waiting fails unexpectedly.
+
+        Ties to other methods
+        Used by entrypoints to keep the app running.
+
+        Why this exists
+        Provides a clean waiting loop with an exit path.
         """
         try:
             self._shutdown_event.wait()
@@ -81,12 +137,26 @@ class ShutdownManager:
 
     def shutdown_requested(self) -> bool:
         """
-        Purpose: Return whether shutdown has been requested.
-        Ties: Used by UI refresh loops and server entrypoints to avoid scheduling new work during teardown.
-        Inputs: None.
-        Outputs: True when shutdown was triggered, else false.
-        Side effects: None.
-        Why: Provides a safe public check for shutdown state without exposing internal event fields.
+        Summary
+        Return whether shutdown has been requested.
+
+        Inputs
+        None.
+
+        Outputs
+        True when shutdown was triggered, else false.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when querying state fails unexpectedly.
+
+        Ties to other methods
+        Used by UI refresh loops and server entrypoints to avoid scheduling new work during teardown.
+
+        Why this exists
+        Provides a safe public check for shutdown state without exposing internal event fields.
         """
         try:
             return bool(self._shutdown_event.is_set())
@@ -102,12 +172,26 @@ class ShutdownManager:
 
     def trigger_shutdown(self) -> None:
         """
-        Purpose: Trigger shutdown and run cleanup callbacks.
-        Ties: Used internally by signal handlers.
-        Inputs: None.
-        Outputs: None.
-        Side effects: Runs cleanup callbacks and sets shutdown event.
-        Why: Ensures cleanup runs before exit.
+        Summary
+        Trigger shutdown and run cleanup callbacks.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Runs cleanup callbacks and sets shutdown event.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when shutdown triggering fails unexpectedly.
+
+        Ties to other methods
+        Used internally by signal handlers.
+
+        Why this exists
+        Ensures cleanup runs before exit.
         """
         try:
             if self._shutdown_event.is_set():
@@ -121,12 +205,26 @@ class ShutdownManager:
 
     def _run_cleanup(self) -> None:
         """
-        Purpose: Run registered cleanup callbacks with time bounds.
-        Ties: Used by trigger_shutdown.
-        Inputs: None.
-        Outputs: None.
-        Side effects: Executes cleanup callbacks.
-        Why: Ensures cleanup completes within a bounded time.
+        Summary
+        Run registered cleanup callbacks with time bounds.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Executes cleanup callbacks.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when cleanup fails unexpectedly.
+
+        Ties to other methods
+        Used by `trigger_shutdown`.
+
+        Why this exists
+        Ensures cleanup completes within a bounded time.
         """
         try:
             timeout = get_config().shutdown.graceful_timeout_sec
@@ -147,12 +245,26 @@ class ShutdownManager:
 
     def _handle_signal(self, _signum: int, _frame: FrameType | None) -> None:
         """
-        Purpose: Handle OS signals by triggering shutdown.
-        Ties: Registered by install_handlers.
-        Inputs: signal number and optional frame are provided by signal module.
-        Outputs: None.
-        Side effects: Triggers shutdown.
-        Why: Ensures graceful shutdown on SIGINT and SIGTERM.
+        Summary
+        Handle OS signals by triggering shutdown.
+
+        Inputs
+        signal number and optional frame are provided by the signal module.
+
+        Outputs
+        None.
+
+        Side effects
+        Triggers shutdown.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when signal handling fails unexpectedly.
+
+        Ties to other methods
+        Registered by `install_handlers`.
+
+        Why this exists
+        Ensures graceful shutdown on SIGINT and SIGTERM.
         """
         try:
             self.trigger_shutdown()

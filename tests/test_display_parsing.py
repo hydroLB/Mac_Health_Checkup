@@ -12,22 +12,50 @@ MODULE_PATH = "tests/test_display_parsing.py"
 
 class DisplayParsingTests(unittest.TestCase):
     """
-    Purpose: Validate display parsing only returns real display rows, not chipset blocks.
-    Ties: Exercises mac_health_checkup.app.gui.sections.display.parsing._parse_raw_display_rows.
-    Inputs: None.
-    Outputs: Assertions on parsed rows.
-    Side effects: None.
-    Why: Some system_profiler outputs include a chipset model section that must not be treated as a display.
+    Summary
+    Validate display parsing only returns real display rows, not chipset blocks.
+
+    Inputs
+    None.
+
+    Outputs
+    Assertions on parsed rows.
+
+    Side effects
+    None.
+
+    Error handling
+    Test methods raise `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `_parse_raw_display_rows`.
+
+    Why this exists
+    Some system_profiler outputs include a chipset model section that must not be treated as a display.
     """
 
     def test_parse_raw_display_rows_ignores_chipset_and_reads_displays(self) -> None:
         """
-        Purpose: Ensure the parser keys off the 'Displays:' section and extracts display properties.
-        Ties: Exercises _parse_raw_display_rows state machine.
-        Inputs: None.
-        Outputs: None.
-        Side effects: None.
-        Why: Prevents bogus display names like the GPU model showing up in the Display table.
+        Summary
+        Ensure the parser keys off the Displays section and extracts display properties.
+
+        Inputs
+        None.
+
+        Outputs
+        Assertions on parsed rows.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `AssertionError` with module and test context when expectations are not met.
+
+        Ties to other methods
+        Exercises `_parse_raw_display_rows` state machine.
+
+        Why this exists
+        Prevents bogus display names like the GPU model showing up in the Display table.
         """
         try:
             raw = """
@@ -68,12 +96,26 @@ Graphics/Displays:
 
     def test_parse_ioreg_display_rows_extracts_resolution_and_refresh(self) -> None:
         """
-        Purpose: Ensure ioreg parsing extracts resolution and fixed-point refresh rates.
-        Ties: Exercises _parse_ioreg_display_rows fallback path.
-        Inputs: None.
-        Outputs: None.
-        Side effects: None.
-        Why: Some macOS builds omit per-display inventory in SPDisplaysDataType; IORegistry should still populate the Display table.
+        Summary
+        Ensure ioreg parsing extracts resolution and fixed-point refresh rates.
+
+        Inputs
+        None.
+
+        Outputs
+        Assertions on parsed rows.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `AssertionError` with module and test context when expectations are not met.
+
+        Ties to other methods
+        Exercises `_parse_ioreg_display_rows` fallback path.
+
+        Why this exists
+        Some macOS builds omit per-display inventory in SPDisplaysDataType; IORegistry should still populate the Display table.
         """
         try:
             raw = """

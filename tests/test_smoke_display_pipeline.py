@@ -6,12 +6,26 @@ MODULE_PATH = "tests/test_smoke_display_pipeline.py"
 
 def test_smoke_display_pipeline() -> None:
     """
-    Purpose: Smoke test the display parsing and rendering pipeline.
-    Ties: Exercises _parse_raw_display_rows and render_display_table.
-    Inputs: Synthetic system_profiler display output.
-    Outputs: Assertions on generated header and body content.
-    Side effects: None.
-    Why: Confirms parsing and rendering stay compatible for basic inputs.
+    Summary
+    Smoke test the display parsing and rendering pipeline.
+
+    Inputs
+    Synthetic `system_profiler` display output.
+
+    Outputs
+    Assertions on generated header and body content.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `_parse_raw_display_rows` and `render_display_table`.
+
+    Why this exists
+    Confirms parsing and rendering stay compatible for basic inputs.
     """
     try:
         raw = (

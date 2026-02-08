@@ -10,12 +10,26 @@ MODULE_PATH = "tests/test_regex_utils.py"
 
 def test_regex_extract_int() -> None:
     """
-    Purpose: Verify integer extraction from regex helpers.
-    Ties: Exercises regex_extract_int from regex_utils.
-    Inputs: Sample text and regex pattern.
-    Outputs: Assertions on parsed integer value.
-    Side effects: None.
-    Why: Confirms integer parsing for diagnostics output.
+    Summary
+    Verify integer extraction from regex helpers.
+
+    Inputs
+    Sample text and regex pattern.
+
+    Outputs
+    Assertions on parsed integer value.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `regex_extract_int`.
+
+    Why this exists
+    Confirms integer parsing for diagnostics output.
     """
     try:
         text = "Cycle Count: 120"
@@ -35,12 +49,26 @@ def test_regex_extract_int() -> None:
 
 def test_regex_extract_float() -> None:
     """
-    Purpose: Verify float extraction from regex helpers.
-    Ties: Exercises regex_extract_float from regex_utils.
-    Inputs: Sample text and regex pattern.
-    Outputs: Assertions on parsed float value.
-    Side effects: None.
-    Why: Confirms float parsing for diagnostics output.
+    Summary
+    Verify float extraction from regex helpers.
+
+    Inputs
+    Sample text and regex pattern.
+
+    Outputs
+    Assertions on parsed float value.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `regex_extract_float`.
+
+    Why this exists
+    Confirms float parsing for diagnostics output.
     """
     try:
         text = "Temperature: 42.5 C"
@@ -60,12 +88,26 @@ def test_regex_extract_float() -> None:
 
 def test_regex_extract_str() -> None:
     """
-    Purpose: Verify string extraction from regex helpers.
-    Ties: Exercises regex_extract_str from regex_utils.
-    Inputs: Sample text and regex pattern.
-    Outputs: Assertions on parsed string value.
-    Side effects: None.
-    Why: Confirms string parsing for diagnostics output.
+    Summary
+    Verify string extraction from regex helpers.
+
+    Inputs
+    Sample text and regex pattern.
+
+    Outputs
+    Assertions on parsed string value.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `regex_extract_str`.
+
+    Why this exists
+    Confirms string parsing for diagnostics output.
     """
     try:
         text = "Model: MacBookPro"
@@ -85,12 +127,26 @@ def test_regex_extract_str() -> None:
 
 def test_hz_from_text() -> None:
     """
-    Purpose: Verify refresh rate extraction and normalization.
-    Ties: Exercises hz_from_text from regex_utils.
-    Inputs: Sample display strings with refresh rates.
-    Outputs: Assertions on normalized Hz strings.
-    Side effects: None.
-    Why: Ensures refresh rate parsing stays consistent.
+    Summary
+    Verify refresh rate extraction and normalization.
+
+    Inputs
+    Sample display strings with refresh rates.
+
+    Outputs
+    Assertions on normalized Hz strings.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `hz_from_text`.
+
+    Why this exists
+    Ensures refresh rate parsing stays consistent.
     """
     try:
         assert hz_from_text("Refresh Rate: 60 Hz") == "60Hz"

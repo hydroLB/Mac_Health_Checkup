@@ -7,12 +7,27 @@ MODULE_PATH = "mac_health_checkup/core/utils/data.py"
 
 def safe_int(value: object) -> int | None:
     """
-    Purpose: Safely convert a value to int.
-    Ties: Used by diagnostics parsing helpers.
-    Inputs: value is an arbitrary object.
-    Outputs: int value or None if conversion fails.
-    Side effects: None.
-    Why: Prevents conversion errors from propagating unexpectedly.
+    Summary
+    Safely convert a value to int.
+
+    Inputs
+    value: Arbitrary object.
+
+    Outputs
+    int value or None when conversion fails.
+
+    Side effects
+    None.
+
+    Error handling
+    Never raises for conversion failures; returns None. Raises `RuntimeError` with module and method context on
+    unexpected errors.
+
+    Ties to other methods
+    Used by diagnostics parsing helpers.
+
+    Why this exists
+    Prevents conversion errors from propagating unexpectedly.
     """
     try:
         if isinstance(value, bool):
@@ -24,18 +39,35 @@ def safe_int(value: object) -> int | None:
         if isinstance(value, str) and value.strip():
             return int(value.strip())
         return None
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError):
+        return None
+    except Exception as exc:
         raise RuntimeError(format_error(MODULE_PATH, "safe_int", "Failed to convert to int", exc)) from exc
 
 
 def safe_float(value: object) -> float | None:
     """
-    Purpose: Safely convert a value to float.
-    Ties: Used by diagnostics parsing helpers.
-    Inputs: value is an arbitrary object.
-    Outputs: float value or None if conversion fails.
-    Side effects: None.
-    Why: Prevents conversion errors from propagating unexpectedly.
+    Summary
+    Safely convert a value to float.
+
+    Inputs
+    value: Arbitrary object.
+
+    Outputs
+    float value or None when conversion fails.
+
+    Side effects
+    None.
+
+    Error handling
+    Never raises for conversion failures; returns None. Raises `RuntimeError` with module and method context on
+    unexpected errors.
+
+    Ties to other methods
+    Used by diagnostics parsing helpers.
+
+    Why this exists
+    Prevents conversion errors from propagating unexpectedly.
     """
     try:
         if isinstance(value, bool):
@@ -45,7 +77,9 @@ def safe_float(value: object) -> float | None:
         if isinstance(value, str) and value.strip():
             return float(value.strip())
         return None
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError):
+        return None
+    except Exception as exc:
         raise RuntimeError(
             format_error(MODULE_PATH, "safe_float", "Failed to convert to float", exc)
         ) from exc
@@ -53,12 +87,26 @@ def safe_float(value: object) -> float | None:
 
 def fmt_percent(value: float | None) -> str:
     """
-    Purpose: Format a float percent value for display.
-    Ties: Used by diagnostics to summarize health.
-    Inputs: value is a percentage or None.
-    Outputs: Formatted string like "92%" or "?".
-    Side effects: None.
-    Why: Keeps percent formatting consistent across sections.
+    Summary
+    Format a float percent value for display.
+
+    Inputs
+    value: Percentage value or None.
+
+    Outputs
+    Formatted string like "92%" or "?".
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when formatting fails.
+
+    Ties to other methods
+    Used by diagnostics to summarize health.
+
+    Why this exists
+    Keeps percent formatting consistent across sections.
     """
     try:
         if value is None:
@@ -70,12 +118,26 @@ def fmt_percent(value: float | None) -> str:
 
 def fmt_bytes(value: float | None) -> str:
     """
-    Purpose: Format a bytes value into a decimal unit string.
-    Ties: Used by SSD diagnostics and display helpers.
-    Inputs: value is bytes as float or None.
-    Outputs: Formatted string like "12.3 GB" or "?".
-    Side effects: None.
-    Why: Keeps byte formatting consistent across sections.
+    Summary
+    Format a bytes value into a decimal unit string.
+
+    Inputs
+    value: Bytes as float or None.
+
+    Outputs
+    Formatted string like "12.3 GB" or "?".
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when formatting fails.
+
+    Ties to other methods
+    Used by SSD diagnostics and display helpers.
+
+    Why this exists
+    Keeps byte formatting consistent across sections.
     """
     try:
         if value is None:
@@ -97,12 +159,26 @@ def fmt_bytes(value: float | None) -> str:
 
 def fmt_temp_c(value: float | None) -> str:
     """
-    Purpose: Format a temperature in Celsius.
-    Ties: Used by diagnostics output formatting.
-    Inputs: value is Celsius float or None.
-    Outputs: Formatted string like "42C" or "?".
-    Side effects: None.
-    Why: Keeps temperature formatting consistent.
+    Summary
+    Format a temperature in Celsius.
+
+    Inputs
+    value: Celsius float or None.
+
+    Outputs
+    Formatted string like "42C" or "?".
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when formatting fails.
+
+    Ties to other methods
+    Used by diagnostics output formatting.
+
+    Why this exists
+    Keeps temperature formatting consistent.
     """
     try:
         if value is None:
@@ -114,12 +190,26 @@ def fmt_temp_c(value: float | None) -> str:
 
 def fmt_temp_f(value: float | None) -> str:
     """
-    Purpose: Format a temperature in Fahrenheit.
-    Ties: Used by diagnostics output formatting.
-    Inputs: value is Fahrenheit float or None.
-    Outputs: Formatted string like "100F" or "?".
-    Side effects: None.
-    Why: Keeps temperature formatting consistent.
+    Summary
+    Format a temperature in Fahrenheit.
+
+    Inputs
+    value: Fahrenheit float or None.
+
+    Outputs
+    Formatted string like "100F" or "?".
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when formatting fails.
+
+    Ties to other methods
+    Used by diagnostics output formatting.
+
+    Why this exists
+    Keeps temperature formatting consistent.
     """
     try:
         if value is None:

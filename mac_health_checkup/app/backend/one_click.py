@@ -4,7 +4,7 @@ import json
 import os
 import secrets
 import socket
-import subprocess
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 from typing import Mapping
@@ -17,12 +17,26 @@ MODULE_PATH = "mac_health_checkup/app/backend/one_click.py"
 
 def run_one_click_agent(*, repo_root: Path) -> int:
     """
-    Purpose: Start a secure agent server with minimal user interaction.
-    Ties: Used by the repository root one-click script to make running the project effortless.
-    Inputs: repo_root is the repository root directory.
-    Outputs: Process exit code from the agent entrypoint.
-    Side effects: Writes a generated config under `.local/`, may generate TLS cert files, and starts the API server.
-    Why: Enables "press Run on one file" developer ergonomics without weakening security defaults.
+    Summary
+    Start a secure agent server with minimal user interaction.
+
+    Inputs
+    repo_root: Repository root directory.
+
+    Outputs
+    Process exit code from the agent entrypoint.
+
+    Side effects
+    Writes a generated config under `.local/`, may generate TLS cert files, and starts the API server.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when configuration or startup fails.
+
+    Ties to other methods
+    Used by the repository root one-click script to make running the project effortless.
+
+    Why this exists
+    Enables press-run developer ergonomics without weakening security defaults.
     """
     try:
         root = repo_root.resolve()
@@ -37,16 +51,17 @@ def run_one_click_agent(*, repo_root: Path) -> int:
         key_path = tls_dir / "agent-key.pem"
 
         lan_ip = _best_effort_lan_ip()
+        allow_lan = lan_ip is not None
         token = secrets.token_urlsafe(32)
-        port = _pick_free_port("0.0.0.0")
+        bind_host_for_port = lan_ip if allow_lan and lan_ip is not None else "127.0.0.1"
+        port = _pick_free_port(bind_host_for_port)
 
         tls_ready, tls_error = _ensure_self_signed_cert(cert_path=cert_path, key_path=key_path)
-        allow_lan = lan_ip is not None
         tls_enabled = bool(tls_ready and allow_lan)
 
         api_overrides: JsonDict = {
             "enabled": True,
-            "bind_host": "0.0.0.0" if allow_lan else "127.0.0.1",
+            "bind_host": bind_host_for_port,
             "port": port,
             "allow_lan": allow_lan,
             "allow_insecure_http_lan": False,
@@ -60,6 +75,7 @@ def run_one_click_agent(*, repo_root: Path) -> int:
             "max_auth_failures_per_minute": 10,
             "auth_ban_seconds": 120,
             "request_timeout_sec": 15,
+            "pairing_qr_enabled": True,
         }
 
         if allow_lan and not tls_enabled:
@@ -114,12 +130,27 @@ def run_one_click_agent(*, repo_root: Path) -> int:
 
 def _build_config_with_api_overrides(base: JsonDict, api_overrides: Mapping[str, JsonValue]) -> JsonDict:
     """
-    Purpose: Return a full config with only the API section overridden.
-    Ties: Used by run_one_click_agent to avoid requiring users to edit config/config.json.
-    Inputs: base is the existing full config dict, api_overrides are values for the `api` section.
-    Outputs: A new dict representing the derived config.
-    Side effects: None.
-    Why: Keeps configuration centralized while enabling a per-run developer overlay.
+    Summary
+    Return a full config with only the API section overridden.
+
+    Inputs
+    base: Existing full config dict.
+    api_overrides: Values to apply to the `api` section.
+
+    Outputs
+    A new dict representing the derived config.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when the base config is malformed.
+
+    Ties to other methods
+    Used by `run_one_click_agent` to avoid requiring users to edit `config/config.json`.
+
+    Why this exists
+    Keeps configuration centralized while enabling a per-run developer overlay.
     """
     try:
         out: JsonDict = dict(base)
@@ -141,12 +172,26 @@ def _build_config_with_api_overrides(base: JsonDict, api_overrides: Mapping[str,
 
 def _read_json_dict(path: Path) -> JsonDict:
     """
-    Purpose: Read a JSON object from disk and validate it is a dict.
-    Ties: Used by run_one_click_agent.
-    Inputs: path to JSON file.
-    Outputs: JSON dict.
-    Side effects: Reads from disk.
-    Why: Keeps IO and validation centralized with clear error messages.
+    Summary
+    Read a JSON object from disk and validate it is a dict.
+
+    Inputs
+    path: Path to JSON file.
+
+    Outputs
+    JSON dict.
+
+    Side effects
+    Reads from disk.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when file IO or JSON decoding fails.
+
+    Ties to other methods
+    Used by `run_one_click_agent`.
+
+    Why this exists
+    Keeps IO and validation centralized with clear error messages.
     """
     try:
         raw = path.read_text(encoding="utf-8")
@@ -160,12 +205,26 @@ def _read_json_dict(path: Path) -> JsonDict:
 
 def _pick_free_port(bind_host: str) -> int:
     """
-    Purpose: Pick a free TCP port on the given bind host.
-    Ties: Used by one-click runner.
-    Inputs: bind_host string.
-    Outputs: Port int.
-    Side effects: Binds and closes a temporary socket.
-    Why: Avoids port conflicts and reduces setup friction.
+    Summary
+    Pick a free TCP port on the given bind host.
+
+    Inputs
+    bind_host: Bind host string.
+
+    Outputs
+    Port int.
+
+    Side effects
+    Binds and closes a temporary socket.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when port selection fails.
+
+    Ties to other methods
+    Used by the one-click runner.
+
+    Why this exists
+    Avoids port conflicts and reduces setup friction.
     """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -177,12 +236,27 @@ def _pick_free_port(bind_host: str) -> int:
 
 def _best_effort_lan_ip() -> str | None:
     """
-    Purpose: Best-effort derive a LAN-reachable IP address for the current machine.
-    Ties: Used by one-click runner to print a usable URL.
-    Inputs: None.
-    Outputs: IP string or None if unavailable.
-    Side effects: Opens a UDP socket without sending traffic.
-    Why: Users should not have to manually find their LAN IP to pair the iOS app.
+    Summary
+    Best-effort derive a LAN-reachable IP address for the current machine.
+
+    Inputs
+    None.
+
+    Outputs
+    IP string or None if unavailable.
+
+    Side effects
+    Opens a UDP socket without sending traffic.
+
+    Error handling
+    Never raises for OS-level socket failures; returns None. Raises `RuntimeError` with module and method context
+    when unexpected failures occur.
+
+    Ties to other methods
+    Used by the one-click runner to print a usable URL.
+
+    Why this exists
+    Users should not have to manually find their LAN IP to pair the iOS app.
     """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
@@ -201,12 +275,28 @@ def _best_effort_lan_ip() -> str | None:
 
 def _ensure_self_signed_cert(*, cert_path: Path, key_path: Path) -> tuple[bool, str | None]:
     """
-    Purpose: Ensure a self-signed TLS certificate exists for the agent.
-    Ties: Used by one-click runner to enable secure LAN mode.
-    Inputs: cert_path and key_path output paths.
-    Outputs: (ready, warning_message).
-    Side effects: May run openssl to generate cert files.
-    Why: TLS should be easy to enable without manual certificate tooling steps.
+    Summary
+    Ensure a self-signed TLS certificate exists for the agent.
+
+    Inputs
+    cert_path: Certificate output path.
+    key_path: Private key output path.
+
+    Outputs
+    (ready, warning_message).
+
+    Side effects
+    May run openssl to generate cert files.
+
+    Error handling
+    Returns a warning message for common openssl failures. Raises `RuntimeError` with module and method context on
+    unexpected failures.
+
+    Ties to other methods
+    Used by the one-click runner to enable secure LAN mode.
+
+    Why this exists
+    TLS should be easy to enable without manual certificate tooling steps.
     """
     try:
         if cert_path.is_file() and key_path.is_file():
@@ -233,7 +323,13 @@ def _ensure_self_signed_cert(*, cert_path: Path, key_path: Path) -> tuple[bool, 
             "-subj",
             "/CN=mac-health-checkup-agent",
         ]
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=15)
+        subprocess.run(  # nosec B603
+            cmd,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=15,
+        )
         if cert_path.is_file() and key_path.is_file():
             return True, None
         return False, "TLS cert generation did not produce expected files"
@@ -249,12 +345,26 @@ def _ensure_self_signed_cert(*, cert_path: Path, key_path: Path) -> tuple[bool, 
 
 def _find_executable(name: str) -> str | None:
     """
-    Purpose: Locate an executable in PATH.
-    Ties: Used by TLS generation helper.
-    Inputs: name of the executable.
-    Outputs: Absolute path string or None.
-    Side effects: Reads PATH environment variable.
-    Why: Avoids brittle assumptions about tool install locations.
+    Summary
+    Locate an executable in PATH.
+
+    Inputs
+    name: Executable name.
+
+    Outputs
+    Absolute path string or None.
+
+    Side effects
+    Reads PATH environment variable.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when PATH inspection fails unexpectedly.
+
+    Ties to other methods
+    Used by the TLS generation helper.
+
+    Why this exists
+    Avoids brittle assumptions about tool install locations.
     """
     try:
         if not name.strip():

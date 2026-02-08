@@ -14,12 +14,26 @@ MODULE_PATH = "tests/test_one_click_runner.py"
 
 def test_build_config_with_api_overrides_preserves_base_sections(tmp_path: Path) -> None:
     """
-    Purpose: Ensure one-click config overlay only changes the api section.
-    Ties: Exercises _build_config_with_api_overrides.
-    Inputs: Minimal base config dict and api overrides.
-    Outputs: Assertions on merged shape.
-    Side effects: Writes a temp file for realistic JSON round-trip.
-    Why: The one-click runner must not require users to maintain a separate full config file by hand.
+    Summary
+    Ensure one-click config overlay only changes the api section.
+
+    Inputs
+    Minimal base config dict and api overrides.
+
+    Outputs
+    Assertions on merged shape.
+
+    Side effects
+    Writes a temp file for realistic JSON round-trip.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `_build_config_with_api_overrides`.
+
+    Why this exists
+    The one-click runner must not require users to maintain a separate full config file by hand.
     """
     try:
         base = {
@@ -102,6 +116,7 @@ def test_build_config_with_api_overrides_preserves_base_sections(tmp_path: Path)
                 "max_auth_failures_per_minute": 10,
                 "auth_ban_seconds": 120,
                 "request_timeout_sec": 15,
+                "pairing_qr_enabled": True,
             },
             "fans": {"use_sudo": False},
             "gui": {
@@ -174,12 +189,26 @@ def test_build_config_with_api_overrides_preserves_base_sections(tmp_path: Path)
 
 def test_build_config_with_api_overrides_requires_api_section() -> None:
     """
-    Purpose: Ensure missing api section yields a clear failure.
-    Ties: Exercises _build_config_with_api_overrides.
-    Inputs: Base config dict without api section.
-    Outputs: Assertion that it raises.
-    Side effects: None.
-    Why: Keeps failures actionable when the base config is corrupted.
+    Summary
+    Ensure missing api section yields a clear failure.
+
+    Inputs
+    Base config dict without api section.
+
+    Outputs
+    Assertion that it raises.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `_build_config_with_api_overrides`.
+
+    Why this exists
+    Keeps failures actionable when the base config is corrupted.
     """
     try:
         with pytest.raises(RuntimeError):

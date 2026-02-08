@@ -15,12 +15,26 @@ _BILLBOARD_KEYWORDS = ("billboard",)
 
 def _extract_external_display_names(raw: str) -> list[str]:
     """
-    Purpose: Extract external display names from raw SPDisplaysDataType output.
-    Ties: Used by the Ports section to annotate USB-C ports that expose a display.
-    Inputs: raw is a system_profiler SPDisplaysDataType output string.
-    Outputs: List of external display names, in the order they appear.
-    Side effects: None.
-    Why: A USB "BILLBOARD" device is non-obvious; annotating it with the active external display makes the UI understandable.
+    Summary
+    Extract external display names from raw SPDisplaysDataType output.
+
+    Inputs
+    raw: system_profiler SPDisplaysDataType output string.
+
+    Outputs
+    List of external display names, in the order they appear.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by the Ports section to annotate USB-C ports that expose a display.
+
+    Why this exists
+    A USB billboard device is non-obvious; annotating it with the active external display makes the UI understandable.
     """
     try:
         if not raw:
@@ -79,12 +93,26 @@ def _extract_external_display_names(raw: str) -> list[str]:
 
 def _compute_depths(items: list[dict[str, int | str]]) -> list[int]:
     """
-    Purpose: Compute stable nesting depths from system_profiler indentation levels.
-    Ties: Used by update_section to convert raw USB tree indentation into a proper hierarchy.
-    Inputs: items is a list of parsed USB tree items with an integer 'indent' key.
-    Outputs: List of depths aligned to items.
-    Side effects: None.
-    Why: system_profiler uses inconsistent indentation steps; relying on a fixed indent size flattens the tree.
+    Summary
+    Compute stable nesting depths from system_profiler indentation levels.
+
+    Inputs
+    items: Parsed USB tree items with an integer indent key.
+
+    Outputs
+    List of depths aligned to items.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when depth computation fails.
+
+    Ties to other methods
+    Used by `update_section` to convert raw USB tree indentation into a proper hierarchy.
+
+    Why this exists
+    system_profiler uses inconsistent indentation steps; relying on a fixed indent size flattens the tree.
     """
     try:
         stack: list[int] = []
@@ -107,12 +135,28 @@ def _annotate_usb_tree_labels(
     labels: list[str], depths: list[int], external_displays: list[str]
 ) -> list[str]:
     """
-    Purpose: Annotate USB tree labels with user-meaningful hints (display alt-mode and port highlighting).
-    Ties: Used by update_section before rendering the tree.
-    Inputs: labels are raw USB tree labels, depths are nesting depths, external_displays are parsed display names.
-    Outputs: Updated labels aligned to inputs.
-    Side effects: None.
-    Why: Makes it clear which USB-C port is carrying an external display and avoids exposing confusing kernel device names.
+    Summary
+    Annotate USB tree labels with user-meaningful hints (display alt-mode and port highlighting).
+
+    Inputs
+    labels: Raw USB tree labels.
+    depths: Nesting depths aligned to labels.
+    external_displays: Parsed display names.
+
+    Outputs
+    Updated labels aligned to inputs.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when annotation fails unexpectedly.
+
+    Ties to other methods
+    Used by `update_section` before rendering the tree.
+
+    Why this exists
+    Makes it clear which USB-C port is carrying an external display and avoids exposing confusing kernel device names.
     """
     try:
         if not labels:
@@ -146,12 +190,26 @@ def _annotate_usb_tree_labels(
 
 def update_section(host: SectionHost) -> JsonDict:
     """
-    Purpose: Update the Ports section from diagnostics.
-    Ties: Used by dashboard section handler.
-    Inputs: host implements SectionHost.
-    Outputs: Diagnostics dict for the section.
-    Side effects: Updates host fields.
-    Why: Keeps ports rendering logic isolated.
+    Summary
+    Update the Ports section from diagnostics.
+
+    Inputs
+    host: SectionHost implementation.
+
+    Outputs
+    Diagnostics dict for the section.
+
+    Side effects
+    Updates host fields and table output.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when section rendering fails.
+
+    Ties to other methods
+    Used by the dashboard section handler.
+
+    Why this exists
+    Keeps ports rendering logic isolated.
     """
     try:
         data = PortsDiagnostics.fetch()
@@ -188,6 +246,7 @@ def update_section(host: SectionHost) -> JsonDict:
             devices = data.get("devices")
             text = ", ".join(devices) if isinstance(devices, list) else "None"
             host.set_field("ports", text)
+            host.render_table("ports", ("USB Tree",), [])
         return {"ports": data, "usb_tree": items, "external_displays": external_displays}
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(

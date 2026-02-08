@@ -22,12 +22,27 @@ _IOREG_TRANSPORT_RE = re.compile(r'^\s*(?:\|\s*)?"Transport"\s*=\s*"(?P<value>[^
 
 class DeviceScanner:
     """
-    Purpose: Scan connected devices across buses.
-    Ties: Used by Devices and Ports sections.
-    Inputs: None. Reads system_profiler outputs.
-    Outputs: List of device labels.
-    Side effects: Executes system_profiler.
-    Why: Provides a unified view of connected devices.
+    Summary
+    Scan connected devices across buses.
+
+    Inputs
+    None. Reads system_profiler outputs.
+
+    Outputs
+    Device labels grouped by source or flattened into a single list.
+
+    Side effects
+    Executes system_profiler commands.
+
+    Error handling
+    Returns empty lists when command output is missing; raises `RuntimeError` with module and method context when
+    parsing fails unexpectedly.
+
+    Ties to other methods
+    Used by Devices and Ports sections.
+
+    Why this exists
+    Provides a unified view of connected devices.
     """
 
     _cache = Cache(get_config().timeouts.cache_ttl)
@@ -35,12 +50,26 @@ class DeviceScanner:
     @staticmethod
     def scan_by_bus() -> JsonDict:
         """
-        Purpose: Scan devices grouped by bus/source with caching.
-        Ties: Used by the Devices section to render a richer table without re-running expensive probes.
-        Inputs: None.
-        Outputs: Dict with keys usb, bluetooth, thunderbolt, network, and devices.
-        Side effects: Executes system_profiler commands.
-        Why: The UI needs to show where a device is connected, and grouping enables a Settings-style presentation.
+        Summary
+        Scan devices grouped by bus or source with caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with keys usb, bluetooth, thunderbolt, network, and devices.
+
+        Side effects
+        Executes system_profiler commands when cache is stale.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when caching or scanning fails unexpectedly.
+
+        Ties to other methods
+        Used by the Devices section to render a richer table without re-running expensive probes.
+
+        Why this exists
+        The UI needs to show where a device is connected, and grouping enables a settings-style presentation.
         """
         try:
             return cached_fetch(
@@ -54,12 +83,26 @@ class DeviceScanner:
     @staticmethod
     def _scan_by_bus_uncached() -> JsonDict:
         """
-        Purpose: Scan devices grouped by bus/source without caching.
-        Ties: Used by cached_fetch.
-        Inputs: None.
-        Outputs: Dict with per-bus device lists and a combined `devices` list.
-        Side effects: Executes system_profiler commands.
-        Why: Keeps IO isolated from caching for testing and consistent behavior.
+        Summary
+        Scan devices grouped by bus or source without caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with per-bus device lists and a combined `devices` list.
+
+        Side effects
+        Executes system_profiler commands.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when scanning fails unexpectedly.
+
+        Ties to other methods
+        Used by `cached_fetch`.
+
+        Why this exists
+        Keeps IO isolated from caching for testing and consistent behavior.
         """
         try:
             usb = DeviceScanner.scan_usb()
@@ -87,12 +130,26 @@ class DeviceScanner:
     @staticmethod
     def scan_all() -> list[str]:
         """
-        Purpose: Scan all buses and return combined device labels.
-        Ties: Used by Devices section handler.
-        Inputs: None.
-        Outputs: List of device label strings.
-        Side effects: Executes system_profiler.
-        Why: Provides a single call to gather connected devices.
+        Summary
+        Scan all buses and return combined device labels.
+
+        Inputs
+        None.
+
+        Outputs
+        List of device label strings.
+
+        Side effects
+        Executes system_profiler.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when scanning fails unexpectedly.
+
+        Ties to other methods
+        Used by Devices section handler.
+
+        Why this exists
+        Provides a single call to gather connected devices.
         """
         try:
             data = cached_fetch(DeviceScanner._cache, "device_scan", DeviceScanner._scan_uncached)
@@ -108,12 +165,26 @@ class DeviceScanner:
     @staticmethod
     def _scan_uncached() -> JsonDict:
         """
-        Purpose: Scan all buses without caching.
-        Ties: Used by cached_fetch.
-        Inputs: None.
-        Outputs: Dict with devices list.
-        Side effects: Executes system_profiler.
-        Why: Keeps IO separate from cache logic for testing.
+        Summary
+        Scan all buses without caching.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with devices list.
+
+        Side effects
+        Executes system_profiler.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when scanning fails unexpectedly.
+
+        Ties to other methods
+        Used by `cached_fetch`.
+
+        Why this exists
+        Keeps IO separate from cache logic for testing.
         """
         try:
             devices = []
@@ -130,12 +201,27 @@ class DeviceScanner:
     @staticmethod
     def scan_usb() -> list[str]:
         """
-        Purpose: Scan USB devices from system_profiler.
-        Ties: Used by DeviceScanner.scan_all and PortsDiagnostics.
-        Inputs: None.
-        Outputs: List of USB device labels.
-        Side effects: Executes system_profiler.
-        Why: Provides USB device discovery.
+        Summary
+        Scan USB devices from system_profiler.
+
+        Inputs
+        None.
+
+        Outputs
+        List of USB device labels.
+
+        Side effects
+        Executes system_profiler.
+
+        Error handling
+        Returns an empty list when output is missing; raises `RuntimeError` with module and method context when parsing
+        fails unexpectedly.
+
+        Ties to other methods
+        Used by `DeviceScanner.scan_all` and `PortsDiagnostics`.
+
+        Why this exists
+        Provides USB device discovery.
         """
         try:
             out, _err = safe_run(["system_profiler", "SPUSBDataType"], context="usb_scan", allow_sudo=False)
@@ -156,12 +242,27 @@ class DeviceScanner:
     @staticmethod
     def scan_bluetooth() -> list[str]:
         """
-        Purpose: Scan connected Bluetooth devices.
-        Ties: Used by DeviceScanner.scan_all.
-        Inputs: None.
-        Outputs: List of Bluetooth device labels.
-        Side effects: Executes system_profiler.
-        Why: Provides Bluetooth device discovery.
+        Summary
+        Scan connected Bluetooth devices.
+
+        Inputs
+        None.
+
+        Outputs
+        List of Bluetooth device labels.
+
+        Side effects
+        Executes system_profiler.
+
+        Error handling
+        Returns an empty list when output is missing; raises `RuntimeError` with module and method context when parsing
+        fails unexpectedly.
+
+        Ties to other methods
+        Used by `DeviceScanner.scan_all`.
+
+        Why this exists
+        Provides Bluetooth device discovery.
         """
         try:
             out, _err = safe_run(
@@ -178,12 +279,27 @@ class DeviceScanner:
     @staticmethod
     def scan_thunderbolt() -> list[str]:
         """
-        Purpose: Scan Thunderbolt devices.
-        Ties: Used by DeviceScanner.scan_all.
-        Inputs: None.
-        Outputs: List of Thunderbolt device labels.
-        Side effects: Executes system_profiler.
-        Why: Provides Thunderbolt device discovery.
+        Summary
+        Scan Thunderbolt devices.
+
+        Inputs
+        None.
+
+        Outputs
+        List of Thunderbolt device labels.
+
+        Side effects
+        Executes system_profiler.
+
+        Error handling
+        Returns an empty list when output is missing; raises `RuntimeError` with module and method context when parsing
+        fails unexpectedly.
+
+        Ties to other methods
+        Used by `DeviceScanner.scan_all`.
+
+        Why this exists
+        Provides Thunderbolt device discovery.
         """
         try:
             out, _err = safe_run(
@@ -201,12 +317,27 @@ class DeviceScanner:
     @staticmethod
     def scan_network() -> list[str]:
         """
-        Purpose: Scan network hardware devices.
-        Ties: Used by DeviceScanner.scan_all.
-        Inputs: None.
-        Outputs: List of network hardware labels.
-        Side effects: Executes system_profiler.
-        Why: Provides network device discovery.
+        Summary
+        Scan network hardware devices.
+
+        Inputs
+        None.
+
+        Outputs
+        List of network hardware labels.
+
+        Side effects
+        Executes system_profiler.
+
+        Error handling
+        Returns an empty list when output is missing; raises `RuntimeError` with module and method context when parsing
+        fails unexpectedly.
+
+        Ties to other methods
+        Used by `DeviceScanner.scan_all`.
+
+        Why this exists
+        Provides network device discovery.
         """
         try:
             out, _err = safe_run(
@@ -223,23 +354,51 @@ class DeviceScanner:
 
 class PortsDiagnostics:
     """
-    Purpose: Collect connected USB port devices.
-    Ties: Used by Ports section in the GUI.
-    Inputs: None.
-    Outputs: Dict with devices list.
-    Side effects: Executes system_profiler.
-    Why: Provides a focused USB ports view.
+    Summary
+    Collect connected USB port devices.
+
+    Inputs
+    None.
+
+    Outputs
+    Dict with devices list.
+
+    Side effects
+    Executes system_profiler.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when device scanning fails unexpectedly.
+
+    Ties to other methods
+    Used by Ports section in the GUI.
+
+    Why this exists
+    Provides a focused USB ports view.
     """
 
     @staticmethod
     def fetch() -> JsonDict:
         """
-        Purpose: Fetch connected USB device labels.
-        Ties: Used by Ports section handler.
-        Inputs: None.
-        Outputs: Dict with devices list.
-        Side effects: Executes system_profiler.
-        Why: Keeps USB port diagnostics in a single place.
+        Summary
+        Fetch connected USB device labels.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with devices list.
+
+        Side effects
+        Executes system_profiler.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when scanning fails unexpectedly.
+
+        Ties to other methods
+        Used by Ports section handler.
+
+        Why this exists
+        Keeps USB port diagnostics in a single place.
         """
         try:
             return {"devices": DeviceScanner.scan_usb()}
@@ -251,12 +410,27 @@ class PortsDiagnostics:
 
 class InputDiagnostics:
     """
-    Purpose: Collect connected input device labels.
-    Ties: Used by Input section in the GUI.
-    Inputs: None.
-    Outputs: Dict with details list.
-    Side effects: Executes system_profiler.
-    Why: Provides a focused input device view.
+    Summary
+    Collect connected input device labels.
+
+    Inputs
+    None.
+
+    Outputs
+    Dict with details list.
+
+    Side effects
+    Executes system_profiler or ioreg, depending on availability.
+
+    Error handling
+    Returns empty lists when signals are missing; raises `RuntimeError` with module and method context when parsing
+    fails unexpectedly.
+
+    Ties to other methods
+    Used by Input section in the GUI.
+
+    Why this exists
+    Provides a focused input device view.
     """
 
     _input_keywords = ("keyboard", "trackpad", "mouse", "touch bar")
@@ -264,12 +438,26 @@ class InputDiagnostics:
     @staticmethod
     def fetch() -> JsonDict:
         """
-        Purpose: Fetch input device labels.
-        Ties: Used by Input section handler.
-        Inputs: None.
-        Outputs: Dict with input device details.
-        Side effects: Executes system_profiler.
-        Why: Keeps input device parsing centralized.
+        Summary
+        Fetch input device labels.
+
+        Inputs
+        None.
+
+        Outputs
+        Dict with input device details.
+
+        Side effects
+        May execute ioreg and system_profiler depending on available signals.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when scanning fails unexpectedly.
+
+        Ties to other methods
+        Used by Input section handler.
+
+        Why this exists
+        Keeps input device parsing centralized.
         """
         try:
             hid_inputs = _scan_hid_inputs()
@@ -286,12 +474,26 @@ class InputDiagnostics:
 
 def _is_input_device(label: str) -> bool:
     """
-    Purpose: Determine if a label represents an input device.
-    Ties: Used by InputDiagnostics.
-    Inputs: label is the device name.
-    Outputs: True if label looks like an input device.
-    Side effects: None.
-    Why: Filters device lists to just input related hardware.
+    Summary
+    Determine if a label represents an input device.
+
+    Inputs
+    label: Device name.
+
+    Outputs
+    True when the label looks like an input device.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when classification fails unexpectedly.
+
+    Ties to other methods
+    Used by `InputDiagnostics`.
+
+    Why this exists
+    Filters device lists to just input related hardware.
     """
     try:
         lower = label.lower()
@@ -304,12 +506,26 @@ def _is_input_device(label: str) -> bool:
 
 def _dedupe(values: list[str]) -> list[str]:
     """
-    Purpose: Deduplicate labels while preserving order.
-    Ties: Used by DeviceScanner parsing helpers.
-    Inputs: values is a list of strings.
-    Outputs: Deduplicated list.
-    Side effects: None.
-    Why: Keeps device lists stable for UI rendering.
+    Summary
+    Deduplicate labels while preserving order.
+
+    Inputs
+    values: List of strings.
+
+    Outputs
+    Deduplicated list.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when deduping fails unexpectedly.
+
+    Ties to other methods
+    Used by `DeviceScanner` parsing helpers.
+
+    Why this exists
+    Keeps device lists stable for UI rendering.
     """
     try:
         seen: set[str] = set()
@@ -325,12 +541,27 @@ def _dedupe(values: list[str]) -> list[str]:
 
 def _scan_hid_inputs() -> list[str]:
     """
-    Purpose: Scan IOHIDDevice services for input devices without relying on name heuristics.
-    Ties: Used by InputDiagnostics.fetch for a robust input inventory.
-    Inputs: None.
-    Outputs: List of formatted device labels.
-    Side effects: Executes ioreg.
-    Why: system_profiler often omits Bluetooth or internal HID devices; IORegistry is more complete.
+    Summary
+    Scan IOHIDDevice services for input devices without relying on name heuristics.
+
+    Inputs
+    None.
+
+    Outputs
+    List of formatted device labels.
+
+    Side effects
+    Executes ioreg.
+
+    Error handling
+    Returns an empty list when output is missing; raises `RuntimeError` with module and method context when parsing
+    fails unexpectedly.
+
+    Ties to other methods
+    Used by `InputDiagnostics.fetch` for a robust input inventory.
+
+    Why this exists
+    system_profiler often omits Bluetooth or internal HID devices; IORegistry is more complete.
     """
     try:
         out, _err = safe_run(
@@ -481,12 +712,28 @@ def _finalize_hid_kinds(product: str, kinds: set[str]) -> str | None:
 
 def _classify_hid_device(product: str, usage_page: int | None, usage: int | None) -> str | None:
     """
-    Purpose: Classify an IOHIDDevice as keyboard/mouse/trackpad when possible.
-    Ties: Used by _scan_hid_inputs.
-    Inputs: product name, usage_page, and usage values when available.
-    Outputs: Kind string or None when not an input device.
-    Side effects: None.
-    Why: Avoids brittle keyword-only filtering and excludes unrelated HID services.
+    Summary
+    Classify an IOHIDDevice as keyboard, mouse, or trackpad when possible.
+
+    Inputs
+    product: Product name.
+    usage_page: HID usage page when available.
+    usage: HID usage when available.
+
+    Outputs
+    Kind string or None when not an input device.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when classification fails unexpectedly.
+
+    Ties to other methods
+    Used by `_scan_hid_inputs`.
+
+    Why this exists
+    Avoids brittle keyword-only filtering and excludes unrelated HID services.
     """
     try:
         name = (product or "").strip()
