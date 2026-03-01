@@ -13,6 +13,29 @@ MODULE_PATH = "tests/test_backend_server_unit.py"
 
 
 def _build_api_config(*, tls_enabled: bool, bind_host: str = "127.0.0.1") -> ApiConfig:
+    """
+    Summary
+    Execute `_build_api_config` for its module-level responsibility.
+
+    Inputs
+    tls_enabled: keyword-only `bool` parameter.
+    bind_host: keyword-only `str` parameter with a default.
+
+    Outputs
+    Returns `ApiConfig`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `tests/test_backend_server_unit.py:_build_api_config` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `tests/test_backend_server_unit.py`.
+
+    Why this exists
+    Keeps `_build_api_config` explicit, testable, and maintainable.
+    """
     return ApiConfig(
         enabled=True,
         bind_host=bind_host,
@@ -62,7 +85,16 @@ def test_url_normalizes_wildcard_host_and_tls_scheme() -> None:
 
         https_server = srv.SnapshotApiServer({}, _build_api_config(tls_enabled=True, bind_host="127.0.0.1"))
         assert https_server.url().startswith("https://127.0.0.1:")
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_url_normalizes_wildcard_host_and_tls_scheme failed: {exc}"
         ) from exc
@@ -95,7 +127,16 @@ def test_tls_fingerprint_is_none_when_tls_disabled() -> None:
         api = _build_api_config(tls_enabled=False)
         server = srv.SnapshotApiServer({}, api)
         assert server.tls_certificate_fingerprint_sha256() is None
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_tls_fingerprint_is_none_when_tls_disabled failed: {exc}"
         ) from exc
@@ -138,6 +179,29 @@ def test_server_start_stop_uses_bind_retry_and_thread(monkeypatch: pytest.Monkey
 
         class _StubHTTPD:
             def __init__(self, addr: tuple[str, int], _handler_factory: object) -> None:
+                """
+                Summary
+                Execute `__init__` for its module-level responsibility.
+
+                Inputs
+                addr: `tuple[str, int]` parameter from the function signature.
+                _handler_factory: `object` parameter from the function signature.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_backend_server_unit.py:__init__` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_backend_server_unit.py`.
+
+                Why this exists
+                Keeps `__init__` explicit, testable, and maintainable.
+                """
                 attempts.append(int(addr[1]))
                 if len(attempts) == 1:
                     raise in_use
@@ -146,12 +210,78 @@ def test_server_start_stop_uses_bind_retry_and_thread(monkeypatch: pytest.Monkey
                 self.socket: object = object()
 
             def serve_forever(self) -> None:
+                """
+                Summary
+                Execute `serve_forever` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_backend_server_unit.py:serve_forever` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_backend_server_unit.py`.
+
+                Why this exists
+                Keeps `serve_forever` explicit, testable, and maintainable.
+                """
                 return
 
             def shutdown(self) -> None:
+                """
+                Summary
+                Execute `shutdown` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_backend_server_unit.py:shutdown` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_backend_server_unit.py`.
+
+                Why this exists
+                Keeps `shutdown` explicit, testable, and maintainable.
+                """
                 return
 
             def server_close(self) -> None:
+                """
+                Summary
+                Execute `server_close` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_backend_server_unit.py:server_close` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_backend_server_unit.py`.
+
+                Why this exists
+                Keeps `server_close` explicit, testable, and maintainable.
+                """
                 return
 
         @dataclass
@@ -163,13 +293,81 @@ def test_server_start_stop_uses_bind_retry_and_thread(monkeypatch: pytest.Monkey
             joined: bool = False
 
             def start(self) -> None:
+                """
+                Summary
+                Execute `start` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_backend_server_unit.py:start` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_backend_server_unit.py`.
+
+                Why this exists
+                Keeps `start` explicit, testable, and maintainable.
+                """
                 self.started = True
 
             def join(self, *, timeout: float | None = None) -> None:
+                """
+                Summary
+                Execute `join` for its module-level responsibility.
+
+                Inputs
+                timeout: keyword-only `float | None` parameter with a default.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_backend_server_unit.py:join` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_backend_server_unit.py`.
+
+                Why this exists
+                Keeps `join` explicit, testable, and maintainable.
+                """
                 _ = timeout
                 self.joined = True
 
         def _thread_factory(*, target: Callable[[], None], name: str, daemon: bool) -> _StubThread:
+            """
+            Summary
+            Execute `_thread_factory` for its module-level responsibility.
+
+            Inputs
+            target: keyword-only `Callable[[], None]` parameter.
+            name: keyword-only `str` parameter.
+            daemon: keyword-only `bool` parameter.
+
+            Outputs
+            Returns `_StubThread`.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `tests/test_backend_server_unit.py:_thread_factory` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `tests/test_backend_server_unit.py`.
+
+            Why this exists
+            Keeps `_thread_factory` explicit, testable, and maintainable.
+            """
             return _StubThread(target=target, name=name, daemon=daemon)
 
         monkeypatch.setattr(srv, "_ReusableThreadingHTTPServer", _StubHTTPD)
@@ -184,7 +382,16 @@ def test_server_start_stop_uses_bind_retry_and_thread(monkeypatch: pytest.Monkey
 
         server.stop()
         assert server.url().endswith(f":{api.port}")
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_server_start_stop_uses_bind_retry_and_thread failed: {exc}"
         ) from exc
@@ -217,21 +424,112 @@ def test_wait_until_ready_uses_bounded_retry(monkeypatch: pytest.MonkeyPatch) ->
         times = [0.0, 0.05, 0.10, 0.15, 0.20]
 
         def _fake_time() -> float:
+            """
+            Summary
+            Execute `_fake_time` for its module-level responsibility.
+
+            Inputs
+            None.
+
+            Outputs
+            Returns `float`.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `tests/test_backend_server_unit.py:_fake_time` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `tests/test_backend_server_unit.py`.
+
+            Why this exists
+            Keeps `_fake_time` explicit, testable, and maintainable.
+            """
             return times.pop(0) if times else 999.0
 
         attempts: list[int] = []
 
         class _Conn:
             def __enter__(self) -> "_Conn":
+                """
+                Summary
+                Execute `__enter__` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                Returns `'_Conn'`.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_backend_server_unit.py:__enter__` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_backend_server_unit.py`.
+
+                Why this exists
+                Keeps `__enter__` explicit, testable, and maintainable.
+                """
                 return self
 
             def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+                """
+                Summary
+                Execute `__exit__` for its module-level responsibility.
+
+                Inputs
+                exc_type: `object` parameter from the function signature.
+                exc: `object` parameter from the function signature.
+                tb: `object` parameter from the function signature.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_backend_server_unit.py:__exit__` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_backend_server_unit.py`.
+
+                Why this exists
+                Keeps `__exit__` explicit, testable, and maintainable.
+                """
                 _ = exc_type
                 _ = exc
                 _ = tb
                 return
 
         def _fake_create_connection(addr: tuple[str, int], timeout: float) -> _Conn:
+            """
+            Summary
+            Execute `_fake_create_connection` for its module-level responsibility.
+
+            Inputs
+            addr: `tuple[str, int]` parameter from the function signature.
+            timeout: `float` parameter from the function signature.
+
+            Outputs
+            Returns `_Conn`.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `tests/test_backend_server_unit.py:_fake_create_connection` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `tests/test_backend_server_unit.py`.
+
+            Why this exists
+            Keeps `_fake_create_connection` explicit, testable, and maintainable.
+            """
             _ = timeout
             attempts.append(addr[1])
             if len(attempts) < 3:
@@ -246,5 +544,14 @@ def test_wait_until_ready_uses_bounded_retry(monkeypatch: pytest.MonkeyPatch) ->
 
         assert srv.wait_until_ready("http://127.0.0.1:1234", timeout_sec=1) is True
         assert len(attempts) == 3
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(f"{MODULE_PATH}:test_wait_until_ready_uses_bounded_retry failed: {exc}") from exc

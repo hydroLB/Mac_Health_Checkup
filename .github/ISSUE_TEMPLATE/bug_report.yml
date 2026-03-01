@@ -1,0 +1,56 @@
+name: Bug report
+description: Report a defect, regression, or unexpected behavior.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for reproducible defects only.
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: Short statement of the defect.
+      placeholder: The SSD section shows "unknown" despite valid SMART output.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Exact steps to reproduce.
+      placeholder: |
+        1. Run make dev
+        2. Open SSD section
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include OS, Python version, and commit SHA if known.
+      placeholder: macOS 14.7, Python 3.11.14, commit abc123
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots
+      render: shell
+    validations:
+      required: false

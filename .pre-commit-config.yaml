@@ -16,7 +16,14 @@ repos:
     rev: v1.13.0
     hooks:
       - id: mypy
-        args: [--config-file=pyproject.toml]
+        name: mypy (packages)
+        pass_filenames: false
+        args: [--config-file=pyproject.toml, mac_health_checkup, tests, tools, benchmarks]
+        additional_dependencies: []
+      - id: mypy
+        name: mypy (entry scripts)
+        pass_filenames: false
+        args: [--config-file=pyproject.toml, run.py, run_mac_health_checkup.py, run_mac_health_checkup_ui.py]
         additional_dependencies: []
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.10

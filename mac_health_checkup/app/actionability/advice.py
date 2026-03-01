@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Literal, Mapping, Sequence, cast
 
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 
 MODULE_PATH = "mac_health_checkup/app/actionability/advice.py"
 
@@ -98,7 +98,7 @@ def worst_severity_from_metrics(metrics: Sequence[tuple[str, str, str]] | None) 
             if normalized == "warn":
                 worst = "warn"
         return worst
-    except Exception:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return "ok"
 
 
@@ -135,13 +135,36 @@ def should_fail_on(severity: AdviceSeverity, fail_on: str | None) -> bool:
         if mode == "warn":
             return severity in {"warn", "bad"}
         return False
-    except Exception:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return False
 
 
 def _severity_for_section(
     metrics: Sequence[tuple[str, str, str]], diagnostics: Mapping[str, object] | None
 ) -> AdviceSeverity:
+    """
+    Summary
+    Execute `_severity_for_section` for its module-level responsibility.
+
+    Inputs
+    metrics: `Sequence[tuple[str, str, str]]` parameter from the function signature.
+    diagnostics: `Mapping[str, object] | None` parameter from the function signature.
+
+    Outputs
+    Returns `AdviceSeverity`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/actionability/advice.py:_severity_for_section` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/actionability/advice.py`.
+
+    Why this exists
+    Keeps `_severity_for_section` explicit, testable, and maintainable.
+    """
     worst = worst_severity_from_metrics(metrics)
     if worst != "ok":
         return worst
@@ -154,6 +177,28 @@ def _severity_for_section(
 
 
 def _normalize_status(value: object) -> AdviceSeverity | None:
+    """
+    Summary
+    Execute `_normalize_status` for its module-level responsibility.
+
+    Inputs
+    value: `object` parameter from the function signature.
+
+    Outputs
+    Returns `AdviceSeverity | None`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/actionability/advice.py:_normalize_status` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/actionability/advice.py`.
+
+    Why this exists
+    Keeps `_normalize_status` explicit, testable, and maintainable.
+    """
     if not isinstance(value, str):
         return None
     lowered = value.strip().lower()
@@ -165,6 +210,28 @@ def _normalize_status(value: object) -> AdviceSeverity | None:
 def _metric_map(
     rows: Sequence[tuple[str, str, str]],
 ) -> dict[str, tuple[str, str]]:
+    """
+    Summary
+    Execute `_metric_map` for its module-level responsibility.
+
+    Inputs
+    rows: `Sequence[tuple[str, str, str]]` parameter from the function signature.
+
+    Outputs
+    Returns `dict[str, tuple[str, str]]`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/actionability/advice.py:_metric_map` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/actionability/advice.py`.
+
+    Why this exists
+    Keeps `_metric_map` explicit, testable, and maintainable.
+    """
     out: dict[str, tuple[str, str]] = {}
     for label, value, status in rows:
         if not label.strip():
@@ -180,6 +247,31 @@ def _diagnosis_for_section(
     metric_map: Mapping[str, tuple[str, str]],
     severity: AdviceSeverity,
 ) -> str:
+    """
+    Summary
+    Execute `_diagnosis_for_section` for its module-level responsibility.
+
+    Inputs
+    key: `str` parameter from the function signature.
+    field: keyword-only `str | None` parameter.
+    metric_map: keyword-only `Mapping[str, tuple[str, str]]` parameter.
+    severity: keyword-only `AdviceSeverity` parameter.
+
+    Outputs
+    Returns `str`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/actionability/advice.py:_diagnosis_for_section` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/actionability/advice.py`.
+
+    Why this exists
+    Keeps `_diagnosis_for_section` explicit, testable, and maintainable.
+    """
     if key == "battery":
         health = metric_map.get("Health")
         cycles = metric_map.get("Cycle count")
@@ -261,6 +353,30 @@ def _diagnosis_for_section(
 def _next_steps_for_section(
     key: str, *, metric_map: Mapping[str, tuple[str, str]], severity: AdviceSeverity
 ) -> list[str]:
+    """
+    Summary
+    Execute `_next_steps_for_section` for its module-level responsibility.
+
+    Inputs
+    key: `str` parameter from the function signature.
+    metric_map: keyword-only `Mapping[str, tuple[str, str]]` parameter.
+    severity: keyword-only `AdviceSeverity` parameter.
+
+    Outputs
+    Returns `list[str]`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/actionability/advice.py:_next_steps_for_section` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/actionability/advice.py`.
+
+    Why this exists
+    Keeps `_next_steps_for_section` explicit, testable, and maintainable.
+    """
     steps: list[str] = []
     if key == "battery":
         if severity == "bad":

@@ -49,14 +49,26 @@ def parse_api(raw: JsonDict) -> ApiConfig:
         section = get_section(raw, "api")
         bind_host = require_str(section.get("bind_host"))
         bind_override = os.getenv("MAC_HEALTH_CHECKUP_API_BIND_HOST")
-        if bind_override is not None and bind_override.strip():
-            bind_host = require_str(bind_override.strip())
+        if bind_override is not None:
+            bind_override_stripped = bind_override.strip()
+            if not bind_override_stripped:
+                raise ValueError(
+                    "MAC_HEALTH_CHECKUP_API_BIND_HOST is set but empty. "
+                    "Set it to a host value or unset the variable."
+                )
+            bind_host = require_str(bind_override_stripped)
 
         port = require_int(0, 65535)(section.get("port"))
         port_override = os.getenv("MAC_HEALTH_CHECKUP_API_PORT")
-        if port_override is not None and port_override.strip():
+        if port_override is not None:
+            port_override_stripped = port_override.strip()
+            if not port_override_stripped:
+                raise ValueError(
+                    "MAC_HEALTH_CHECKUP_API_PORT is set but empty. "
+                    "Set it to a value in 0-65535 or unset the variable."
+                )
             try:
-                port = require_int(0, 65535)(port_override.strip())
+                port = require_int(0, 65535)(port_override_stripped)
             except ValueError as exc:
                 raise ValueError(
                     f"Invalid MAC_HEALTH_CHECKUP_API_PORT override: {port_override!r} (expected 0-65535)"
@@ -205,6 +217,22 @@ def parse_thresholds(raw: JsonDict) -> ThresholdsConfig:
         backup_bad_days = require_int(0, 3650)(section.get("backup_bad_days"))
         if backup_bad_days <= backup_warn_days:
             raise ValueError("thresholds.backup_bad_days must be greater than thresholds.backup_warn_days")
+        health_excellent_min_percent = require_float(0.0, 100.0)(section.get("health_excellent_min_percent"))
+        health_good_min_percent = require_float(0.0, 100.0)(section.get("health_good_min_percent"))
+        health_fair_min_percent = require_float(0.0, 100.0)(section.get("health_fair_min_percent"))
+        if health_excellent_min_percent <= health_good_min_percent:
+            raise ValueError(
+                "thresholds.health_excellent_min_percent must be greater than "
+                "thresholds.health_good_min_percent"
+            )
+        if health_good_min_percent <= health_fair_min_percent:
+            raise ValueError(
+                "thresholds.health_good_min_percent must be greater than thresholds.health_fair_min_percent"
+            )
+        ssd_unsafe_shutdowns_warn_count = require_int(1, 1_000_000)(
+            section.get("ssd_unsafe_shutdowns_warn_count")
+        )
+        ssd_media_errors_bad_count = require_int(1, 1_000_000)(section.get("ssd_media_errors_bad_count"))
         return ThresholdsConfig(
             temp_warn_c=temp_warn_c,
             temp_bad_c=temp_bad_c,
@@ -216,6 +244,11 @@ def parse_thresholds(raw: JsonDict) -> ThresholdsConfig:
             memory_free_bad_percent=mem_free_bad,
             backup_warn_days=backup_warn_days,
             backup_bad_days=backup_bad_days,
+            health_excellent_min_percent=health_excellent_min_percent,
+            health_good_min_percent=health_good_min_percent,
+            health_fair_min_percent=health_fair_min_percent,
+            ssd_unsafe_shutdowns_warn_count=ssd_unsafe_shutdowns_warn_count,
+            ssd_media_errors_bad_count=ssd_media_errors_bad_count,
         )
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(

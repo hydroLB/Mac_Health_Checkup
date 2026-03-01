@@ -80,7 +80,7 @@ public struct DiagnosticsTreeView: View {
          Why this exists
          Provides a predictable, readable nested view with minimal clutter.
          */
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: theme.layout.verticalScaled(6)) {
             ForEach(diagnostics.keys.sorted(), id: \.self) { key in
                 NodeView(theme: theme, name: key, value: diagnostics[key] ?? .null, depth: 0)
             }
@@ -129,7 +129,7 @@ private struct NodeView: View {
                         .foregroundStyle(theme.colors.field)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .textSelection(.enabled)
-                        .padding(.top, 4)
+                        .padding(.top, theme.layout.verticalScaled(4))
                 }
                 .frame(maxHeight: 260)
             } label: {
@@ -146,13 +146,13 @@ private struct NodeView: View {
             }
         case .object(let obj):
             DisclosureGroup(isExpanded: $isExpanded) {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: theme.layout.verticalScaled(6)) {
                     ForEach(obj.keys.sorted(), id: \.self) { childKey in
                         NodeView(theme: theme, name: childKey, value: obj[childKey] ?? .null, depth: depth + 1)
                     }
                 }
                 .padding(.leading, 14)
-                .padding(.top, 4)
+                .padding(.top, theme.layout.verticalScaled(4))
             } label: {
                 HStack(alignment: .top) {
                     Text(name)
@@ -167,13 +167,13 @@ private struct NodeView: View {
             }
         case .array(let arr):
             DisclosureGroup(isExpanded: $isExpanded) {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: theme.layout.verticalScaled(6)) {
                     ForEach(Array(arr.enumerated()), id: \.offset) { idx, item in
                         NodeView(theme: theme, name: "[\(idx)]", value: item, depth: depth + 1)
                     }
                 }
                 .padding(.leading, 14)
-                .padding(.top, 4)
+                .padding(.top, theme.layout.verticalScaled(4))
             } label: {
                 HStack(alignment: .top) {
                     Text(name)

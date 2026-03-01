@@ -143,3 +143,96 @@ def _extract_usb_tree_items(raw: str) -> list[dict[str, int | str]]:
         raise RuntimeError(
             format_error(MODULE_PATH, "_extract_usb_tree_items", "Failed to parse USB tree", exc)
         ) from exc
+
+
+def strip_sysprop_prefix(line: str) -> str:
+    """
+    Summary
+    Public wrapper around USB property-prefix stripping.
+
+    Inputs
+    line: Raw USB tree line.
+
+    Outputs
+    Cleaned label or empty string when the line is metadata.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Delegates to `_strip_sysprop_prefix`.
+
+    Why this exists
+    Exposes a stable public surface without requiring callers to import underscore-prefixed internals.
+    """
+    try:
+        return _strip_sysprop_prefix(line)
+    except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
+        raise RuntimeError(
+            format_error(MODULE_PATH, "strip_sysprop_prefix", "Failed to strip prefix", exc)
+        ) from exc
+
+
+def is_usb_tree_device_line(label: str) -> bool:
+    """
+    Summary
+    Public wrapper around USB device-line classification.
+
+    Inputs
+    label: Cleaned line label candidate.
+
+    Outputs
+    True when the label should be treated as a USB device.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when classification fails unexpectedly.
+
+    Ties to other methods
+    Delegates to `_is_usb_tree_device_line`.
+
+    Why this exists
+    Keeps internal underscore helpers private while still offering a stable public API.
+    """
+    try:
+        return _is_usb_tree_device_line(label)
+    except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
+        raise RuntimeError(
+            format_error(MODULE_PATH, "is_usb_tree_device_line", "Failed to classify line", exc)
+        ) from exc
+
+
+def parse_usb_tree_items(raw: str) -> list[dict[str, int | str]]:
+    """
+    Summary
+    Public wrapper around USB tree extraction.
+
+    Inputs
+    raw: Raw `system_profiler` USB tree text.
+
+    Outputs
+    List of parsed items with `label` and `indent`.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
+
+    Ties to other methods
+    Delegates to `_extract_usb_tree_items`.
+
+    Why this exists
+    Provides a supported import surface for USB parsing helpers while preserving existing internal helpers for tests.
+    """
+    try:
+        return _extract_usb_tree_items(raw)
+    except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
+        raise RuntimeError(
+            format_error(MODULE_PATH, "parse_usb_tree_items", "Failed to parse USB tree items", exc)
+        ) from exc

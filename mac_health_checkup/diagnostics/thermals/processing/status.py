@@ -39,5 +39,5 @@ def status_for_temp(value_c: float, *, warn: float, bad: float) -> str:
         if value >= float(warn):
             return "warn"
         return "ok"
-    except Exception:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return "ok"

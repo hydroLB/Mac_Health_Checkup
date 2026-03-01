@@ -43,7 +43,7 @@ def release_all(api: HidApi, *values: ctypes.c_void_p) -> None:
         for value in values:
             if value:
                 api.cf_release(value)
-    except Exception:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return
 
 
@@ -74,7 +74,7 @@ def create_cfstring(api: HidApi, name: bytes) -> ctypes.c_void_p | None:
     try:
         created = api.cf_string_create(ctypes.c_void_p(0), name, K_CF_STRING_ENCODING_UTF8)
         return created if created else None
-    except Exception:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return None
 
 
@@ -110,7 +110,7 @@ def create_cfnumbers(
         num_page = api.cf_number_create(null, K_CF_NUMBER_SINT32, ctypes.byref(ctypes.c_int32(int(page))))
         num_usage = api.cf_number_create(null, K_CF_NUMBER_SINT32, ctypes.byref(ctypes.c_int32(int(usage))))
         return (num_page if num_page else None, num_usage if num_usage else None)
-    except Exception:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return (None, None)
 
 
@@ -163,5 +163,5 @@ def create_matching_dict(
             ctypes.byref(value_callbacks),
         )
         return matching if matching else None
-    except Exception:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return None

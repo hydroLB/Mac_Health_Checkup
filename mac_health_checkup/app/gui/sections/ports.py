@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from mac_health_checkup.app.gui.sections.types import SectionHost
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.errors import format_error
-from mac_health_checkup.core.utils.shell import safe_run
-from mac_health_checkup.core.utils.usb_tree import _extract_usb_tree_items
+from mac_health_checkup.core.utils import format_error, parse_usb_tree_items, safe_run
 from mac_health_checkup.diagnostics.devices import PortsDiagnostics
 from mac_health_checkup.diagnostics.display import DisplayDiagnostics
 
@@ -45,6 +43,28 @@ def _extract_external_display_names(raw: str) -> list[str]:
         current_is_builtin: bool | None = None
 
         def flush() -> None:
+            """
+            Summary
+            Execute `flush` for its module-level responsibility.
+
+            Inputs
+            None.
+
+            Outputs
+            None.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `mac_health_checkup/app/gui/sections/ports.py:flush` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `mac_health_checkup/app/gui/sections/ports.py`.
+
+            Why this exists
+            Keeps `flush` explicit, testable, and maintainable.
+            """
             nonlocal current_name, current_connection, current_is_builtin
             if not current_name:
                 current_name = None
@@ -221,7 +241,7 @@ def update_section(host: SectionHost) -> JsonDict:
         out, _err = safe_run(
             ["system_profiler", "SPUSBDataType"], context="usb_tree_full", allow_sudo=False, timeout=8
         )
-        items = _extract_usb_tree_items(out or "") if out else []
+        items = parse_usb_tree_items(out or "") if out else []
         rows: list[tuple[str, ...]] = []
         depths = _compute_depths(items)
         labels = [str(item.get("label", "")).strip() for item in items]

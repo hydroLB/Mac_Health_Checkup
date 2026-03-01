@@ -4,9 +4,9 @@ from dataclasses import dataclass
 
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.data import safe_float, safe_int
-from mac_health_checkup.core.utils.errors import format_error
-from mac_health_checkup.core.utils.shell import safe_run
+from mac_health_checkup.core.utils import safe_float, safe_int
+from mac_health_checkup.core.utils import format_error
+from mac_health_checkup.core.utils import safe_run
 from mac_health_checkup.diagnostics.base import Cache, cached_fetch, get_diagnostics_logger, new_context
 
 MODULE_PATH = "mac_health_checkup/diagnostics/processes.py"
@@ -165,7 +165,7 @@ class TopProcessesDiagnostics:
                 "raw_cpu": cpu_out or "",
                 "raw_mem": mem_out or "",
             }
-        except Exception as exc:
+        except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
             logger.warning(
                 "process collection failed",
                 event="processes_error",

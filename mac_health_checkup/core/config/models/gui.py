@@ -13,7 +13,7 @@ class ThresholdsConfig:
 
     Inputs
     Temperature thresholds in Celsius, Wi‑Fi RSSI thresholds in dBm, and maintenance thresholds for disk, memory,
-    and backup recency.
+    backup recency, battery and SSD health labels, and SSD warning and error counters.
 
     Outputs
     Immutable thresholds configuration.
@@ -41,6 +41,11 @@ class ThresholdsConfig:
     memory_free_bad_percent: float
     backup_warn_days: int
     backup_bad_days: int
+    health_excellent_min_percent: float
+    health_good_min_percent: float
+    health_fair_min_percent: float
+    ssd_unsafe_shutdowns_warn_count: int
+    ssd_media_errors_bad_count: int
 
 
 @dataclass(frozen=True)

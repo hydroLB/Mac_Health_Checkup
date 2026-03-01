@@ -78,7 +78,16 @@ class SecurityPostureParsingTests(unittest.TestCase):
             self.assertEqual(
                 _parse_filevault_status("unexpected output"), {"enabled": None, "status": "unknown"}
             )
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:SecurityPostureParsingTests.test_parse_filevault_status_handles_on_off_and_unknown failed: {exc}"
             ) from exc
@@ -124,7 +133,16 @@ class SecurityPostureParsingTests(unittest.TestCase):
             self.assertEqual(_parse_firewall_globalstate("0\n"), {"enabled": False, "state": 0})
             self.assertEqual(_parse_firewall_globalstate("2\n"), {"enabled": True, "state": 2})
             self.assertEqual(_parse_firewall_globalstate("not_an_int\n"), {"enabled": None, "state": None})
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:SecurityPostureParsingTests.test_parse_sip_gatekeeper_and_firewall failed: {exc}"
             ) from exc
@@ -186,7 +204,16 @@ class SystemPressureParsingTests(unittest.TestCase):
             self.assertEqual(parsed.get("used_percent"), 80.0)
             self.assertEqual(parsed.get("free_percent"), 20.0)
             self.assertEqual(_parse_df_root(""), {"used_percent": None, "free_percent": None})
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:SystemPressureParsingTests.test_parse_df_root_computes_free_percent failed: {exc}"
             ) from exc
@@ -219,7 +246,16 @@ class SystemPressureParsingTests(unittest.TestCase):
             parsed = _parse_memory_pressure(raw)
             self.assertEqual(parsed.get("free_percent"), 13.2)
             self.assertEqual(_parse_memory_pressure("no match"), {"free_percent": None})
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:SystemPressureParsingTests.test_parse_memory_pressure_extracts_free_percent failed: {exc}"
             ) from exc
@@ -286,7 +322,16 @@ class SoftwareUpdateParsingTests(unittest.TestCase):
             labels = _parse_update_labels(raw)
             self.assertEqual(labels, ["Label One", "Label Two"])
             self.assertEqual(_parse_update_labels(""), [])
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:SoftwareUpdateParsingTests.test_parse_update_labels_dedupes_and_preserves_order failed: {exc}"
             ) from exc
@@ -348,7 +393,16 @@ class TimeMachineParsingTests(unittest.TestCase):
             if parsed is not None:
                 self.assertIsNotNone(parsed.tzinfo)
             self.assertIsNone(_parse_tm_timestamp("not a timestamp"))
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:TimeMachineParsingTests.test_extract_and_parse_timestamp failed: {exc}"
             ) from exc
@@ -386,7 +440,16 @@ class TimeMachineParsingTests(unittest.TestCase):
             self.assertTrue(_tm_is_running("Running = 1;"))
             self.assertFalse(_tm_is_running("running = 0"))
             self.assertIsNone(_tm_is_running("no running key"))
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:TimeMachineParsingTests.test_age_days_and_running_state_are_conservative failed: {exc}"
             ) from exc
@@ -458,7 +521,16 @@ class ProcessesParsingTests(unittest.TestCase):
             self.assertEqual(rows2[1].pid, 42)
             self.assertIn("Chrome", rows2[1].command)
             self.assertEqual(_parse_ps_rows(raw, limit=0), [])
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:ProcessesParsingTests.test_parse_ps_rows_skips_header_and_respects_limit failed: {exc}"
             ) from exc

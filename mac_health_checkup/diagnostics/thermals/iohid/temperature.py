@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ctypes
 
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 from mac_health_checkup.diagnostics.thermals.iohid.cf_objects import (
     create_cfnumbers,
     create_cfstring,
@@ -106,7 +106,7 @@ def collect_temperature_samples_once(
             out.append((name, value))
             raw_lines.append(f"{name}: {value:.3f} C")
         return (out, raw_lines, None)
-    except Exception as exc:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
         return (
             [],
             [],

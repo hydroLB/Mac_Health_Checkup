@@ -66,7 +66,16 @@ class ShellSafeRunUnitTests(unittest.TestCase):
                 self.assertEqual(result.stdout, "hi")
                 self.assertEqual(result.stderr, "err")
                 self.assertEqual(result.returncode, 0)
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:ShellSafeRunUnitTests.test_run_once_strips_stdout_and_stderr failed: {exc}"
             ) from exc
@@ -112,7 +121,16 @@ class ShellSafeRunUnitTests(unittest.TestCase):
                 result2 = _run_once(["missing"], timeout_sec=1)
                 self.assertEqual(result2.returncode, 127)
                 self.assertIn("not found", str(result2.stderr))
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:ShellSafeRunUnitTests.test_run_once_handles_timeout_and_not_found failed: {exc}"
             ) from exc
@@ -161,7 +179,16 @@ class ShellSafeRunUnitTests(unittest.TestCase):
                     ["x"], CommandResult(stdout=None, stderr="no such file", returncode=1)
                 )
             )
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:ShellSafeRunUnitTests.test_should_retry_with_sudo_detects_permission_hints failed: {exc}"
             ) from exc
@@ -195,6 +222,29 @@ class ShellSafeRunUnitTests(unittest.TestCase):
             calls: list[list[str]] = []
 
             def _fake_run_once(cmd: list[str], _timeout: int) -> CommandResult:
+                """
+                Summary
+                Execute `_fake_run_once` for its module-level responsibility.
+
+                Inputs
+                cmd: `list[str]` parameter from the function signature.
+                _timeout: `int` parameter from the function signature.
+
+                Outputs
+                Returns `CommandResult`.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_shell_safe_run_unit.py:_fake_run_once` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_shell_safe_run_unit.py`.
+
+                Why this exists
+                Keeps `_fake_run_once` explicit, testable, and maintainable.
+                """
                 calls.append(list(cmd))
                 if cmd[:2] == ["sudo", "-n"]:
                     return CommandResult(stdout="ok", stderr=None, returncode=0)
@@ -210,7 +260,16 @@ class ShellSafeRunUnitTests(unittest.TestCase):
                     self.assertEqual(out, "ok")
                     self.assertIsNone(err)
                     self.assertGreaterEqual(len(calls), 2)
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:ShellSafeRunUnitTests.test_safe_run_retries_and_sudo_fallback failed: {exc}"
             ) from exc
@@ -244,7 +303,16 @@ class ShellSafeRunUnitTests(unittest.TestCase):
             out, err = safe_run(["x"], context="t", allow_sudo=False, timeout=1, cancel_event=cancel)
             self.assertIsNone(out)
             self.assertEqual(err, "cancelled")
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:ShellSafeRunUnitTests.test_safe_run_honors_cancel_event failed: {exc}"
             ) from exc
@@ -273,7 +341,7 @@ class ShellSafeRunUnitTests(unittest.TestCase):
         Backoff should be bounded and deterministic under mocks to avoid slowing tests.
         """
         try:
-            from mac_health_checkup.core.config.models.runtime import RetryConfig
+            from mac_health_checkup.core.config import RetryConfig
 
             retry = RetryConfig(
                 enabled=True,
@@ -292,7 +360,16 @@ class ShellSafeRunUnitTests(unittest.TestCase):
                     seconds = float(sleep_mock.call_args[0][0])
                     self.assertGreater(seconds, 0.0)
                     self.assertLess(seconds, 2.0)
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:ShellSafeRunUnitTests.test_sleep_backoff_uses_delay_and_jitter failed: {exc}"
             ) from exc

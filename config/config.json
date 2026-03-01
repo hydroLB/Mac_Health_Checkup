@@ -26,7 +26,8 @@
   },
   "ui": {
     "window_size": "820x1180",
-    "window_title": "Mac Health Checkup"
+    "window_title": "Mac Health Checkup",
+    "color_mode": "auto"
   },
   "logging": {
     "max_lines": 500,
@@ -112,7 +113,12 @@
     "memory_free_warn_percent": 20.0,
     "memory_free_bad_percent": 10.0,
     "backup_warn_days": 7,
-    "backup_bad_days": 30
+    "backup_bad_days": 30,
+    "health_excellent_min_percent": 90.0,
+    "health_good_min_percent": 80.0,
+    "health_fair_min_percent": 65.0,
+    "ssd_unsafe_shutdowns_warn_count": 1,
+    "ssd_media_errors_bad_count": 1
   },
   "gui": {
     "section_rows": [

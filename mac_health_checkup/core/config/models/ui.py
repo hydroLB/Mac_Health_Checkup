@@ -89,6 +89,7 @@ class UiConfig:
     Inputs
     window_size: Window size string such as \"820x1180\".
     window_title: Window title label.
+    color_mode: UI color mode (`light`, `dark`, or `auto`).
 
     Outputs
     Immutable UI configuration.
@@ -108,3 +109,4 @@ class UiConfig:
 
     window_size: str
     window_title: str
+    color_mode: str

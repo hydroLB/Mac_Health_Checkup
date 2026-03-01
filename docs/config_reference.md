@@ -27,17 +27,17 @@ Validated by `mac_health_checkup.core.config.parsing.ui.parse_colors`.
 
 | Key | Type | Default | Notes |
 |---|---|---:|---|
-| `colors.bad` | `str` | `"#ff4136"` |  |
+| `colors.bad` | `str` | `"#e05d5d"` |  |
 | `colors.banner_bad` | `str` | `"#dc3545"` |  |
 | `colors.banner_good` | `str` | `"#28a745"` |  |
 | `colors.banner_warn` | `str` | `"#ffc107"` |  |
-| `colors.bg` | `str` | `"#23272e"` |  |
-| `colors.fg` | `str` | `"#ffffff"` |  |
-| `colors.field` | `str` | `"#daf6ff"` |  |
-| `colors.label` | `str` | `"#f1c40f"` |  |
-| `colors.ok` | `str` | `"#2ecc40"` |  |
-| `colors.section` | `str` | `"#339af0"` |  |
-| `colors.warn` | `str` | `"#ffdc00"` |  |
+| `colors.bg` | `str` | `"#12181f"` |  |
+| `colors.fg` | `str` | `"#f3f7fb"` |  |
+| `colors.field` | `str` | `"#e3eaf4"` |  |
+| `colors.label` | `str` | `"#a8b3c4"` |  |
+| `colors.ok` | `str` | `"#2fbf71"` |  |
+| `colors.section` | `str` | `"#58a6ff"` |  |
+| `colors.warn` | `str` | `"#d8a13a"` |  |
 
 ### `fonts`
 
@@ -53,8 +53,8 @@ Validated by `mac_health_checkup.core.config.parsing.ui.parse_fonts`.
 | `fonts.size_field` | `int` | `13` |  |
 | `fonts.size_section` | `int` | `16` |  |
 | `fonts.size_tooltip` | `int` | `10` |  |
-| `fonts.tooltip_bg` | `str` | `"#1a1c20"` |  |
-| `fonts.tooltip_fg` | `str` | `"#f0f0f0"` |  |
+| `fonts.tooltip_bg` | `str` | `"#0f141a"` |  |
+| `fonts.tooltip_fg` | `str` | `"#eef3f9"` |  |
 | `fonts.weight_bold` | `str` | `"bold"` |  |
 | `fonts.weight_normal` | `str` | `"normal"` |  |
 
@@ -235,8 +235,8 @@ Validated by `mac_health_checkup.core.config.parsing.features.parse_gui`.
 |---|---|---:|---|
 | `gui.auto_refresh_ms` | `int` | `10000` |  |
 | `gui.bytes_per_du` | `float` | `512000.0` |  |
-| `gui.card_bg` | `str` | `"#1b2027"` |  |
-| `gui.card_border` | `str` | `"#2a313c"` |  |
+| `gui.card_bg` | `str` | `"#1a212a"` |  |
+| `gui.card_border` | `str` | `"#313d4b"` |  |
 | `gui.card_max_height` | `int` | `420` |  |
 | `gui.card_relaxed_height` | `int` | `520` |  |
 | `gui.content_wrap` | `int` | `760` |  |

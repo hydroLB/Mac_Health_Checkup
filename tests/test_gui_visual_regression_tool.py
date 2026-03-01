@@ -269,7 +269,16 @@ def test_visual_capture_and_diff_have_expected_key_states(tmp_path: Path) -> Non
         assert _as_int(manifest.get("changed_pixels"), "changed_pixels") == 0
         assert _as_int(manifest.get("total_pixels"), "total_pixels") > 0
         assert _as_float(manifest.get("changed_ratio"), "changed_ratio") == pytest.approx(0.0, abs=1e-12)
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_visual_capture_and_diff_have_expected_key_states failed: {exc}"
         ) from exc
@@ -341,7 +350,16 @@ def test_visual_diff_fails_when_pixel_drift_is_injected(tmp_path: Path) -> None:
         assert isinstance(resize_small, dict)
         assert _as_int(resize_small.get("changed_pixels"), "resize_small.changed_pixels") > 0
         assert _as_float(resize_small.get("changed_ratio"), "resize_small.changed_ratio") > 0.0
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_visual_diff_fails_when_pixel_drift_is_injected failed: {exc}"
         ) from exc

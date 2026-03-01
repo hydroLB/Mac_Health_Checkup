@@ -229,7 +229,13 @@ class EntrypointLoggingTests(unittest.TestCase):
 
         fake_cfg = SimpleNamespace(
             logging=_FakeLoggingConfig(),
-            api=SimpleNamespace(enabled=False, allow_lan=False, tls_enabled=False),
+            api=SimpleNamespace(
+                enabled=False,
+                allow_lan=False,
+                tls_enabled=False,
+                bind_host="127.0.0.1",
+                port=7878,
+            ),
             gui=SimpleNamespace(section_rows=[]),
         )
 

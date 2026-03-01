@@ -55,7 +55,7 @@ public struct SettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: theme.layout.cardSpacing) {
                 Card(theme: theme) {
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: theme.layout.verticalScaled(10)) {
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
                             Button {
                                 dismiss()
@@ -67,7 +67,7 @@ public struct SettingsView: View {
                             .buttonStyle(.plain)
                             .foregroundStyle(theme.colors.label)
 
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: theme.layout.verticalScaled(4)) {
                                 Text("Settings")
                                     .font(theme.fonts.sectionTitle)
                                     .foregroundStyle(theme.colors.section)
@@ -92,14 +92,10 @@ public struct SettingsView: View {
 
                 Card(theme: theme) {
                     VStack(alignment: .leading, spacing: 0) {
+                        let toggleColumnWidth: CGFloat = 64
                         ForEach(Array(model.sections.enumerated()), id: \.element.key) { index, section in
-                            Toggle(isOn: Binding(
-                                get: { !model.hiddenSectionKeys.contains(section.key) },
-                                set: { newValue in
-                                    model.setSectionHidden(!newValue, key: section.key)
-                                }
-                            )) {
-                                VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: theme.layout.verticalScaled(2)) {
                                     Text(section.title)
                                         .font(theme.fonts.body)
                                         .foregroundStyle(theme.colors.field)
@@ -107,10 +103,24 @@ public struct SettingsView: View {
                                         .font(theme.fonts.caption)
                                         .foregroundStyle(theme.colors.label)
                                 }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                                Toggle(
+                                    "",
+                                    isOn: Binding(
+                                        get: { !model.hiddenSectionKeys.contains(section.key) },
+                                        set: { newValue in
+                                            model.setSectionHidden(!newValue, key: section.key)
+                                        }
+                                    )
+                                )
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                                .tint(theme.colors.section)
+                                .frame(width: toggleColumnWidth, alignment: .trailing)
+                                .accessibilityLabel("\(section.title) visibility")
                             }
-                            .toggleStyle(.switch)
-                            .tint(theme.colors.section)
-                            .padding(.vertical, 7)
+                            .padding(.vertical, theme.layout.verticalScaled(7))
 
                             if index < model.sections.count - 1 {
                                 Divider().opacity(0.6)

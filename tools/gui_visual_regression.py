@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 
 MODULE_PATH = "tools/gui_visual_regression.py"
 
@@ -1033,6 +1034,126 @@ def _parse_args() -> argparse.Namespace:
         raise RuntimeError(format_error(MODULE_PATH, "_parse_args", "Failed to parse args", exc)) from exc
 
 
+def _resolve_existing_directory(path_text: str, *, arg_name: str) -> Path:
+    """
+    Summary
+    Resolve and validate a required existing directory argument.
+
+    Inputs
+    path_text: Raw directory argument value.
+    arg_name: CLI flag name for contextual errors.
+
+    Outputs
+    Resolved directory path.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when validation fails.
+
+    Ties to other methods
+    Used by `main` for diff mode input directories.
+
+    Why this exists
+    Diff mode should fail fast with clear guidance when required input directories are invalid.
+    """
+    try:
+        resolved = Path(path_text).resolve()
+        if not resolved.exists():
+            raise FileNotFoundError(f"{arg_name} does not exist: {resolved}")
+        if not resolved.is_dir():
+            raise ValueError(f"{arg_name} must be a directory: {resolved}")
+        return resolved
+    except (RuntimeError, ValueError, TypeError, OSError) as exc:
+        raise RuntimeError(
+            format_error(
+                MODULE_PATH,
+                "_resolve_existing_directory",
+                f"Invalid value for `{arg_name}`",
+                exc,
+            )
+        ) from exc
+
+
+def _resolve_output_directory(path_text: str, *, arg_name: str) -> Path:
+    """
+    Summary
+    Resolve and validate an output directory argument.
+
+    Inputs
+    path_text: Raw directory argument value.
+    arg_name: CLI flag name for contextual errors.
+
+    Outputs
+    Resolved directory path.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when validation fails.
+
+    Ties to other methods
+    Used by `main` for capture and diff output directories.
+
+    Why this exists
+    Output targets must be validated before expensive rendering and diff workflows begin.
+    """
+    try:
+        resolved = Path(path_text).resolve()
+        if resolved.exists() and not resolved.is_dir():
+            raise ValueError(f"{arg_name} must be a directory path: {resolved}")
+        return resolved
+    except (RuntimeError, ValueError, TypeError, OSError) as exc:
+        raise RuntimeError(
+            format_error(
+                MODULE_PATH,
+                "_resolve_output_directory",
+                f"Invalid value for `{arg_name}`",
+                exc,
+            )
+        ) from exc
+
+
+def _emit_boundary_error(method: str, message: str, exc: Exception) -> None:
+    """
+    Summary
+    Write a formatted visual-regression boundary error to stderr.
+
+    Inputs
+    method: Boundary method name associated with the failure.
+    message: High-level failure context.
+    exc: Captured exception instance.
+
+    Outputs
+    None.
+
+    Side effects
+    Writes one line to stderr.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when output formatting fails.
+
+    Ties to other methods
+    Used by `main` for CLI boundary failures.
+
+    Why this exists
+    CI and local runs need concise boundary failures without traceback noise for operational errors.
+    """
+    try:
+        print(format_error(MODULE_PATH, method, message, exc), file=sys.stderr)
+    except (RuntimeError, ValueError, TypeError, OSError) as emit_exc:
+        raise RuntimeError(
+            format_error(
+                MODULE_PATH,
+                "_emit_boundary_error",
+                "Failed while emitting visual regression boundary error",
+                emit_exc,
+            )
+        ) from emit_exc
+
+
 def main() -> int:
     """
     Summary
@@ -1048,7 +1169,7 @@ def main() -> int:
     Reads config, writes scene images, writes diff images, and writes JSON manifests.
 
     Error handling
-    Raises `RuntimeError` with module and method context when workflow execution fails.
+    Returns exit code `2` after emitting a formatted boundary error for runtime failures.
 
     Ties to other methods
     Orchestrates all helper functions in this module.
@@ -1059,12 +1180,14 @@ def main() -> int:
     try:
         args = _parse_args()
         config_path = Path(str(args.config)).resolve()
+        if not config_path.is_file():
+            raise FileNotFoundError(f"Config file does not exist: {config_path}")
         theme = _load_theme(config_path)
 
         if args.mode == "capture":
             if not args.output_dir:
                 raise ValueError("--output-dir is required for capture mode")
-            output_dir = Path(str(args.output_dir)).resolve()
+            output_dir = _resolve_output_directory(str(args.output_dir), arg_name="--output-dir")
             captures = _capture_scenes(output_dir, theme)
             scene_names = [path.stem for path in captures]
             manifest_path = (
@@ -1082,9 +1205,13 @@ def main() -> int:
 
         if not args.before_dir or not args.after_dir:
             raise ValueError("--before-dir and --after-dir are required for diff mode")
-        before_dir = Path(str(args.before_dir)).resolve()
-        after_dir = Path(str(args.after_dir)).resolve()
-        diff_dir = Path(str(args.diff_dir)).resolve() if args.diff_dir else after_dir / "diff"
+        before_dir = _resolve_existing_directory(str(args.before_dir), arg_name="--before-dir")
+        after_dir = _resolve_existing_directory(str(args.after_dir), arg_name="--after-dir")
+        diff_dir = (
+            _resolve_output_directory(str(args.diff_dir), arg_name="--diff-dir")
+            if args.diff_dir
+            else after_dir / "diff"
+        )
 
         results = _diff_scenes(before_dir, after_dir, diff_dir)
         changed_scenes = [item for item in results if int(item["changed_pixels"]) > 0]
@@ -1119,9 +1246,8 @@ def main() -> int:
             return 1
         return 0
     except (RuntimeError, ValueError, TypeError, OSError) as exc:
-        raise RuntimeError(
-            format_error(MODULE_PATH, "main", "Visual regression workflow failed", exc)
-        ) from exc
+        _emit_boundary_error("main", "Visual regression workflow failed", exc)
+        return 2
 
 
 if __name__ == "__main__":

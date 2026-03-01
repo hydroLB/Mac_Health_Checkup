@@ -4,8 +4,8 @@ from pathlib import Path
 
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.errors import format_error
-from mac_health_checkup.core.utils.shell import safe_run
+from mac_health_checkup.core.utils import format_error
+from mac_health_checkup.core.utils import safe_run
 from mac_health_checkup.diagnostics.base import Cache, cached_fetch, get_diagnostics_logger, new_context
 
 MODULE_PATH = "mac_health_checkup/diagnostics/startup.py"
@@ -122,7 +122,7 @@ class StartupItemsDiagnostics:
                 "system_agents": system_agents[:max_items],
                 "system_daemons": system_daemons[:max_items],
             }
-        except Exception as exc:
+        except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
             logger.warning(
                 "startup item enumeration failed",
                 event="startup_error",
@@ -215,5 +215,5 @@ def _best_effort_plist_label(path: Path, *, timeout: int) -> str:
         if label:
             return label
         return path.stem
-    except Exception:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return path.stem

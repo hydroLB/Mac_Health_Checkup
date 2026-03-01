@@ -34,7 +34,19 @@ enum SectionDetailPolicy {
         let hasTable = (payload.table != nil && !(payload.table?.rows.isEmpty ?? true))
 
         if hasMetrics || hasTable {
-            if ["fan", "battery", "ssd", "network", "input", "display"].contains(key) {
+            if [
+                "fan",
+                "battery",
+                "ssd",
+                "network",
+                "input",
+                "display",
+                "security",
+                "system",
+                "updates",
+                "devices",
+                "ports",
+            ].contains(key) {
                 return false
             }
         }
@@ -73,4 +85,3 @@ enum SectionDetailPolicy {
         }
     }
 }
-

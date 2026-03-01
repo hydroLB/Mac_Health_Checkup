@@ -4,8 +4,8 @@ import re
 
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.errors import format_error
-from mac_health_checkup.core.utils.shell import safe_run
+from mac_health_checkup.core.utils import format_error
+from mac_health_checkup.core.utils import safe_run
 from mac_health_checkup.diagnostics.base import Cache, cached_fetch, get_diagnostics_logger, new_context
 
 MODULE_PATH = "mac_health_checkup/diagnostics/security.py"
@@ -153,7 +153,7 @@ class SecurityPostureDiagnostics:
                 "gatekeeper": {**gatekeeper, "raw": gk_out or "", "error": gk_err or ""},
                 "firewall": {**firewall, "raw": fw_out or "", "error": fw_err or ""},
             }
-        except Exception as exc:
+        except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
             logger.warning(
                 "security posture collection failed",
                 event="security_error",

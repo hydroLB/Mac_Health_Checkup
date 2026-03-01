@@ -44,7 +44,7 @@ struct OverviewView: View {
                 let visible = model.visibleSections
                 if visible.isEmpty {
                     Card(theme: theme) {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: theme.layout.verticalScaled(8)) {
                             Text("No sections enabled")
                                 .font(theme.fonts.sectionTitle)
                                 .foregroundStyle(theme.colors.section)
@@ -62,9 +62,9 @@ struct OverviewView: View {
                     let isExpanded = expandedKeys.contains(section.key)
 
                     Card(theme: theme) {
-                        VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: theme.layout.verticalScaled(10)) {
                             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                                VStack(alignment: .leading, spacing: 2) {
+                                VStack(alignment: .leading, spacing: theme.layout.verticalScaled(2)) {
                                     Text(section.title)
                                         .font(theme.fonts.sectionTitle)
                                         .foregroundStyle(theme.colors.section)

@@ -33,9 +33,40 @@ class NetworkParsingUnitTests(unittest.TestCase):
     """
 
     def setUp(self) -> None:
+        """
+        Summary
+        Execute `setUp` for its module-level responsibility.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_network_parsing_unit.py:setUp` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_network_parsing_unit.py`.
+
+        Why this exists
+        Keeps `setUp` explicit, testable, and maintainable.
+        """
         try:
             net.NetworkQualityDiagnostics._last_bytes = None
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise RuntimeError(f"{MODULE_PATH}:NetworkParsingUnitTests.setUp failed: {exc}") from exc
 
     def test_interface_priority_and_try_int(self) -> None:
@@ -67,7 +98,16 @@ class NetworkParsingUnitTests(unittest.TestCase):
             self.assertEqual(net._interface_priority("awdl0"), 999)
             self.assertEqual(net._try_int(" 42 "), 42)
             self.assertIsNone(net._try_int("nope"))
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:NetworkParsingUnitTests.test_interface_priority_and_try_int failed: {exc}"
             ) from exc
@@ -107,7 +147,16 @@ class NetworkParsingUnitTests(unittest.TestCase):
                 if rx1 is not None and tx1 is not None:
                     self.assertGreater(rx1, 0.0)
                     self.assertGreater(tx1, 0.0)
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:NetworkParsingUnitTests.test_rate_mbps_from_bytes_requires_two_samples failed: {exc}"
             ) from exc
@@ -140,6 +189,31 @@ class NetworkParsingUnitTests(unittest.TestCase):
             def _fake_safe_run(
                 cmd: object, context: str, *, allow_sudo: bool, timeout: int | None
             ) -> tuple[str | None, str | None]:
+                """
+                Summary
+                Execute `_fake_safe_run` for its module-level responsibility.
+
+                Inputs
+                cmd: `object` parameter from the function signature.
+                context: `str` parameter from the function signature.
+                allow_sudo: keyword-only `bool` parameter.
+                timeout: keyword-only `int | None` parameter.
+
+                Outputs
+                Returns `tuple[str | None, str | None]`.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_network_parsing_unit.py:_fake_safe_run` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_network_parsing_unit.py`.
+
+                Why this exists
+                Keeps `_fake_safe_run` explicit, testable, and maintainable.
+                """
                 _ = allow_sudo
                 _ = timeout
                 cmd_list = list(cmd) if isinstance(cmd, (list, tuple)) else []
@@ -176,7 +250,16 @@ class NetworkParsingUnitTests(unittest.TestCase):
                 self.assertEqual(data.get("down_mbps"), 100.0)
                 self.assertEqual(data.get("up_mbps"), 20.0)
                 self.assertTrue(data.get("ok"))
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:NetworkParsingUnitTests.test_fetch_uncached_parses_command_outputs failed: {exc}"
             ) from exc

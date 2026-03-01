@@ -3,7 +3,7 @@ from __future__ import annotations
 from mac_health_checkup.app.gui.sections.types import SectionHost
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 from mac_health_checkup.diagnostics.startup import StartupItemsDiagnostics
 
 MODULE_PATH = "mac_health_checkup/app/gui/sections/startup.py"
@@ -38,6 +38,29 @@ def update_section(host: SectionHost) -> JsonDict:
         rows: list[tuple[str, ...]] = []
 
         def add(scope: str, items: object) -> None:
+            """
+            Summary
+            Execute `add` for its module-level responsibility.
+
+            Inputs
+            scope: `str` parameter from the function signature.
+            items: `object` parameter from the function signature.
+
+            Outputs
+            None.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `mac_health_checkup/app/gui/sections/startup.py:add` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `mac_health_checkup/app/gui/sections/startup.py`.
+
+            Why this exists
+            Keeps `add` explicit, testable, and maintainable.
+            """
             if not isinstance(items, list):
                 return
             for label in items:

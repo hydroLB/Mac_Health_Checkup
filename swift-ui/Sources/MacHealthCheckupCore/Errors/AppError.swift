@@ -27,6 +27,50 @@ public struct AppError: Error, CustomStringConvertible, Sendable {
     public let message: String
     public let underlying: (any Error)?
 
+    public var userFacingMessage: String {
+        /**
+         Summary
+         Return a UI-friendly error message without source-code context prefixes.
+
+         Inputs
+         None.
+
+         Outputs
+         A concise message suitable for banners and user-visible summaries.
+
+         Side effects
+         None.
+
+         Error handling
+         None.
+
+         Ties to other methods
+         Used by SwiftUI views that render non-technical error banners.
+
+         Why this exists
+         Source file and method context is useful for debugging but looks unprofessional in user-facing UI copy.
+         */
+        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return "Unexpected error."
+        }
+        guard let firstSpace = trimmed.firstIndex(of: " ") else {
+            return trimmed
+        }
+
+        let prefix = String(trimmed[..<firstSpace])
+        let hasFileAndMethodPrefix = prefix.contains(".swift:") || (prefix.contains("/") && prefix.contains(":"))
+        if hasFileAndMethodPrefix {
+            let suffix = String(trimmed[trimmed.index(after: firstSpace)...]).trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            if !suffix.isEmpty {
+                return suffix
+            }
+        }
+        return trimmed
+    }
+
     public var description: String {
         /**
          Summary
@@ -91,4 +135,3 @@ public struct AppError: Error, CustomStringConvertible, Sendable {
         return AppError(message: context, underlying: underlying)
     }
 }
-

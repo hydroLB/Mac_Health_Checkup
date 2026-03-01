@@ -80,7 +80,8 @@ public struct Card<Content: View>: View {
          Ensures all cards share the same padding, border, and background.
          */
         content()
-            .padding(theme.layout.cardPadding)
+            .padding(.horizontal, theme.layout.cardPadding)
+            .padding(.vertical, theme.layout.cardVerticalPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(theme.colors.cardBackground)
             .overlay(
@@ -90,4 +91,3 @@ public struct Card<Content: View>: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
-

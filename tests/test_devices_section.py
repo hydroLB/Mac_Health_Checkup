@@ -4,6 +4,28 @@ from mac_health_checkup.app.gui.sections.devices import _filter_device_labels
 
 
 def test_devices_filter_keeps_real_adapters_and_hides_infrastructure() -> None:
+    """
+    Summary
+    Execute `test_devices_filter_keeps_real_adapters_and_hides_infrastructure` for its module-level responsibility.
+
+    Inputs
+    None.
+
+    Outputs
+    None.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `tests/test_devices_section.py:test_devices_filter_keeps_real_adapters_and_hides_infrastructure` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `tests/test_devices_section.py`.
+
+    Why this exists
+    Keeps `test_devices_filter_keeps_real_adapters_and_hides_infrastructure` explicit, testable, and maintainable.
+    """
     labels = [
         "USB 3.1 Bus",
         "USB2.0 HUB",

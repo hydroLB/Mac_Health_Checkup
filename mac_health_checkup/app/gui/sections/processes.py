@@ -3,7 +3,7 @@ from __future__ import annotations
 from mac_health_checkup.app.gui.sections.types import SectionHost
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 from mac_health_checkup.diagnostics.processes import TopProcessesDiagnostics
 
 MODULE_PATH = "mac_health_checkup/app/gui/sections/processes.py"
@@ -40,6 +40,29 @@ def update_section(host: SectionHost) -> JsonDict:
         rows: list[tuple[str, ...]] = []
 
         def append_rows(kind: str, items: object) -> None:
+            """
+            Summary
+            Execute `append_rows` for its module-level responsibility.
+
+            Inputs
+            kind: `str` parameter from the function signature.
+            items: `object` parameter from the function signature.
+
+            Outputs
+            None.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `mac_health_checkup/app/gui/sections/processes.py:append_rows` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `mac_health_checkup/app/gui/sections/processes.py`.
+
+            Why this exists
+            Keeps `append_rows` explicit, testable, and maintainable.
+            """
             if not isinstance(items, list):
                 return
             for item in items[: int(cfg.processes_max_rows)]:

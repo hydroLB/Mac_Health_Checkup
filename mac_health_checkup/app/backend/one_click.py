@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Mapping
 
 from mac_health_checkup.core.types import JsonDict, JsonValue
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 
 MODULE_PATH = "mac_health_checkup/app/backend/one_click.py"
 

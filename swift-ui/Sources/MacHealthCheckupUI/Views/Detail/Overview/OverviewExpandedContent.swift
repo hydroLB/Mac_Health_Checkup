@@ -30,7 +30,7 @@ struct OverviewExpandedContent: View {
          Why this exists
          Users want to see more details at a glance without losing their place in the overview list.
          */
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: theme.layout.verticalScaled(10)) {
             if let field = payload?.field {
                 let trimmed = field.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
@@ -52,4 +52,3 @@ struct OverviewExpandedContent: View {
         }
     }
 }
-

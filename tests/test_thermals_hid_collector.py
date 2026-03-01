@@ -36,6 +36,28 @@ def test_thermals_fetch_returns_hid_readings(monkeypatch: pytest.MonkeyPatch) ->
     from mac_health_checkup.diagnostics.thermals import collector as thermals_collector
 
     def _fake_collect_temperature_readings() -> HidTemperatureResult:
+        """
+        Summary
+        Execute `_fake_collect_temperature_readings` for its module-level responsibility.
+
+        Inputs
+        None.
+
+        Outputs
+        Returns `HidTemperatureResult`.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_thermals_hid_collector.py:_fake_collect_temperature_readings` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_thermals_hid_collector.py`.
+
+        Why this exists
+        Keeps `_fake_collect_temperature_readings` explicit, testable, and maintainable.
+        """
         return HidTemperatureResult(
             readings=[TemperatureReading(label="CPU Core", celsius=42.0, status="ok")],
             raw_lines=["CPU Core: 42.000 C"],
@@ -83,6 +105,28 @@ def test_thermals_fetch_returns_guidance_when_empty(monkeypatch: pytest.MonkeyPa
     from mac_health_checkup.diagnostics.thermals import collector as thermals_collector
 
     def _fake_collect_temperature_readings() -> HidTemperatureResult:
+        """
+        Summary
+        Execute `_fake_collect_temperature_readings` for its module-level responsibility.
+
+        Inputs
+        None.
+
+        Outputs
+        Returns `HidTemperatureResult`.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_thermals_hid_collector.py:_fake_collect_temperature_readings` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_thermals_hid_collector.py`.
+
+        Why this exists
+        Keeps `_fake_collect_temperature_readings` explicit, testable, and maintainable.
+        """
         return HidTemperatureResult(readings=[], raw_lines=[], error="no_services")
 
     monkeypatch.setattr(

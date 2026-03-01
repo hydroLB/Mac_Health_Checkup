@@ -17,6 +17,28 @@ else:
 
 class _StubCanvas:
     def __init__(self) -> None:
+        """
+        Summary
+        Execute `__init__` for its module-level responsibility.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_scroll_container_unit.py:__init__` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_scroll_container_unit.py`.
+
+        Why this exists
+        Keeps `__init__` explicit, testable, and maintainable.
+        """
         self.config_calls: list[dict[str, object]] = []
         self.bind_all_calls: list[str] = []
         self.unbind_all_calls: list[str] = []
@@ -25,24 +47,181 @@ class _StubCanvas:
         self.itemconfigure_calls: list[tuple[object, dict[str, object]]] = []
 
     def configure(self, **kwargs: object) -> None:
+        """
+        Summary
+        Execute `configure` for its module-level responsibility.
+
+        Inputs
+        **kwargs: variadic keyword `object` parameters.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_scroll_container_unit.py:configure` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_scroll_container_unit.py`.
+
+        Why this exists
+        Keeps `configure` explicit, testable, and maintainable.
+        """
         self.config_calls.append(dict(kwargs))
 
     def bbox(self, _tag: str) -> tuple[int, int, int, int]:
+        """
+        Summary
+        Execute `bbox` for its module-level responsibility.
+
+        Inputs
+        _tag: `str` parameter from the function signature.
+
+        Outputs
+        Returns `tuple[int, int, int, int]`.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_scroll_container_unit.py:bbox` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_scroll_container_unit.py`.
+
+        Why this exists
+        Keeps `bbox` explicit, testable, and maintainable.
+        """
         return (0, 0, 10, 10)
 
     def bind_all(self, event: str, _handler: object) -> None:
+        """
+        Summary
+        Execute `bind_all` for its module-level responsibility.
+
+        Inputs
+        event: `str` parameter from the function signature.
+        _handler: `object` parameter from the function signature.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_scroll_container_unit.py:bind_all` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_scroll_container_unit.py`.
+
+        Why this exists
+        Keeps `bind_all` explicit, testable, and maintainable.
+        """
         self.bind_all_calls.append(str(event))
 
     def unbind_all(self, event: str) -> None:
+        """
+        Summary
+        Execute `unbind_all` for its module-level responsibility.
+
+        Inputs
+        event: `str` parameter from the function signature.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_scroll_container_unit.py:unbind_all` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_scroll_container_unit.py`.
+
+        Why this exists
+        Keeps `unbind_all` explicit, testable, and maintainable.
+        """
         self.unbind_all_calls.append(str(event))
 
     def yview_scroll(self, steps: int, units: str) -> None:
+        """
+        Summary
+        Execute `yview_scroll` for its module-level responsibility.
+
+        Inputs
+        steps: `int` parameter from the function signature.
+        units: `str` parameter from the function signature.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_scroll_container_unit.py:yview_scroll` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_scroll_container_unit.py`.
+
+        Why this exists
+        Keeps `yview_scroll` explicit, testable, and maintainable.
+        """
         self.scroll_calls.append((int(steps), str(units)))
 
     def yview_moveto(self, value: float) -> None:
+        """
+        Summary
+        Execute `yview_moveto` for its module-level responsibility.
+
+        Inputs
+        value: `float` parameter from the function signature.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_scroll_container_unit.py:yview_moveto` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_scroll_container_unit.py`.
+
+        Why this exists
+        Keeps `yview_moveto` explicit, testable, and maintainable.
+        """
         self.moveto_calls.append(float(value))
 
     def itemconfigure(self, item: object, **kwargs: object) -> None:
+        """
+        Summary
+        Execute `itemconfigure` for its module-level responsibility.
+
+        Inputs
+        item: `object` parameter from the function signature.
+        **kwargs: variadic keyword `object` parameters.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_scroll_container_unit.py:itemconfigure` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_scroll_container_unit.py`.
+
+        Why this exists
+        Keeps `itemconfigure` explicit, testable, and maintainable.
+        """
         self.itemconfigure_calls.append((item, dict(kwargs)))
 
 
@@ -71,6 +250,28 @@ class ScrollContainerUnitTests(unittest.TestCase):
     """
 
     def _new_instance(self) -> tuple[ScrollContainer, _StubCanvas]:
+        """
+        Summary
+        Execute `_new_instance` for its module-level responsibility.
+
+        Inputs
+        None.
+
+        Outputs
+        Returns `tuple[ScrollContainer, _StubCanvas]`.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_scroll_container_unit.py:_new_instance` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_scroll_container_unit.py`.
+
+        Why this exists
+        Keeps `_new_instance` explicit, testable, and maintainable.
+        """
         inst = object.__new__(ScrollContainer)
         canvas = _StubCanvas()
         inst._canvas = cast(tk.Canvas, canvas)
@@ -115,7 +316,16 @@ class ScrollContainerUnitTests(unittest.TestCase):
             sc._on_mousewheel_linux(cast(_EventMisc, SimpleNamespace(num=4)))
             sc._on_mousewheel_linux(cast(_EventMisc, SimpleNamespace(num=5)))
             self.assertGreaterEqual(len(canvas.scroll_calls), 4)
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:ScrollContainerUnitTests.test_mousewheel_scrolling_and_bindings failed: {exc}"
             ) from exc
@@ -157,7 +367,16 @@ class ScrollContainerUnitTests(unittest.TestCase):
             self.assertEqual(canvas.moveto_calls[-1], 1.0)
             sc.scroll_pages(2)
             self.assertEqual(canvas.scroll_calls[-1], (2, "pages"))
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:ScrollContainerUnitTests.test_configure_handlers_update_canvas failed: {exc}"
             ) from exc

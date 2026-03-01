@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass, field
 
 from mac_health_checkup.core.config import get_config
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 
 MODULE_PATH = "mac_health_checkup/app/gui/dashboard/queueing.py"
 

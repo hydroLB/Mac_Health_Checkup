@@ -47,6 +47,30 @@ def test_main_cli_advice_and_fail_on(
         monkeypatch.setattr(entrypoint, "SECTION_HANDLERS", {"general": lambda _host: {"ok": True}})
 
         def _stub_run_sections(host: ConsoleHost, *, logger: object, context: object) -> int:
+            """
+            Summary
+            Execute `_stub_run_sections` for its module-level responsibility.
+
+            Inputs
+            host: `ConsoleHost` parameter from the function signature.
+            logger: keyword-only `object` parameter.
+            context: keyword-only `object` parameter.
+
+            Outputs
+            Returns `int`.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `tests/test_entrypoint_cli_serve.py:_stub_run_sections` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `tests/test_entrypoint_cli_serve.py`.
+
+            Why this exists
+            Keeps `_stub_run_sections` explicit, testable, and maintainable.
+            """
             _ = logger
             _ = context
             host.set_field("general", "ok")
@@ -66,7 +90,16 @@ def test_main_cli_advice_and_fail_on(
         assert code == 1
         assert "[advice]" in out
         assert "[general] WARN" in out
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(f"{MODULE_PATH}:test_main_cli_advice_and_fail_on failed: {exc}") from exc
 
 
@@ -101,6 +134,29 @@ def test_run_sections_best_effort_continues_after_failure(monkeypatch: pytest.Mo
         )
 
         def _fake_run_section(_host: ConsoleHost, key: str) -> dict[str, object]:
+            """
+            Summary
+            Execute `_fake_run_section` for its module-level responsibility.
+
+            Inputs
+            _host: `ConsoleHost` parameter from the function signature.
+            key: `str` parameter from the function signature.
+
+            Outputs
+            Returns `dict[str, object]`.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `tests/test_entrypoint_cli_serve.py:_fake_run_section` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `tests/test_entrypoint_cli_serve.py`.
+
+            Why this exists
+            Keeps `_fake_run_section` explicit, testable, and maintainable.
+            """
             if key == "bad":
                 raise RuntimeError("boom")
             return {"ok": True}
@@ -111,7 +167,16 @@ def test_run_sections_best_effort_continues_after_failure(monkeypatch: pytest.Mo
         assert code == 1
         assert "bad" in host.fields
         assert host.fields["bad"].startswith("Error:")
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_run_sections_best_effort_continues_after_failure failed: {exc}"
         ) from exc
@@ -160,28 +225,205 @@ def test_main_serve_mode_prints_pairing_payload(
 
         class _StubServer:
             def __init__(self, _handlers: object, _api: object) -> None:
+                """
+                Summary
+                Execute `__init__` for its module-level responsibility.
+
+                Inputs
+                _handlers: `object` parameter from the function signature.
+                _api: `object` parameter from the function signature.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_cli_serve.py:__init__` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_cli_serve.py`.
+
+                Why this exists
+                Keeps `__init__` explicit, testable, and maintainable.
+                """
                 return
 
             def start(self) -> None:
+                """
+                Summary
+                Execute `start` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_cli_serve.py:start` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_cli_serve.py`.
+
+                Why this exists
+                Keeps `start` explicit, testable, and maintainable.
+                """
                 return
 
             def stop(self) -> None:
+                """
+                Summary
+                Execute `stop` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_cli_serve.py:stop` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_cli_serve.py`.
+
+                Why this exists
+                Keeps `stop` explicit, testable, and maintainable.
+                """
                 calls.append("stop")
 
             def url(self) -> str:
+                """
+                Summary
+                Execute `url` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                Returns `str`.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_cli_serve.py:url` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_cli_serve.py`.
+
+                Why this exists
+                Keeps `url` explicit, testable, and maintainable.
+                """
                 return "https://127.0.0.1:9999"
 
             def tls_certificate_fingerprint_sha256(self) -> str | None:
+                """
+                Summary
+                Execute `tls_certificate_fingerprint_sha256` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                Returns `str | None`.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_cli_serve.py:tls_certificate_fingerprint_sha256` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_cli_serve.py`.
+
+                Why this exists
+                Keeps `tls_certificate_fingerprint_sha256` explicit, testable, and maintainable.
+                """
                 return "deadbeef"
 
         class _StubShutdown:
             def install_handlers(self) -> None:
+                """
+                Summary
+                Execute `install_handlers` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_cli_serve.py:install_handlers` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_cli_serve.py`.
+
+                Why this exists
+                Keeps `install_handlers` explicit, testable, and maintainable.
+                """
                 return
 
             def wait_for_shutdown(self) -> None:
+                """
+                Summary
+                Execute `wait_for_shutdown` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_cli_serve.py:wait_for_shutdown` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_cli_serve.py`.
+
+                Why this exists
+                Keeps `wait_for_shutdown` explicit, testable, and maintainable.
+                """
                 return
 
             def trigger_shutdown(self) -> None:
+                """
+                Summary
+                Execute `trigger_shutdown` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_cli_serve.py:trigger_shutdown` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_cli_serve.py`.
+
+                Why this exists
+                Keeps `trigger_shutdown` explicit, testable, and maintainable.
+                """
                 return
 
         monkeypatch.setattr(entrypoint, "SnapshotApiServer", _StubServer)
@@ -201,9 +443,106 @@ def test_main_serve_mode_prints_pairing_payload(
         assert payload["pin"] == "deadbeef"
         assert payload["url"] == os.environ["MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL"]
         assert "stop" in calls
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_main_serve_mode_prints_pairing_payload failed: {exc}"
+        ) from exc
+
+
+def test_resolve_public_base_url_rejects_empty_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Summary
+    Ensure an explicitly empty public base URL override fails fast with a contextual error.
+
+    Inputs
+    Monkeypatched `MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL` environment variable.
+
+    Outputs
+    Assertion that `_resolve_public_base_url` raises `RuntimeError`.
+
+    Side effects
+    Updates process environment during test execution.
+
+    Error handling
+    Raises `AssertionError` with module and method context on failures.
+
+    Ties to other methods
+    Exercises `_resolve_public_base_url` strict env validation path.
+
+    Why this exists
+    Empty URL overrides should never silently fall back because they indicate broken startup configuration.
+    """
+    try:
+        monkeypatch.setenv("MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL", " ")
+        with pytest.raises(RuntimeError) as exc_info:
+            entrypoint._resolve_public_base_url(default_url="http://127.0.0.1:7878")
+        assert "MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL is set but empty" in str(exc_info.value)
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
+        raise AssertionError(
+            f"{MODULE_PATH}:test_resolve_public_base_url_rejects_empty_override failed: {exc}"
+        ) from exc
+
+
+def test_resolve_public_base_url_rejects_path_query_and_fragment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Summary
+    Ensure public base URL override rejects path, query, or fragment segments.
+
+    Inputs
+    Monkeypatched `MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL` with a malformed URL.
+
+    Outputs
+    Assertion that `_resolve_public_base_url` raises `RuntimeError`.
+
+    Side effects
+    Updates process environment during test execution.
+
+    Error handling
+    Raises `AssertionError` with module and method context on failures.
+
+    Ties to other methods
+    Exercises `_resolve_public_base_url` URL-shape validation.
+
+    Why this exists
+    Pairing URLs should be canonical scheme://host[:port] values so clients receive deterministic connection targets.
+    """
+    try:
+        monkeypatch.setenv("MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL", "https://example.test:7878/path?q=1#x")
+        with pytest.raises(RuntimeError) as exc_info:
+            entrypoint._resolve_public_base_url(default_url="http://127.0.0.1:7878")
+        assert "must not include path, query, or fragment" in str(exc_info.value)
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
+        raise AssertionError(
+            f"{MODULE_PATH}:test_resolve_public_base_url_rejects_path_query_and_fragment failed: {exc}"
         ) from exc
 
 
@@ -244,7 +583,16 @@ def test_main_diff_and_export_branches_call_helpers(monkeypatch: pytest.MonkeyPa
 
         monkeypatch.setattr(sys, "argv", ["prog", "--export", "markdown", "--export-from-snapshot", "a.json"])
         assert entrypoint.main() == 0
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_main_diff_and_export_branches_call_helpers failed: {exc}"
         ) from exc

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from mac_health_checkup.app.backend.tls import certificate_sha256_fingerprint_from_pem
 from mac_health_checkup.core.config import ApiConfig
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 
 MODULE_PATH = "mac_health_checkup/app/backend/security/validation.py"
 

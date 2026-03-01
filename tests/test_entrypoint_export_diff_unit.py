@@ -9,12 +9,34 @@ from pathlib import Path
 import pytest
 
 import mac_health_checkup.app.entrypoint as entrypoint
-from mac_health_checkup.app.backend.snapshot import Snapshot, SnapshotSection, SnapshotTheme
+from mac_health_checkup.app.backend import Snapshot, SnapshotSection, SnapshotTheme
 
 MODULE_PATH = "tests/test_entrypoint_export_diff_unit.py"
 
 
 def _snapshot_with_warn_section(*, ok: bool) -> Snapshot:
+    """
+    Summary
+    Execute `_snapshot_with_warn_section` for its module-level responsibility.
+
+    Inputs
+    ok: keyword-only `bool` parameter.
+
+    Outputs
+    Returns `Snapshot`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `tests/test_entrypoint_export_diff_unit.py:_snapshot_with_warn_section` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `tests/test_entrypoint_export_diff_unit.py`.
+
+    Why this exists
+    Keeps `_snapshot_with_warn_section` explicit, testable, and maintainable.
+    """
     return Snapshot(
         schema_version=2,
         generated_at_unix_ms=0,
@@ -69,7 +91,16 @@ def test_run_diff_mode_prints_markdown(
         assert entrypoint._run_diff_mode(args) == 0
         out = capsys.readouterr().out
         assert out == "DIFF\n"
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(f"{MODULE_PATH}:test_run_diff_mode_prints_markdown failed: {exc}") from exc
 
 
@@ -111,6 +142,29 @@ def test_run_export_mode_diff_snapshots_writes_file(
         monkeypatch.setattr("mac_health_checkup.app.reports.render_diff_html", lambda _d: "<html/>")
 
         def _write(path: Path, content: str) -> None:
+            """
+            Summary
+            Execute `_write` for its module-level responsibility.
+
+            Inputs
+            path: `Path` parameter from the function signature.
+            content: `str` parameter from the function signature.
+
+            Outputs
+            None.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `tests/test_entrypoint_export_diff_unit.py:_write` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `tests/test_entrypoint_export_diff_unit.py`.
+
+            Why this exists
+            Keeps `_write` explicit, testable, and maintainable.
+            """
             written[str(path)] = content
 
         monkeypatch.setattr(entrypoint, "_write_text_file", _write)
@@ -127,7 +181,16 @@ def test_run_export_mode_diff_snapshots_writes_file(
         assert entrypoint._run_export_mode(args) == 0
         assert written[str(export_path)] == "MD"
         assert capsys.readouterr().out.strip() == str(export_path)
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_run_export_mode_diff_snapshots_writes_file failed: {exc}"
         ) from exc
@@ -175,9 +238,53 @@ def test_run_export_mode_diff_against_uses_current_snapshot(
 
         class _StubBuilder:
             def __init__(self, _handlers: object) -> None:
+                """
+                Summary
+                Execute `__init__` for its module-level responsibility.
+
+                Inputs
+                _handlers: `object` parameter from the function signature.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_export_diff_unit.py:__init__` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_export_diff_unit.py`.
+
+                Why this exists
+                Keeps `__init__` explicit, testable, and maintainable.
+                """
                 return
 
             def build(self) -> Snapshot:
+                """
+                Summary
+                Execute `build` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                Returns `Snapshot`.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_export_diff_unit.py:build` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_export_diff_unit.py`.
+
+                Why this exists
+                Keeps `build` explicit, testable, and maintainable.
+                """
                 return current
 
         monkeypatch.setattr("mac_health_checkup.app.backend.snapshot.SnapshotBuilder", _StubBuilder)
@@ -192,7 +299,16 @@ def test_run_export_mode_diff_against_uses_current_snapshot(
             export_from_snapshot=None,
         )
         assert entrypoint._run_export_mode(args) == 1
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_run_export_mode_diff_against_uses_current_snapshot failed: {exc}"
         ) from exc
@@ -249,7 +365,16 @@ def test_run_export_mode_export_from_snapshot_respects_fail_on(
             export_from_snapshot="snap.json",
         )
         assert entrypoint._run_export_mode(args) == 1
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_run_export_mode_export_from_snapshot_respects_fail_on failed: {exc}"
         ) from exc
@@ -282,7 +407,16 @@ def test_resolve_export_path_default_uses_timestamp(monkeypatch: pytest.MonkeyPa
         monkeypatch.setattr("mac_health_checkup.app.entrypoint.time.strftime", lambda _fmt: "20260205-120000")
         p = entrypoint._resolve_export_path("markdown", explicit_path=None, kind="snapshot")
         assert str(p).endswith(".local/reports/mac-health-checkup-snapshot-20260205-120000.md")
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_resolve_export_path_default_uses_timestamp failed: {exc}"
         ) from exc
@@ -322,6 +456,28 @@ def test_gui_success_path_starts_dashboard(monkeypatch: pytest.MonkeyPatch) -> N
 
         class _StubDashboard:
             def start(self) -> None:
+                """
+                Summary
+                Execute `start` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_export_diff_unit.py:start` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_export_diff_unit.py`.
+
+                Why this exists
+                Keeps `start` explicit, testable, and maintainable.
+                """
                 started.append("start")
 
         setattr(stub_module, "DashboardApp", _StubDashboard)
@@ -334,6 +490,32 @@ def test_gui_success_path_starts_dashboard(monkeypatch: pytest.MonkeyPatch) -> N
             fromlist: tuple[str, ...] = (),
             level: int = 0,
         ) -> object:
+            """
+            Summary
+            Execute `_import` for its module-level responsibility.
+
+            Inputs
+            name: `str` parameter from the function signature.
+            globals: `dict[str, object] | None` parameter from the function signature with a default.
+            locals: `dict[str, object] | None` parameter from the function signature with a default.
+            fromlist: `tuple[str, ...]` parameter from the function signature with a default.
+            level: `int` parameter from the function signature with a default.
+
+            Outputs
+            Returns `object`.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `tests/test_entrypoint_export_diff_unit.py:_import` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `tests/test_entrypoint_export_diff_unit.py`.
+
+            Why this exists
+            Keeps `_import` explicit, testable, and maintainable.
+            """
             if name == "mac_health_checkup.app.gui.app":
                 return stub_module
             return real_import(name, globals, locals, fromlist, level)
@@ -341,7 +523,16 @@ def test_gui_success_path_starts_dashboard(monkeypatch: pytest.MonkeyPatch) -> N
         monkeypatch.setattr(builtins, "__import__", _import)
         assert entrypoint.main() == 0
         assert started == ["start"]
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(f"{MODULE_PATH}:test_gui_success_path_starts_dashboard failed: {exc}") from exc
 
 
@@ -375,7 +566,16 @@ def test_main_error_write_non_broken_pipe_returns_one(monkeypatch: pytest.Monkey
         )
         monkeypatch.setattr(sys.stderr, "write", lambda _s: (_ for _ in ()).throw(RuntimeError("no stderr")))
         assert entrypoint.main() == 1
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_main_error_write_non_broken_pipe_returns_one failed: {exc}"
         ) from exc
@@ -413,7 +613,16 @@ def test_print_pairing_qr_no_output_when_renderer_empty(
         )
         entrypoint._print_pairing_qr_best_effort("{}", enabled=True)
         assert capsys.readouterr().out == ""
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_print_pairing_qr_no_output_when_renderer_empty failed: {exc}"
         ) from exc

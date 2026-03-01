@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import errno
 import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
@@ -12,8 +11,14 @@ from mac_health_checkup.app.backend.security.throttling import RequestThrottler
 from mac_health_checkup.app.backend.snapshot import emit_section_json, emit_snapshot_json
 from mac_health_checkup.app.gui.sections.types import SectionHost
 from mac_health_checkup.core.config import ApiConfig
-from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.types import JsonDict, JsonValue
+from mac_health_checkup.core.utils import format_error
+from mac_health_checkup.core.utils.error_boundary import (
+    ErrorBoundary,
+    ErrorCode,
+    is_client_disconnect_exception,
+    map_boundary_exception,
+)
 
 MODULE_PATH = "mac_health_checkup/app/backend/http/handler_factory.py"
 
@@ -45,12 +50,8 @@ def _is_client_disconnect(exc: BaseException) -> bool:
     can trigger nested exception loops in error handlers.
     """
     try:
-        if isinstance(exc, (BrokenPipeError, ConnectionResetError)):
-            return True
-        if isinstance(exc, OSError):
-            return getattr(exc, "errno", None) in (errno.EPIPE, errno.ECONNRESET)
-        return False
-    except Exception:
+        return bool(is_client_disconnect_exception(exc))
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return False
 
 
@@ -85,6 +86,29 @@ def build_handler_factory(
 
         class _Handler(BaseHTTPRequestHandler):
             def log_message(self, format: str, *args: object) -> None:
+                """
+                Summary
+                Execute `log_message` for its module-level responsibility.
+
+                Inputs
+                format: `str` parameter from the function signature.
+                *args: variadic `object` parameters.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `mac_health_checkup/app/backend/http/handler_factory.py:log_message` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `mac_health_checkup/app/backend/http/handler_factory.py`.
+
+                Why this exists
+                Keeps `log_message` explicit, testable, and maintainable.
+                """
                 _ = format
                 _ = args
                 return
@@ -117,9 +141,12 @@ def build_handler_factory(
                     self.connection.settimeout(float(api.request_timeout_sec))
                     allowed, retry_after = throttler.allow_request(client_ip)
                     if not allowed:
-                        self._respond_json(
+                        self._respond_api_error(
                             HTTPStatus.TOO_MANY_REQUESTS,
-                            {"ok": False, "error": "rate_limited", "retry_after_sec": retry_after},
+                            error=ErrorCode.RATE_LIMITED.value,
+                            error_code=ErrorCode.RATE_LIMITED.value,
+                            message="Request rate limit exceeded.",
+                            extra_payload={"retry_after_sec": retry_after},
                             headers={"Retry-After": str(retry_after)},
                         )
                         return
@@ -133,8 +160,11 @@ def build_handler_factory(
                     if path == "/v1/snapshot":
                         if not auth_ok(self.headers.get("Authorization"), api):
                             throttler.record_auth_failure(client_ip)
-                            self._respond_json(
-                                HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "unauthorized"}
+                            self._respond_api_error(
+                                HTTPStatus.UNAUTHORIZED,
+                                error="unauthorized",
+                                error_code=ErrorCode.AUTH_FAILED.value,
+                                message="Authentication failed.",
                             )
                             return
                         throttler.record_auth_success(client_ip)
@@ -156,17 +186,22 @@ def build_handler_factory(
                     if path == "/v1/section":
                         if not auth_ok(self.headers.get("Authorization"), api):
                             throttler.record_auth_failure(client_ip)
-                            self._respond_json(
-                                HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "unauthorized"}
+                            self._respond_api_error(
+                                HTTPStatus.UNAUTHORIZED,
+                                error="unauthorized",
+                                error_code=ErrorCode.AUTH_FAILED.value,
+                                message="Authentication failed.",
                             )
                             return
                         throttler.record_auth_success(client_ip)
                         key_values = query.get("key", [])
                         key = key_values[0] if key_values else ""
                         if not isinstance(key, str) or not key.strip():
-                            self._respond_json(
+                            self._respond_api_error(
                                 HTTPStatus.BAD_REQUEST,
-                                {"ok": False, "error": "missing_section_key"},
+                                error="missing_section_key",
+                                error_code=ErrorCode.INPUT_INVALID.value,
+                                message="Section key is required.",
                             )
                             return
                         code, section_json = emit_section_json(
@@ -186,17 +221,27 @@ def build_handler_factory(
                                 return
                             raise
                         return
-                    self._respond_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
+                    self._respond_api_error(
+                        HTTPStatus.NOT_FOUND,
+                        error="not_found",
+                        error_code=ErrorCode.NOT_FOUND.value,
+                        message="Requested resource was not found.",
+                    )
                 except (OSError, RuntimeError, ValueError, TypeError, AttributeError) as exc:
                     if _is_client_disconnect(exc):
                         return
                     try:
-                        self._respond_json(
-                            HTTPStatus.INTERNAL_SERVER_ERROR,
-                            {
-                                "ok": False,
-                                "error": format_error(MODULE_PATH, "_Handler.do_GET", "Request failed", exc),
-                            },
+                        mapped = map_boundary_exception(
+                            exc,
+                            boundary=ErrorBoundary.API,
+                            default_message="Request handling failed",
+                        )
+                        self._respond_api_error(
+                            mapped.http_status,
+                            error=mapped.code.value,
+                            error_code=mapped.code.value,
+                            message=mapped.user_message,
+                            headers={"X-Error-Code": mapped.code.value},
                         )
                     except OSError as write_exc:
                         if _is_client_disconnect(write_exc):
@@ -204,7 +249,7 @@ def build_handler_factory(
                         raise
 
             def _respond_json(
-                self, status: HTTPStatus, payload: JsonDict, *, headers: Mapping[str, str] | None = None
+                self, status: int | HTTPStatus, payload: JsonDict, *, headers: Mapping[str, str] | None = None
             ) -> None:
                 """
                 Summary
@@ -250,6 +295,59 @@ def build_handler_factory(
                 except (OSError, RuntimeError, ValueError, TypeError) as exc:
                     raise RuntimeError(
                         format_error(MODULE_PATH, "_Handler._respond_json", "Failed to write response", exc)
+                    ) from exc
+
+            def _respond_api_error(
+                self,
+                status: int | HTTPStatus,
+                *,
+                error: str,
+                error_code: str,
+                message: str,
+                extra_payload: Mapping[str, JsonValue] | None = None,
+                headers: Mapping[str, str] | None = None,
+            ) -> None:
+                """
+                Summary
+                Write a standardized API error response.
+
+                Inputs
+                status: HTTP status code.
+                error: Backward-compatible API error string.
+                error_code: Standardized typed error code.
+                message: Human-readable error message.
+                extra_payload: Optional extra payload fields merged into the response body.
+                headers: Optional response headers.
+
+                Outputs
+                Writes the HTTP response.
+
+                Side effects
+                Writes to the socket.
+
+                Error handling
+                Raises `RuntimeError` with module and method context when response writing fails.
+
+                Ties to other methods
+                Used by `do_GET` for auth, validation, and unexpected-failure paths.
+
+                Why this exists
+                API clients should receive one consistent failure payload shape.
+                """
+                try:
+                    payload: JsonDict = {
+                        "ok": False,
+                        "error": error,
+                        "error_code": error_code,
+                        "message": message,
+                    }
+                    if extra_payload is not None:
+                        for key, value in extra_payload.items():
+                            payload[str(key)] = value
+                    self._respond_json(status, payload, headers=headers)
+                except (OSError, RuntimeError, ValueError, TypeError, AttributeError) as exc:
+                    raise RuntimeError(
+                        format_error(MODULE_PATH, "_Handler._respond_api_error", "Failed to write API error", exc)
                     ) from exc
 
         return _Handler

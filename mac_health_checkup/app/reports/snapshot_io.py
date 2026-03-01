@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Mapping, cast
 
-from mac_health_checkup.app.backend.snapshot import (
+from mac_health_checkup.app.backend import (
     Snapshot,
     SnapshotSection,
     SnapshotSectionDescriptor,
@@ -13,7 +13,7 @@ from mac_health_checkup.app.backend.snapshot import (
 )
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict, JsonValue
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 
 MODULE_PATH = "mac_health_checkup/app/reports/snapshot_io.py"
 
@@ -402,24 +402,115 @@ def _require_json_dict(value: object, name: str, *, allow_empty: bool) -> JsonDi
 
 
 def _require_int(value: object, name: str) -> int:
+    """
+    Summary
+    Execute `_require_int` for its module-level responsibility.
+
+    Inputs
+    value: `object` parameter from the function signature.
+    name: `str` parameter from the function signature.
+
+    Outputs
+    Returns `int`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_io.py:_require_int` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_io.py`.
+
+    Why this exists
+    Keeps `_require_int` explicit, testable, and maintainable.
+    """
     if not isinstance(value, int):
         raise ValueError(f"{name} must be int")
     return int(value)
 
 
 def _require_bool(value: object, name: str) -> bool:
+    """
+    Summary
+    Execute `_require_bool` for its module-level responsibility.
+
+    Inputs
+    value: `object` parameter from the function signature.
+    name: `str` parameter from the function signature.
+
+    Outputs
+    Returns `bool`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_io.py:_require_bool` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_io.py`.
+
+    Why this exists
+    Keeps `_require_bool` explicit, testable, and maintainable.
+    """
     if not isinstance(value, bool):
         raise ValueError(f"{name} must be bool")
     return bool(value)
 
 
 def _require_str(value: object, name: str) -> str:
+    """
+    Summary
+    Execute `_require_str` for its module-level responsibility.
+
+    Inputs
+    value: `object` parameter from the function signature.
+    name: `str` parameter from the function signature.
+
+    Outputs
+    Returns `str`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_io.py:_require_str` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_io.py`.
+
+    Why this exists
+    Keeps `_require_str` explicit, testable, and maintainable.
+    """
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be non-empty string")
     return value
 
 
 def _optional_str(value: object) -> str | None:
+    """
+    Summary
+    Execute `_optional_str` for its module-level responsibility.
+
+    Inputs
+    value: `object` parameter from the function signature.
+
+    Outputs
+    Returns `str | None`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_io.py:_optional_str` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_io.py`.
+
+    Why this exists
+    Keeps `_optional_str` explicit, testable, and maintainable.
+    """
     if value is None:
         return None
     if not isinstance(value, str):
@@ -459,6 +550,28 @@ def _coerce_json_dict(value: Mapping[object, object]) -> JsonDict:
 
 
 def _coerce_json_value(value: object) -> JsonValue:
+    """
+    Summary
+    Execute `_coerce_json_value` for its module-level responsibility.
+
+    Inputs
+    value: `object` parameter from the function signature.
+
+    Outputs
+    Returns `JsonValue`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_io.py:_coerce_json_value` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_io.py`.
+
+    Why this exists
+    Keeps `_coerce_json_value` explicit, testable, and maintainable.
+    """
     if value is None:
         return None
     if isinstance(value, (str, int, float, bool)):

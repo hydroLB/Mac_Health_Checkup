@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 import unittest
 
-from mac_health_checkup.core.config.public import get_config, reset_config_cache
+from mac_health_checkup.core.config import get_config, reset_config_cache
 
 MODULE_PATH = "tests/test_config_thread_safety.py"
 
@@ -62,9 +62,39 @@ class ConfigThreadSafetyTests(unittest.TestCase):
         errors_lock = threading.Lock()
 
         def _worker() -> None:
+            """
+            Summary
+            Execute `_worker` for its module-level responsibility.
+
+            Inputs
+            None.
+
+            Outputs
+            None.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `tests/test_config_thread_safety.py:_worker` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `tests/test_config_thread_safety.py`.
+
+            Why this exists
+            Keeps `_worker` explicit, testable, and maintainable.
+            """
             try:
                 _ = get_config()
-            except BaseException as exc:  # noqa: BLE001
+            except (
+                RuntimeError,
+                ValueError,
+                TypeError,
+                AttributeError,
+                KeyError,
+                IndexError,
+                OSError,
+            ) as exc:
                 with errors_lock:
                     errors.append(exc)
 

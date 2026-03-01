@@ -144,7 +144,7 @@ public struct Theme: Sendable {
             mono: .system(.body, design: .monospaced),
             caption: .system(size: 11)
         )
-        let layout = LayoutMetrics(pagePadding: 14, cardPadding: 12, cardSpacing: 12)
+        let layout = LayoutMetrics(pagePadding: 14, cardPadding: 12, cardSpacing: 12, cardHeightScale: 1.25)
         return Theme(colors: colors, fonts: fonts, layout: layout)
     }
 }
@@ -152,7 +152,9 @@ public struct Theme: Sendable {
 public struct LayoutMetrics: Sendable {
     public let pagePadding: CGFloat
     public let cardPadding: CGFloat
+    public let cardVerticalPadding: CGFloat
     public let cardSpacing: CGFloat
+    public let cardHeightScale: CGFloat
 
     public init(from config: AppConfig) {
         /**
@@ -179,9 +181,12 @@ public struct LayoutMetrics: Sendable {
          */
         let padx = max(12, config.gui.section_padx)
         let pady = max(10, config.gui.section_pady)
+        let verticalScale: CGFloat = 1.25
         self.pagePadding = CGFloat(padx)
         self.cardPadding = 12
-        self.cardSpacing = CGFloat(pady)
+        self.cardVerticalPadding = 12 * verticalScale
+        self.cardSpacing = CGFloat(pady) * verticalScale
+        self.cardHeightScale = verticalScale
     }
 
     public init(from theme: SnapshotTheme) {
@@ -209,12 +214,15 @@ public struct LayoutMetrics: Sendable {
          */
         let padx = max(12, theme.gui.section_padx)
         let pady = max(10, theme.gui.section_pady)
+        let verticalScale: CGFloat = 1.25
         self.pagePadding = CGFloat(padx)
         self.cardPadding = 12
-        self.cardSpacing = CGFloat(pady)
+        self.cardVerticalPadding = 12 * verticalScale
+        self.cardSpacing = CGFloat(pady) * verticalScale
+        self.cardHeightScale = verticalScale
     }
 
-    init(pagePadding: CGFloat, cardPadding: CGFloat, cardSpacing: CGFloat) {
+    init(pagePadding: CGFloat, cardPadding: CGFloat, cardSpacing: CGFloat, cardHeightScale: CGFloat) {
         /**
          Summary
          Initialize layout metrics with explicit values.
@@ -241,7 +249,35 @@ public struct LayoutMetrics: Sendable {
          */
         self.pagePadding = pagePadding
         self.cardPadding = cardPadding
-        self.cardSpacing = cardSpacing
+        self.cardVerticalPadding = cardPadding * cardHeightScale
+        self.cardSpacing = cardSpacing * cardHeightScale
+        self.cardHeightScale = cardHeightScale
+    }
+
+    public func verticalScaled(_ value: CGFloat) -> CGFloat {
+        /**
+         Summary
+         Scale a vertical spacing or height value by the card height scale factor.
+
+         Inputs
+         value: Base vertical spacing or height.
+
+         Outputs
+         Scaled value.
+
+         Side effects
+         None.
+
+         Error handling
+         None.
+
+         Ties to other methods
+         Used by card and table views to keep vertical breathing room consistent.
+
+         Why this exists
+         A single scaling helper avoids ad-hoc spacing math scattered across views.
+         */
+        return max(0, value * cardHeightScale)
     }
 }
 

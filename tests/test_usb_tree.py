@@ -80,7 +80,16 @@ USB:
             self.assertNotIn("PCI Device ID", labels)
             self.assertNotIn("Manufacturer", labels)
             self.assertNotIn("Product ID", labels)
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:UsbTreeParserTests.test_extract_usb_tree_items_ignores_key_value_properties failed: {exc}"
             ) from exc

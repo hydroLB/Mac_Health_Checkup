@@ -30,7 +30,12 @@ public enum SectionHealth: String, Sendable {
          Why this exists
          Keeps health labeling consistent across the UI.
          */
-        return rawValue.uppercased()
+        switch self {
+        case .unknown:
+            return "UNK"
+        default:
+            return rawValue.uppercased()
+        }
     }
 
     public func color(theme: Theme) -> Color {
@@ -125,6 +130,9 @@ public enum SectionHealth: String, Sendable {
            case let .bool(ok) = diagnostics["ok"],
            ok == false
         {
+            if _shouldTreatFailedDiagnosticsAsUnknown(diagnostics: diagnostics) {
+                return .unknown
+            }
             return .bad
         }
 
@@ -147,5 +155,143 @@ public enum SectionHealth: String, Sendable {
         }
 
         return .unknown
+    }
+
+    private static func _shouldTreatFailedDiagnosticsAsUnknown(diagnostics: [String: JSONValue]) -> Bool {
+        /**
+         Summary
+         Determine whether a diagnostics failure represents unavailable data rather than a health failure.
+
+         Inputs
+         diagnostics: Section diagnostics payload.
+
+         Outputs
+         True when failure should be rendered as unknown.
+
+         Side effects
+         None.
+
+         Error handling
+         None.
+
+         Ties to other methods
+         Used by `fromSnapshotSection` when `diagnostics.ok` is false.
+
+         Why this exists
+         Backend collection/access failures should render as unknown to avoid implying a confirmed unhealthy state.
+         */
+        if let permissionRequired = _boolValue(for: "permission_required", in: diagnostics), permissionRequired {
+            return true
+        }
+        let errorText = _normalizedDiagnosticsText(
+            _stringValue(for: "error", in: diagnostics) ??
+                _stringValue(for: "guidance", in: diagnostics) ??
+                ""
+        )
+        if errorText.isEmpty {
+            return false
+        }
+        let unavailableTokens: [String] = [
+            "unavailable",
+            "not available",
+            "not reachable",
+            "network unreachable",
+            "connection refused",
+            "connection reset",
+            "timed out",
+            "timeout",
+            "no data",
+            "permission denied",
+            "permission required",
+            "unsupported",
+            "iokit/corefoundation unavailable",
+        ]
+        return unavailableTokens.contains { errorText.contains($0) }
+    }
+
+    private static func _stringValue(for key: String, in diagnostics: [String: JSONValue]) -> String? {
+        /**
+         Summary
+         Extract a diagnostics string field when present.
+
+         Inputs
+         key: Diagnostics key.
+         diagnostics: Section diagnostics payload.
+
+         Outputs
+         Optional string value.
+
+         Side effects
+         None.
+
+         Error handling
+         None.
+
+         Ties to other methods
+         Used by `_shouldTreatFailedDiagnosticsAsUnknown`.
+
+         Why this exists
+         Keeping JSONValue extraction local avoids repetitive switch logic in health mapping.
+         */
+        guard let raw = diagnostics[key], case let .string(value) = raw else {
+            return nil
+        }
+        return value
+    }
+
+    private static func _boolValue(for key: String, in diagnostics: [String: JSONValue]) -> Bool? {
+        /**
+         Summary
+         Extract a diagnostics boolean field when present.
+
+         Inputs
+         key: Diagnostics key.
+         diagnostics: Section diagnostics payload.
+
+         Outputs
+         Optional boolean value.
+
+         Side effects
+         None.
+
+         Error handling
+         None.
+
+         Ties to other methods
+         Used by `_shouldTreatFailedDiagnosticsAsUnknown`.
+
+         Why this exists
+         Permission and capability flags influence whether failures should be marked unknown.
+         */
+        guard let raw = diagnostics[key], case let .bool(value) = raw else {
+            return nil
+        }
+        return value
+    }
+
+    private static func _normalizedDiagnosticsText(_ value: String) -> String {
+        /**
+         Summary
+         Normalize diagnostics text for token-based matching.
+
+         Inputs
+         value: Raw diagnostics message.
+
+         Outputs
+         Lowercased, trimmed text.
+
+         Side effects
+         None.
+
+         Error handling
+         None.
+
+         Ties to other methods
+         Used by `_shouldTreatFailedDiagnosticsAsUnknown`.
+
+         Why this exists
+         Token checks should be robust against case and extra whitespace differences.
+         */
+        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 }

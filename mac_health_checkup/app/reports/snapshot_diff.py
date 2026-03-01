@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from mac_health_checkup.app.backend.snapshot import Snapshot, SnapshotSection, SnapshotTable
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.app.backend import Snapshot, SnapshotSection, SnapshotTable
+from mac_health_checkup.core.utils import format_error
 
 MODULE_PATH = "mac_health_checkup/app/reports/snapshot_diff.py"
 
@@ -89,6 +89,28 @@ class SectionDiff:
 
     @property
     def changed(self) -> bool:
+        """
+        Summary
+        Execute `changed` for its module-level responsibility.
+
+        Inputs
+        None.
+
+        Outputs
+        Returns `bool`.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `mac_health_checkup/app/reports/snapshot_diff.py:changed` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `mac_health_checkup/app/reports/snapshot_diff.py`.
+
+        Why this exists
+        Keeps `changed` explicit, testable, and maintainable.
+        """
         return bool(
             (self.field_before or "") != (self.field_after or "")
             or self.metrics_added
@@ -143,6 +165,28 @@ class SnapshotDiff:
 
     @property
     def changed_sections(self) -> list[SectionDiff]:
+        """
+        Summary
+        Execute `changed_sections` for its module-level responsibility.
+
+        Inputs
+        None.
+
+        Outputs
+        Returns `list[SectionDiff]`.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `mac_health_checkup/app/reports/snapshot_diff.py:changed_sections` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `mac_health_checkup/app/reports/snapshot_diff.py`.
+
+        Why this exists
+        Keeps `changed_sections` explicit, testable, and maintainable.
+        """
         return [item for item in self.section_diffs if item.changed]
 
 
@@ -200,6 +244,30 @@ def diff_snapshots(before: Snapshot, after: Snapshot) -> SnapshotDiff:
 
 
 def _diff_section(key: str, before: SnapshotSection, after: SnapshotSection) -> SectionDiff:
+    """
+    Summary
+    Execute `_diff_section` for its module-level responsibility.
+
+    Inputs
+    key: `str` parameter from the function signature.
+    before: `SnapshotSection` parameter from the function signature.
+    after: `SnapshotSection` parameter from the function signature.
+
+    Outputs
+    Returns `SectionDiff`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_diff.py:_diff_section` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_diff.py`.
+
+    Why this exists
+    Keeps `_diff_section` explicit, testable, and maintainable.
+    """
     field_before = before.field
     field_after = after.field
     metrics_added, metrics_removed, metrics_changed = _diff_metrics(before.metrics, after.metrics)
@@ -221,6 +289,29 @@ def _diff_metrics(
     before: list[tuple[str, str, str]] | None,
     after: list[tuple[str, str, str]] | None,
 ) -> tuple[list[tuple[str, str, str]], list[tuple[str, str, str]], list[MetricChange]]:
+    """
+    Summary
+    Execute `_diff_metrics` for its module-level responsibility.
+
+    Inputs
+    before: `list[tuple[str, str, str]] | None` parameter from the function signature.
+    after: `list[tuple[str, str, str]] | None` parameter from the function signature.
+
+    Outputs
+    Returns `tuple[list[tuple[str, str, str]], list[tuple[str, str, str]], list[MetricChange]]`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_diff.py:_diff_metrics` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_diff.py`.
+
+    Why this exists
+    Keeps `_diff_metrics` explicit, testable, and maintainable.
+    """
     if not before and not after:
         return [], [], []
     before_rows = before or []
@@ -286,6 +377,29 @@ def _diff_metrics(
 
 
 def _diff_table(before: SnapshotTable | None, after: SnapshotTable | None) -> tuple[bool, int, int]:
+    """
+    Summary
+    Execute `_diff_table` for its module-level responsibility.
+
+    Inputs
+    before: `SnapshotTable | None` parameter from the function signature.
+    after: `SnapshotTable | None` parameter from the function signature.
+
+    Outputs
+    Returns `tuple[bool, int, int]`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_diff.py:_diff_table` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_diff.py`.
+
+    Why this exists
+    Keeps `_diff_table` explicit, testable, and maintainable.
+    """
     before_rows = len(before.rows) if before is not None else 0
     after_rows = len(after.rows) if after is not None else 0
     if before is None and after is None:

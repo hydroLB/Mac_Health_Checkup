@@ -4,7 +4,7 @@ import tkinter as tk
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 
 MODULE_PATH = "mac_health_checkup/app/gui/widgets/tooltip.py"
 
@@ -140,6 +140,28 @@ class TooltipManager:
             wid = id(widget)
 
             def _provider(_event: tk.Event[tk.Misc]) -> Optional[str]:
+                """
+                Summary
+                Execute `_provider` for its module-level responsibility.
+
+                Inputs
+                _event: `tk.Event[tk.Misc]` parameter from the function signature.
+
+                Outputs
+                Returns `Optional[str]`.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `mac_health_checkup/app/gui/widgets/tooltip.py:_provider` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `mac_health_checkup/app/gui/widgets/tooltip.py`.
+
+                Why this exists
+                Keeps `_provider` explicit, testable, and maintainable.
+                """
                 value = (text or "").strip()
                 return value if value else None
 
@@ -246,14 +268,67 @@ class TooltipManager:
             ) from exc
 
     def _on_enter(self, event: tk.Event[tk.Misc]) -> None:
+        """
+        Summary
+        Execute `_on_enter` for its module-level responsibility.
+
+        Inputs
+        event: `tk.Event[tk.Misc]` parameter from the function signature.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `mac_health_checkup/app/gui/widgets/tooltip.py:_on_enter` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `mac_health_checkup/app/gui/widgets/tooltip.py`.
+
+        Why this exists
+        Keeps `_on_enter` explicit, testable, and maintainable.
+        """
         try:
             self._active_widget_id = id(event.widget)
             self._schedule_show(event)
-        except Exception:
+        except (
+            tk.TclError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ):
             # Tooltips should never take down the UI; any unexpected errors are swallowed at this boundary.
             self.hide()
 
     def _on_motion(self, event: tk.Event[tk.Misc]) -> None:
+        """
+        Summary
+        Execute `_on_motion` for its module-level responsibility.
+
+        Inputs
+        event: `tk.Event[tk.Misc]` parameter from the function signature.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `mac_health_checkup/app/gui/widgets/tooltip.py:_on_motion` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `mac_health_checkup/app/gui/widgets/tooltip.py`.
+
+        Why this exists
+        Keeps `_on_motion` explicit, testable, and maintainable.
+        """
         try:
             wid = id(event.widget)
             if self._active_widget_id != wid:
@@ -269,42 +344,188 @@ class TooltipManager:
                 self._label.configure(text=text)
                 self._last_text = text
             self._position_tip(event)
-        except Exception:
+        except (
+            tk.TclError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ):
             self.hide()
 
     def _on_leave(self, _event: tk.Event[tk.Misc]) -> None:
+        """
+        Summary
+        Execute `_on_leave` for its module-level responsibility.
+
+        Inputs
+        _event: `tk.Event[tk.Misc]` parameter from the function signature.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `mac_health_checkup/app/gui/widgets/tooltip.py:_on_leave` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `mac_health_checkup/app/gui/widgets/tooltip.py`.
+
+        Why this exists
+        Keeps `_on_leave` explicit, testable, and maintainable.
+        """
         self.hide()
 
     def _schedule_show(self, event: tk.Event[tk.Misc]) -> None:
+        """
+        Summary
+        Execute `_schedule_show` for its module-level responsibility.
+
+        Inputs
+        event: `tk.Event[tk.Misc]` parameter from the function signature.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `mac_health_checkup/app/gui/widgets/tooltip.py:_schedule_show` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `mac_health_checkup/app/gui/widgets/tooltip.py`.
+
+        Why this exists
+        Keeps `_schedule_show` explicit, testable, and maintainable.
+        """
         try:
             self._cancel_scheduled()
             if self._delay_ms == 0:
                 self._show(event)
                 return
             self._after_id = self._root.after(self._delay_ms, lambda: self._show(event))
-        except Exception:
+        except (
+            tk.TclError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ):
             self.hide()
 
     def _cancel_scheduled(self) -> None:
+        """
+        Summary
+        Execute `_cancel_scheduled` for its module-level responsibility.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `mac_health_checkup/app/gui/widgets/tooltip.py:_cancel_scheduled` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `mac_health_checkup/app/gui/widgets/tooltip.py`.
+
+        Why this exists
+        Keeps `_cancel_scheduled` explicit, testable, and maintainable.
+        """
         if self._after_id is None:
             return
         try:
             self._root.after_cancel(self._after_id)
-        except Exception:
+        except (
+            tk.TclError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ):
             return
         finally:
             self._after_id = None
 
     def _tooltip_text(self, event: tk.Event[tk.Misc]) -> Optional[str]:
+        """
+        Summary
+        Execute `_tooltip_text` for its module-level responsibility.
+
+        Inputs
+        event: `tk.Event[tk.Misc]` parameter from the function signature.
+
+        Outputs
+        Returns `Optional[str]`.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `mac_health_checkup/app/gui/widgets/tooltip.py:_tooltip_text` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `mac_health_checkup/app/gui/widgets/tooltip.py`.
+
+        Why this exists
+        Keeps `_tooltip_text` explicit, testable, and maintainable.
+        """
         provider = self._providers.get(id(event.widget))
         if provider is None:
             return None
         try:
             return provider(event)
-        except Exception:
+        except (
+            tk.TclError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ):
             return None
 
     def _show(self, event: tk.Event[tk.Misc]) -> None:
+        """
+        Summary
+        Execute `_show` for its module-level responsibility.
+
+        Inputs
+        event: `tk.Event[tk.Misc]` parameter from the function signature.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `mac_health_checkup/app/gui/widgets/tooltip.py:_show` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `mac_health_checkup/app/gui/widgets/tooltip.py`.
+
+        Why this exists
+        Keeps `_show` explicit, testable, and maintainable.
+        """
         try:
             text = self._tooltip_text(event)
             if not text:
@@ -316,10 +537,41 @@ class TooltipManager:
             self._position_tip(event)
             if self._tip is not None:
                 self._tip.deiconify()
-        except Exception:
+        except (
+            tk.TclError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ):
             self.hide()
 
     def _ensure_tip(self) -> None:
+        """
+        Summary
+        Execute `_ensure_tip` for its module-level responsibility.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `mac_health_checkup/app/gui/widgets/tooltip.py:_ensure_tip` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `mac_health_checkup/app/gui/widgets/tooltip.py`.
+
+        Why this exists
+        Keeps `_ensure_tip` explicit, testable, and maintainable.
+        """
         if self._tip is not None:
             return
         try:
@@ -350,23 +602,85 @@ class TooltipManager:
             ) from exc
 
     def _position_tip(self, event: tk.Event[tk.Misc]) -> None:
+        """
+        Summary
+        Execute `_position_tip` for its module-level responsibility.
+
+        Inputs
+        event: `tk.Event[tk.Misc]` parameter from the function signature.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `mac_health_checkup/app/gui/widgets/tooltip.py:_position_tip` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `mac_health_checkup/app/gui/widgets/tooltip.py`.
+
+        Why this exists
+        Keeps `_position_tip` explicit, testable, and maintainable.
+        """
         if self._tip is None:
             return
         try:
             x = int(event.x_root) + 14
             y = int(event.y_root) + 18
             self._tip.geometry(f"+{x}+{y}")
-        except Exception:
+        except (
+            tk.TclError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ):
             self.hide()
 
     def _destroy_tip(self) -> None:
+        """
+        Summary
+        Execute `_destroy_tip` for its module-level responsibility.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `mac_health_checkup/app/gui/widgets/tooltip.py:_destroy_tip` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `mac_health_checkup/app/gui/widgets/tooltip.py`.
+
+        Why this exists
+        Keeps `_destroy_tip` explicit, testable, and maintainable.
+        """
         if self._tip is None:
             self._label = None
             self._last_text = None
             return
         try:
             self._tip.destroy()
-        except Exception:
+        except (
+            tk.TclError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ):
             return
         finally:
             self._tip = None

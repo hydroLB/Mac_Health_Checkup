@@ -33,9 +33,14 @@ def resolve_config_path() -> Path:
     Allows operators to point the tool at different config files without code edits.
     """
     try:
-        override = os.getenv("MAC_HEALTH_CHECKUP_CONFIG")
-        if override:
-            return Path(override).expanduser()
+        env_name = "MAC_HEALTH_CHECKUP_CONFIG"
+        if env_name in os.environ:
+            override = os.environ.get(env_name, "")
+            if not override.strip():
+                raise ValueError(
+                    f"{env_name} is set but empty. Set it to a config file path or unset the variable."
+                )
+            return Path(override.strip()).expanduser()
         return Path("config") / "config.json"
     except (OSError, RuntimeError, ValueError, TypeError) as exc:
         raise RuntimeError(
@@ -67,9 +72,14 @@ def config_max_bytes() -> int:
     Avoids unbounded reads when a config path is misconfigured or points to an unexpected file.
     """
     try:
-        override = os.getenv("MAC_HEALTH_CHECKUP_CONFIG_MAX_BYTES")
-        if override:
-            return require_int(1, 10_000_000)(override)
+        env_name = "MAC_HEALTH_CHECKUP_CONFIG_MAX_BYTES"
+        if env_name in os.environ:
+            override = os.environ.get(env_name, "")
+            if not override.strip():
+                raise ValueError(
+                    f"{env_name} is set but empty. Set it to an integer byte limit or unset the variable."
+                )
+            return require_int(1, 10_000_000)(override.strip())
         return 1_048_576
     except (TypeError, ValueError) as exc:
         raise RuntimeError(format_error(MODULE_PATH, "config_max_bytes", "Invalid size limit", exc)) from exc

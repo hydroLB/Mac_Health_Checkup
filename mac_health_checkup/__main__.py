@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from mac_health_checkup.app.entrypoint import main
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 
 MODULE_PATH = "mac_health_checkup/__main__.py"
 

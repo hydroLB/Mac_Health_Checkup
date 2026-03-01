@@ -40,7 +40,7 @@ def cfstring_to_str(api: HidApi, value: ctypes.c_void_p) -> str:
             return "Unknown Sensor"
         decoded = buf.value.decode("utf-8", errors="replace").strip()
         return decoded or "Unknown Sensor"
-    except Exception:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return "Unknown Sensor"
 
 
@@ -72,7 +72,7 @@ def is_cfstring(api: HidApi, value_ref: int) -> bool:
         if value_ref <= 0:
             return False
         return int(api.cf_get_type_id(as_void_p(int(value_ref)))) == int(api.cf_string_get_type_id())
-    except Exception:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return False
 
 

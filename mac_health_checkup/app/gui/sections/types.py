@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Optional, Protocol, Sequence, TypeAlias
 
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 
 if TYPE_CHECKING:
     import tkinter as tk

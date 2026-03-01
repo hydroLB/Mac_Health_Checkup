@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 from mac_health_checkup.diagnostics.base import Cache, cached_fetch, get_diagnostics_logger, new_context
 from mac_health_checkup.diagnostics.thermals.hid_event_system import collect_temperature_readings
 
@@ -127,7 +127,7 @@ class ThermalSensorsDiagnostics:
                 "error": error,
                 "guidance": guidance,
             }
-        except Exception as exc:
+        except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
             logger.warning(
                 "temperature sensor collection failed",
                 event="thermals_error",

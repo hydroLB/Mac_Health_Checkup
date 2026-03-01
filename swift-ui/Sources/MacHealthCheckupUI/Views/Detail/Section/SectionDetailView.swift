@@ -37,7 +37,7 @@ struct SectionDetailView: View {
             VStack(alignment: .leading, spacing: theme.layout.cardSpacing) {
                 if selectedKey == nil {
                     Card(theme: theme) {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: theme.layout.verticalScaled(8)) {
                             Text("Select a section")
                                 .font(theme.fonts.sectionTitle)
                                 .foregroundStyle(theme.colors.section)
@@ -114,7 +114,7 @@ struct SectionDetailView: View {
 
                     if let metrics = payload?.metrics, !metrics.isEmpty {
                         Card(theme: theme) {
-                            VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: theme.layout.verticalScaled(8)) {
                                 Text("Metrics")
                                     .font(theme.fonts.body)
                                     .foregroundStyle(theme.colors.label)
@@ -126,7 +126,7 @@ struct SectionDetailView: View {
 
                     if let table = payload?.table {
                         Card(theme: theme) {
-                            VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: theme.layout.verticalScaled(8)) {
                                 if let key = selectedKey,
                                    let title = SectionDetailPolicy.tableTitle(for: key),
                                    !title.isEmpty

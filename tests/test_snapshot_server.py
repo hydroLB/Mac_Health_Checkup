@@ -5,7 +5,7 @@ import unittest
 import urllib.error
 import urllib.request
 
-from mac_health_checkup.app.backend.server import SnapshotApiServer, pick_free_port, wait_until_ready
+from mac_health_checkup.app.backend import SnapshotApiServer, pick_free_port, wait_until_ready
 from mac_health_checkup.app.gui.sections.types import SectionHost
 from mac_health_checkup.core.config import ApiConfig
 from mac_health_checkup.core.types import JsonDict
@@ -129,6 +129,29 @@ class SnapshotServerTests(unittest.TestCase):
             self.assertTrue(wait_until_ready(server.url(), timeout_sec=3))
 
             def _fetch(path: str, token: str | None) -> tuple[int, dict[str, object]]:
+                """
+                Summary
+                Execute `_fetch` for its module-level responsibility.
+
+                Inputs
+                path: `str` parameter from the function signature.
+                token: `str | None` parameter from the function signature.
+
+                Outputs
+                Returns `tuple[int, dict[str, object]]`.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_snapshot_server.py:_fetch` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_snapshot_server.py`.
+
+                Why this exists
+                Keeps `_fetch` explicit, testable, and maintainable.
+                """
                 url = f"{server.url()}{path}"
                 req = urllib.request.Request(url, method="GET")
                 if token is not None:
@@ -185,7 +208,16 @@ class SnapshotServerTests(unittest.TestCase):
                     self.assertEqual(first.get("key"), "test")
         except unittest.SkipTest:
             raise
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:SnapshotServerTests.test_snapshot_endpoint_auth_and_shape failed: {exc}"
             ) from exc
@@ -193,7 +225,16 @@ class SnapshotServerTests(unittest.TestCase):
             if server is not None:
                 try:
                     server.stop()
-                except Exception:
+                except (
+                    AssertionError,
+                    RuntimeError,
+                    ValueError,
+                    TypeError,
+                    AttributeError,
+                    KeyError,
+                    IndexError,
+                    OSError,
+                ):
                     pass
 
 

@@ -34,5 +34,5 @@ def update_best_by_label(best_by_label: dict[str, float], samples: list[tuple[st
             existing = best_by_label.get(name)
             if existing is None or float(celsius) > float(existing):
                 best_by_label[name] = float(celsius)
-    except Exception:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return
