@@ -117,9 +117,14 @@ def parse_ui(raw: JsonDict) -> UiConfig:
     """
     try:
         section = get_section(raw, "ui")
+        color_mode_raw = section.get("color_mode", "auto")
+        color_mode = require_str(color_mode_raw).strip().lower()
+        if color_mode not in {"light", "dark", "auto"}:
+            raise ValueError("ui.color_mode must be one of: light, dark, auto")
         return UiConfig(
             window_size=require_str(section.get("window_size")),
             window_title=require_str(section.get("window_title")),
+            color_mode=color_mode,
         )
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(format_error(MODULE_PATH, "parse_ui", "Failed to parse ui", exc)) from exc

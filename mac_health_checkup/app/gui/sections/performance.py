@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from mac_health_checkup.app.gui.sections.types import SectionHost
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 from mac_health_checkup.diagnostics.power import PowerResidencyDiagnostics
 from mac_health_checkup.diagnostics.thermals import ThermalSensorsDiagnostics
 

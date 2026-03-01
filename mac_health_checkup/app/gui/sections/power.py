@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from mac_health_checkup.app.gui.sections.types import SectionHost
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.data import fmt_temp_c
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import fmt_temp_c
+from mac_health_checkup.core.utils import format_error
 from mac_health_checkup.diagnostics.battery import BatteryTempDiagnostics
 from mac_health_checkup.diagnostics.power import PowerAdapterDiagnostics, USBPowerDiagnostics
 

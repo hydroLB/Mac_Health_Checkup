@@ -55,7 +55,7 @@ struct SectionHealthBadge: View {
             .font(theme.fonts.caption)
             .foregroundStyle(health.color(theme: theme))
             .padding(.horizontal, 8)
-            .padding(.vertical, 2)
+            .padding(.vertical, theme.layout.verticalScaled(2))
             .background(health.color(theme: theme).opacity(0.12))
             .clipShape(Capsule())
     }

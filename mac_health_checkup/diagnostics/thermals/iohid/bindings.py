@@ -130,5 +130,5 @@ def load_hid_api() -> HidApi | None:
             hid_service_copy_property=hid_service_copy_property,
             hid_event_get_float_value=hid_event_get_float_value,
         )
-    except Exception:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return None

@@ -1,0 +1,56 @@
+{
+  "scan_roots": [
+    "mac_health_checkup",
+    "tools",
+    "benchmarks",
+    "run.py",
+    "run_mac_health_checkup.py",
+    "run_mac_health_checkup_ui.py"
+  ],
+  "exclude_paths": [
+    "__pycache__",
+    ".venv",
+    ".venv-lock",
+    ".local"
+  ],
+  "layers": [
+    {
+      "name": "domain",
+      "module_prefixes": [
+        "mac_health_checkup.core",
+        "mac_health_checkup.diagnostics"
+      ]
+    },
+    {
+      "name": "app",
+      "module_prefixes": [
+        "mac_health_checkup.app"
+      ]
+    },
+    {
+      "name": "infra",
+      "module_prefixes": [
+        "mac_health_checkup.__main__",
+        "tools",
+        "benchmarks",
+        "run",
+        "run_mac_health_checkup",
+        "run_mac_health_checkup_ui"
+      ]
+    }
+  ],
+  "allowed_imports": {
+    "domain": [
+      "domain"
+    ],
+    "app": [
+      "domain",
+      "app"
+    ],
+    "infra": [
+      "domain",
+      "app",
+      "infra"
+    ]
+  }
+}

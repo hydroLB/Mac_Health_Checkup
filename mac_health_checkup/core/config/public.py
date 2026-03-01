@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
 from typing import Callable, overload
@@ -19,6 +21,93 @@ _RAW_CACHE: JsonDict | None = None
 _RAW_CACHE_PATH: Path | None = None
 _CONFIG_CACHE_PATH: Path | None = None
 _CACHE_LOCK = Lock()
+_STARTUP_ENV_OVERRIDES: tuple[str, ...] = (
+    "MAC_HEALTH_CHECKUP_CONFIG",
+    "MAC_HEALTH_CHECKUP_CONFIG_MAX_BYTES",
+    "MAC_HEALTH_CHECKUP_API_BIND_HOST",
+    "MAC_HEALTH_CHECKUP_API_PORT",
+    "MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL",
+)
+
+
+@dataclass(frozen=True)
+class StartupConfigValidationReport:
+    """
+    Summary
+    Capture startup config validation details for deterministic observability.
+
+    Inputs
+    config_path: Resolved config file path.
+    config_max_bytes: Active max file-size limit.
+    env_overrides: Environment override variable names present at startup.
+    api_enabled: Effective API enabled flag.
+    api_bind_host: Effective API bind host.
+    api_port: Effective API port.
+
+    Outputs
+    Immutable startup validation report.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Produced by `build_startup_config_validation_report` and logged by startup entrypoints.
+
+    Why this exists
+    Gives operators a safe, structured report proving which config contract was validated at startup.
+    """
+
+    config_path: str
+    config_max_bytes: int
+    env_overrides: tuple[str, ...]
+    api_enabled: bool
+    api_bind_host: str
+    api_port: int
+
+    def to_log_payload(self) -> JsonDict:
+        """
+        Summary
+        Convert the report into a structured JSON payload for logging.
+
+        Inputs
+        None.
+
+        Outputs
+        `JsonDict` payload.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when payload serialization fails unexpectedly.
+
+        Ties to other methods
+        Used by startup entrypoints when writing the `startup_config_validated` event.
+
+        Why this exists
+        Keeps report logging deterministic and free from ad-hoc dictionary assembly.
+        """
+        try:
+            return {
+                "config_path": self.config_path,
+                "config_max_bytes": self.config_max_bytes,
+                "env_overrides": list(self.env_overrides),
+                "api_enabled": self.api_enabled,
+                "api_bind_host": self.api_bind_host,
+                "api_port": self.api_port,
+            }
+        except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
+            raise RuntimeError(
+                format_error(
+                    MODULE_PATH,
+                    "StartupConfigValidationReport.to_log_payload",
+                    "Failed to convert report to payload",
+                    exc,
+                )
+            ) from exc
 
 
 def reset_config_cache() -> None:
@@ -57,30 +146,199 @@ def reset_config_cache() -> None:
         ) from exc
 
 
-@overload
-def get_config_value(
-    path: str, default: bool, validator: Callable[[JsonValue], bool] | None = None
-) -> bool: ...
+def build_startup_config_validation_report(config: Config) -> StartupConfigValidationReport:
+    """
+    Summary
+    Build a startup config validation report from the active typed config.
+
+    Inputs
+    config: Parsed typed config instance used by the running process.
+
+    Outputs
+    `StartupConfigValidationReport`.
+
+    Side effects
+    Reads environment variables and config path metadata.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when report assembly fails.
+
+    Ties to other methods
+    Called by application entrypoints after `get_config` succeeds.
+
+    Why this exists
+    Startup should emit one machine-readable proof that config/env contract validation passed.
+    """
+    try:
+        config_path = resolve_config_path()
+        max_bytes = config_max_bytes()
+        active_overrides = tuple(name for name in _STARTUP_ENV_OVERRIDES if name in os.environ)
+        return StartupConfigValidationReport(
+            config_path=str(config_path),
+            config_max_bytes=max_bytes,
+            env_overrides=active_overrides,
+            api_enabled=bool(config.api.enabled),
+            api_bind_host=str(config.api.bind_host),
+            api_port=int(config.api.port),
+        )
+    except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as exc:
+        raise RuntimeError(
+            format_error(
+                MODULE_PATH,
+                "build_startup_config_validation_report",
+                "Failed to build startup config validation report",
+                exc,
+            )
+        ) from exc
 
 
 @overload
-def get_config_value(path: str, default: int, validator: Callable[[JsonValue], int] | None = None) -> int: ...
+def get_config_value(path: str, default: bool, validator: Callable[[JsonValue], bool] | None = None) -> bool:
+    """
+    Summary
+    Execute `get_config_value` for its module-level responsibility.
+
+    Inputs
+    path: `str` parameter from the function signature.
+    default: `bool` parameter from the function signature.
+    validator: `Callable[[JsonValue], bool] | None` parameter from the function signature with a default.
+
+    Outputs
+    Returns `bool`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/core/config/public.py:get_config_value` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/core/config/public.py`.
+
+    Why this exists
+    Keeps `get_config_value` explicit, testable, and maintainable.
+    """
+    ...
+
+
+@overload
+def get_config_value(path: str, default: int, validator: Callable[[JsonValue], int] | None = None) -> int:
+    """
+    Summary
+    Execute `get_config_value` for its module-level responsibility.
+
+    Inputs
+    path: `str` parameter from the function signature.
+    default: `int` parameter from the function signature.
+    validator: `Callable[[JsonValue], int] | None` parameter from the function signature with a default.
+
+    Outputs
+    Returns `int`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/core/config/public.py:get_config_value` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/core/config/public.py`.
+
+    Why this exists
+    Keeps `get_config_value` explicit, testable, and maintainable.
+    """
+    ...
 
 
 @overload
 def get_config_value(
     path: str, default: float, validator: Callable[[JsonValue], float] | None = None
-) -> float: ...
+) -> float:
+    """
+    Summary
+    Execute `get_config_value` for its module-level responsibility.
+
+    Inputs
+    path: `str` parameter from the function signature.
+    default: `float` parameter from the function signature.
+    validator: `Callable[[JsonValue], float] | None` parameter from the function signature with a default.
+
+    Outputs
+    Returns `float`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/core/config/public.py:get_config_value` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/core/config/public.py`.
+
+    Why this exists
+    Keeps `get_config_value` explicit, testable, and maintainable.
+    """
+    ...
 
 
 @overload
-def get_config_value(path: str, default: str, validator: Callable[[JsonValue], str] | None = None) -> str: ...
+def get_config_value(path: str, default: str, validator: Callable[[JsonValue], str] | None = None) -> str:
+    """
+    Summary
+    Execute `get_config_value` for its module-level responsibility.
+
+    Inputs
+    path: `str` parameter from the function signature.
+    default: `str` parameter from the function signature.
+    validator: `Callable[[JsonValue], str] | None` parameter from the function signature with a default.
+
+    Outputs
+    Returns `str`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/core/config/public.py:get_config_value` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/core/config/public.py`.
+
+    Why this exists
+    Keeps `get_config_value` explicit, testable, and maintainable.
+    """
+    ...
 
 
 @overload
 def get_config_value(
     path: str, default: list[JsonValue], validator: Callable[[JsonValue], list[JsonValue]] | None = None
-) -> list[JsonValue]: ...
+) -> list[JsonValue]:
+    """
+    Summary
+    Execute `get_config_value` for its module-level responsibility.
+
+    Inputs
+    path: `str` parameter from the function signature.
+    default: `list[JsonValue]` parameter from the function signature.
+    validator: `Callable[[JsonValue], list[JsonValue]] | None` parameter from the function signature with a default.
+
+    Outputs
+    Returns `list[JsonValue]`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/core/config/public.py:get_config_value` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/core/config/public.py`.
+
+    Why this exists
+    Keeps `get_config_value` explicit, testable, and maintainable.
+    """
+    ...
 
 
 @overload
@@ -88,7 +346,32 @@ def get_config_value(
     path: str,
     default: dict[str, JsonValue],
     validator: Callable[[JsonValue], dict[str, JsonValue]] | None = None,
-) -> dict[str, JsonValue]: ...
+) -> dict[str, JsonValue]:
+    """
+    Summary
+    Execute `get_config_value` for its module-level responsibility.
+
+    Inputs
+    path: `str` parameter from the function signature.
+    default: `dict[str, JsonValue]` parameter from the function signature.
+    validator: `Callable[[JsonValue], dict[str, JsonValue]] | None` parameter from the function signature with a default.
+
+    Outputs
+    Returns `dict[str, JsonValue]`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/core/config/public.py:get_config_value` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/core/config/public.py`.
+
+    Why this exists
+    Keeps `get_config_value` explicit, testable, and maintainable.
+    """
+    ...
 
 
 def get_config_value(

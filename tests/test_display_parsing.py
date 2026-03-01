@@ -89,7 +89,16 @@ Graphics/Displays:
             self.assertEqual(rows[0][3], "Internal")
             self.assertIn("120", rows[0][4])
             self.assertEqual(rows[1][0], "DELL U2720Q")
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:DisplayParsingTests.test_parse_raw_display_rows_ignores_chipset_and_reads_displays failed: {exc}"
             ) from exc
@@ -144,7 +153,16 @@ Graphics/Displays:
             self.assertTrue(rows[1][0].startswith("External Display 10AC75A2"))
             self.assertEqual(rows[1][1], "3840 x 2160")
             self.assertIn("60", rows[1][4])
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:DisplayParsingTests.test_parse_ioreg_display_rows_extracts_resolution_and_refresh failed: {exc}"
             ) from exc

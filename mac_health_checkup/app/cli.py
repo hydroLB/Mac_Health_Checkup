@@ -5,7 +5,7 @@ from typing import Callable, Optional, Sequence
 
 from mac_health_checkup.app.gui.sections.types import SectionHost, Widget
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 
 MODULE_PATH = "mac_health_checkup/app/cli.py"
 

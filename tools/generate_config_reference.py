@@ -5,17 +5,19 @@ import dataclasses
 import inspect
 import json
 import sys
+import tempfile
 import types
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, get_args, get_origin
+from typing import TypeGuard, get_args, get_origin
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from mac_health_checkup.core.config.parsing.root import parse_config  # noqa: E402
-from mac_health_checkup.core.utils.errors import format_error  # noqa: E402
+from mac_health_checkup.core.config import parse_config  # noqa: E402
+from mac_health_checkup.core.types import JsonDict, JsonValue  # noqa: E402
+from mac_health_checkup.core.utils import format_error  # noqa: E402
 
 MODULE_PATH = "tools/generate_config_reference.py"
 
@@ -54,6 +56,28 @@ class LeafSetting:
 
 
 def _extract_summary(doc: str | None) -> str | None:
+    """
+    Summary
+    Execute `_extract_summary` for its module-level responsibility.
+
+    Inputs
+    doc: `str | None` parameter from the function signature.
+
+    Outputs
+    Returns `str | None`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `tools/generate_config_reference.py:_extract_summary` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `tools/generate_config_reference.py`.
+
+    Why this exists
+    Keeps `_extract_summary` explicit, testable, and maintainable.
+    """
     if not doc:
         return None
     lines = [line.rstrip() for line in doc.splitlines()]
@@ -71,13 +95,58 @@ def _extract_summary(doc: str | None) -> str | None:
 
 
 def _format_union(parts: list[str]) -> str:
+    """
+    Summary
+    Execute `_format_union` for its module-level responsibility.
+
+    Inputs
+    parts: `list[str]` parameter from the function signature.
+
+    Outputs
+    Returns `str`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `tools/generate_config_reference.py:_format_union` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `tools/generate_config_reference.py`.
+
+    Why this exists
+    Keeps `_format_union` explicit, testable, and maintainable.
+    """
     normalized = [p for p in parts if p]
     if not normalized:
         return "object"
     return " | ".join(normalized)
 
 
-def _format_type(annotation: Any, fallback_value: object) -> str:
+def _format_type(annotation: object, fallback_value: object) -> str:
+    """
+    Summary
+    Execute `_format_type` for its module-level responsibility.
+
+    Inputs
+    annotation: `object` parameter from the function signature.
+    fallback_value: `object` parameter from the function signature.
+
+    Outputs
+    Returns `str`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `tools/generate_config_reference.py:_format_type` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `tools/generate_config_reference.py`.
+
+    Why this exists
+    Keeps `_format_type` explicit, testable, and maintainable.
+    """
     if annotation is None:
         return type(fallback_value).__name__
     if isinstance(annotation, str):
@@ -99,7 +168,7 @@ def _format_type(annotation: Any, fallback_value: object) -> str:
     if origin is types.UnionType or origin is None and hasattr(annotation, "__args__") and args:
         return _format_union([_format_type(arg, object()) for arg in args])
 
-    if origin is None and dataclasses.is_dataclass(annotation):
+    if origin is None and isinstance(annotation, type) and dataclasses.is_dataclass(annotation):
         return annotation.__name__
 
     if origin is None:
@@ -112,6 +181,28 @@ def _format_type(annotation: Any, fallback_value: object) -> str:
 
 
 def _format_default(value: object) -> str:
+    """
+    Summary
+    Execute `_format_default` for its module-level responsibility.
+
+    Inputs
+    value: `object` parameter from the function signature.
+
+    Outputs
+    Returns `str`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `tools/generate_config_reference.py:_format_default` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `tools/generate_config_reference.py`.
+
+    Why this exists
+    Keeps `_format_default` explicit, testable, and maintainable.
+    """
     if value is None:
         return "null"
     if isinstance(value, bool):
@@ -144,7 +235,31 @@ def _format_default(value: object) -> str:
     return json.dumps(str(value), ensure_ascii=False)
 
 
-def _leaf_settings(prefix: str, obj: object, annotation: Any) -> list[LeafSetting]:
+def _leaf_settings(prefix: str, obj: object, annotation: object) -> list[LeafSetting]:
+    """
+    Summary
+    Execute `_leaf_settings` for its module-level responsibility.
+
+    Inputs
+    prefix: `str` parameter from the function signature.
+    obj: `object` parameter from the function signature.
+    annotation: `object` parameter from the function signature.
+
+    Outputs
+    Returns `list[LeafSetting]`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `tools/generate_config_reference.py:_leaf_settings` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `tools/generate_config_reference.py`.
+
+    Why this exists
+    Keeps `_leaf_settings` explicit, testable, and maintainable.
+    """
     if dataclasses.is_dataclass(obj):
         settings: list[LeafSetting] = []
         type_hints = getattr(obj.__class__, "__annotations__", {})
@@ -172,6 +287,29 @@ def _leaf_settings(prefix: str, obj: object, annotation: Any) -> list[LeafSettin
 
 
 def _render_markdown(config_obj: object, *, source_path: Path) -> str:
+    """
+    Summary
+    Execute `_render_markdown` for its module-level responsibility.
+
+    Inputs
+    config_obj: `object` parameter from the function signature.
+    source_path: keyword-only `Path` parameter.
+
+    Outputs
+    Returns `str`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `tools/generate_config_reference.py:_render_markdown` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `tools/generate_config_reference.py`.
+
+    Why this exists
+    Keeps `_render_markdown` explicit, testable, and maintainable.
+    """
     if not dataclasses.is_dataclass(config_obj):
         raise TypeError("expected dataclass config object")
 
@@ -232,15 +370,206 @@ def _render_markdown(config_obj: object, *, source_path: Path) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _read_json_dict(path: Path) -> dict[str, object]:
+def _is_json_value(value: object) -> TypeGuard[JsonValue]:
+    """
+    Summary
+    Determine whether a value conforms to the project `JsonValue` type.
+
+    Inputs
+    value: Candidate JSON value.
+
+    Outputs
+    `True` when the value is valid JSON according to project typing, otherwise `False`.
+
+    Side effects
+    None.
+
+    Error handling
+    Returns `False` for unsupported value types.
+
+    Ties to other methods
+    Used by `_is_json_dict` to validate parsed config payloads.
+
+    Why this exists
+    Keeps runtime JSON validation aligned with static `JsonValue` typing.
+    """
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return True
+    if isinstance(value, list):
+        return all(_is_json_value(item) for item in value)
+    if isinstance(value, dict):
+        return all(isinstance(key, str) and _is_json_value(item) for key, item in value.items())
+    return False
+
+
+def _is_json_dict(value: object) -> TypeGuard[JsonDict]:
+    """
+    Summary
+    Determine whether a value is a JSON object with string keys.
+
+    Inputs
+    value: Candidate JSON object.
+
+    Outputs
+    `True` when the value conforms to `JsonDict`, otherwise `False`.
+
+    Side effects
+    None.
+
+    Error handling
+    Returns `False` for invalid object shapes.
+
+    Ties to other methods
+    Used by `_read_json_dict` before invoking typed config parsing.
+
+    Why this exists
+    Prevents malformed JSON structures from entering the typed config parser.
+    """
+    return isinstance(value, dict) and all(
+        isinstance(key, str) and _is_json_value(item) for key, item in value.items()
+    )
+
+
+def _read_json_dict(path: Path) -> JsonDict:
+    """
+    Summary
+    Execute `_read_json_dict` for its module-level responsibility.
+
+    Inputs
+    path: `Path` parameter from the function signature.
+
+    Outputs
+    Returns `JsonDict`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `tools/generate_config_reference.py:_read_json_dict` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `tools/generate_config_reference.py`.
+
+    Why this exists
+    Keeps `_read_json_dict` explicit, testable, and maintainable.
+    """
     raw = path.read_text(encoding="utf-8")
     data = json.loads(raw)
-    if not isinstance(data, dict):
+    if not _is_json_dict(data):
         raise ValueError("config root must be object")
     return data
 
 
+def _validate_cli_paths(config_path: Path, out_path: Path) -> tuple[Path, Path]:
+    """
+    Summary
+    Validate and normalize config-reference CLI paths.
+
+    Inputs
+    config_path: Candidate input config path.
+    out_path: Candidate markdown output path.
+
+    Outputs
+    Tuple of resolved `(config_path, out_path)` values.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises contextual errors from `tools/generate_config_reference.py:_validate_cli_paths` when validation fails.
+
+    Ties to other methods
+    Used by `main` before reading config and writing output.
+
+    Why this exists
+    Failing fast on invalid paths keeps CLI usage predictable and failure messages actionable.
+    """
+    try:
+        resolved_config = config_path.resolve()
+        resolved_output = out_path.resolve()
+        if not resolved_config.is_file():
+            raise FileNotFoundError(f"Missing config file: {resolved_config}")
+        if resolved_config.suffix.lower() != ".json":
+            raise ValueError(f"Config path must be a .json file: {resolved_config}")
+        if resolved_output.suffix.lower() != ".md":
+            raise ValueError(f"Output path must be a .md file: {resolved_output}")
+        return resolved_config, resolved_output
+    except (RuntimeError, ValueError, TypeError, OSError) as exc:
+        raise RuntimeError(
+            format_error(
+                MODULE_PATH,
+                "_validate_cli_paths",
+                "Invalid CLI path arguments",
+                exc,
+            )
+        ) from exc
+
+
+def _write_text_atomic(path: Path, content: str) -> None:
+    """
+    Summary
+    Atomically write UTF-8 text to a target path.
+
+    Inputs
+    path: Destination markdown path.
+    content: Markdown payload to write.
+
+    Outputs
+    None.
+
+    Side effects
+    Creates parent directories and writes files on disk.
+
+    Error handling
+    Raises contextual errors from `tools/generate_config_reference.py:_write_text_atomic` when writing fails.
+
+    Ties to other methods
+    Used by `main` when updating the generated reference file.
+
+    Why this exists
+    Atomic writes prevent partially written docs when interrupted by tooling failures.
+    """
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, delete=False) as tmp_file:
+            tmp_file.write(content)
+            tmp_file.write("\n" if not content.endswith("\n") else "")
+            tmp_path = Path(tmp_file.name)
+        tmp_path.replace(path)
+    except (RuntimeError, ValueError, TypeError, OSError) as exc:
+        raise RuntimeError(
+            format_error(
+                MODULE_PATH,
+                "_write_text_atomic",
+                f"Failed to write output file: {path}",
+                exc,
+            )
+        ) from exc
+
+
 def main(argv: list[str] | None = None) -> int:
+    """
+    Summary
+    Execute `main` for its module-level responsibility.
+
+    Inputs
+    argv: `list[str] | None` parameter from the function signature with a default.
+
+    Outputs
+    Returns `int`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Returns exit code `2` with a contextual stderr message when runtime failures occur.
+
+    Ties to other methods
+    Used by workflows in `tools/generate_config_reference.py`.
+
+    Why this exists
+    Keeps `main` explicit, testable, and maintainable.
+    """
     parser = argparse.ArgumentParser(description="Generate configuration reference markdown.")
     parser.add_argument("--config", default="config/config.json", help="Path to the config JSON file.")
     parser.add_argument("--out", default="docs/config_reference.md", help="Path to write markdown output.")
@@ -248,8 +577,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        config_path = Path(args.config)
-        out_path = Path(args.out)
+        config_path, out_path = _validate_cli_paths(Path(args.config), Path(args.out))
         raw = _read_json_dict(config_path)
         cfg = parse_config(raw)
         content = _render_markdown(cfg, source_path=config_path)
@@ -265,8 +593,7 @@ def main(argv: list[str] | None = None) -> int:
                 return 1
             return 0
 
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(content, encoding="utf-8")
+        _write_text_atomic(out_path, content)
         return 0
     except (OSError, ValueError, TypeError, RuntimeError) as exc:
         print(format_error(MODULE_PATH, "main", "Failed to generate config reference", exc), file=sys.stderr)

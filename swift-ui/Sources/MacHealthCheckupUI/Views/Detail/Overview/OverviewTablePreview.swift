@@ -31,7 +31,7 @@ struct OverviewTablePreview: View {
          */
         let maxRows = 4
         let maxCols = min(3, max(1, headers.count))
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: theme.layout.verticalScaled(6)) {
             if !headers.isEmpty {
                 HStack(spacing: 10) {
                     ForEach(0..<maxCols, id: \.self) { idx in
@@ -43,7 +43,7 @@ struct OverviewTablePreview: View {
                             .help(HelpText.tableHeader(sectionKey: nil, header: headers[idx]))
                     }
                 }
-                .padding(.bottom, 2)
+                .padding(.bottom, theme.layout.verticalScaled(2))
             }
             ForEach(0..<min(maxRows, rows.count), id: \.self) { rowIndex in
                 let row = rows[rowIndex]
@@ -69,9 +69,9 @@ struct OverviewTablePreview: View {
                     .foregroundStyle(theme.colors.label)
             }
         }
-        .padding(10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, theme.layout.verticalScaled(10))
         .background(theme.colors.background.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
-

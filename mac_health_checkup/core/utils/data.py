@@ -41,7 +41,7 @@ def safe_int(value: object) -> int | None:
         return None
     except (TypeError, ValueError):
         return None
-    except Exception as exc:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
         raise RuntimeError(format_error(MODULE_PATH, "safe_int", "Failed to convert to int", exc)) from exc
 
 
@@ -79,7 +79,7 @@ def safe_float(value: object) -> float | None:
         return None
     except (TypeError, ValueError):
         return None
-    except Exception as exc:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
         raise RuntimeError(
             format_error(MODULE_PATH, "safe_float", "Failed to convert to float", exc)
         ) from exc

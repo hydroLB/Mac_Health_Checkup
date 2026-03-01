@@ -4,9 +4,7 @@ import re
 
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.errors import format_error
-from mac_health_checkup.core.utils.shell import safe_run
-from mac_health_checkup.core.utils.usb_tree import _extract_usb_tree_items
+from mac_health_checkup.core.utils import format_error, parse_usb_tree_items, safe_run
 from mac_health_checkup.diagnostics.base import Cache, cached_fetch
 
 MODULE_PATH = "mac_health_checkup/diagnostics/devices.py"
@@ -227,7 +225,7 @@ class DeviceScanner:
             out, _err = safe_run(["system_profiler", "SPUSBDataType"], context="usb_scan", allow_sudo=False)
             if not out:
                 return []
-            items = _extract_usb_tree_items(out)
+            items = parse_usb_tree_items(out)
             labels: list[str] = []
             for item in items:
                 label = item.get("label")
@@ -576,6 +574,28 @@ def _scan_hid_inputs() -> list[str]:
         current_transport: str | None = None
 
         def flush() -> None:
+            """
+            Summary
+            Execute `flush` for its module-level responsibility.
+
+            Inputs
+            None.
+
+            Outputs
+            None.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `mac_health_checkup/diagnostics/devices.py:flush` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `mac_health_checkup/diagnostics/devices.py`.
+
+            Why this exists
+            Keeps `flush` explicit, testable, and maintainable.
+            """
             nonlocal current_product, current_page, current_usage, current_transport
             if not current_product:
                 return

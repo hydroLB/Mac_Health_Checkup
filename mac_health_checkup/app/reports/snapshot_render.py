@@ -4,9 +4,9 @@ import datetime as _dt
 import html
 from typing import Mapping, Sequence
 
-from mac_health_checkup.app.backend.snapshot import Snapshot
+from mac_health_checkup.app.backend import Snapshot
 from mac_health_checkup.app.reports.snapshot_diff import SnapshotDiff
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 
 MODULE_PATH = "mac_health_checkup/app/reports/snapshot_render.py"
 
@@ -429,12 +429,57 @@ def render_diff_html(diff: SnapshotDiff) -> str:
 
 
 def _render_metrics_markdown(rows: list[tuple[str, str, str]]) -> list[str]:
+    """
+    Summary
+    Execute `_render_metrics_markdown` for its module-level responsibility.
+
+    Inputs
+    rows: `list[tuple[str, str, str]]` parameter from the function signature.
+
+    Outputs
+    Returns `list[str]`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_render.py:_render_metrics_markdown` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_render.py`.
+
+    Why this exists
+    Keeps `_render_metrics_markdown` explicit, testable, and maintainable.
+    """
     headers = ("Metric", "Value", "Status")
     table_rows: list[tuple[str, str, str]] = [(label, value, status) for label, value, status in rows]
     return _render_table_markdown(headers, table_rows)
 
 
 def _render_table_markdown(headers: Sequence[str], rows: Sequence[Sequence[str]]) -> list[str]:
+    """
+    Summary
+    Execute `_render_table_markdown` for its module-level responsibility.
+
+    Inputs
+    headers: `Sequence[str]` parameter from the function signature.
+    rows: `Sequence[Sequence[str]]` parameter from the function signature.
+
+    Outputs
+    Returns `list[str]`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_render.py:_render_table_markdown` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_render.py`.
+
+    Why this exists
+    Keeps `_render_table_markdown` explicit, testable, and maintainable.
+    """
     safe_headers = [_md_escape(str(cell)) for cell in headers]
     lines = ["| " + " | ".join(safe_headers) + " |"]
     lines.append("| " + " | ".join("---" for _ in safe_headers) + " |")
@@ -447,6 +492,28 @@ def _render_table_markdown(headers: Sequence[str], rows: Sequence[Sequence[str]]
 
 
 def _render_metrics_html(rows: list[tuple[str, str, str]] | None) -> str:
+    """
+    Summary
+    Execute `_render_metrics_html` for its module-level responsibility.
+
+    Inputs
+    rows: `list[tuple[str, str, str]] | None` parameter from the function signature.
+
+    Outputs
+    Returns `str`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_render.py:_render_metrics_html` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_render.py`.
+
+    Why this exists
+    Keeps `_render_metrics_html` explicit, testable, and maintainable.
+    """
     if not rows:
         return ""
     body_rows = "".join(
@@ -461,6 +528,29 @@ def _render_metrics_html(rows: list[tuple[str, str, str]] | None) -> str:
 
 
 def _render_table_html(headers: tuple[str, ...], rows: list[tuple[str, ...]]) -> str:
+    """
+    Summary
+    Execute `_render_table_html` for its module-level responsibility.
+
+    Inputs
+    headers: `tuple[str, ...]` parameter from the function signature.
+    rows: `list[tuple[str, ...]]` parameter from the function signature.
+
+    Outputs
+    Returns `str`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_render.py:_render_table_html` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_render.py`.
+
+    Why this exists
+    Keeps `_render_table_html` explicit, testable, and maintainable.
+    """
     head = "".join(f"<th>{html.escape(h)}</th>" for h in headers)
     body_rows: list[str] = []
     for row in rows:
@@ -471,26 +561,140 @@ def _render_table_html(headers: tuple[str, ...], rows: list[tuple[str, ...]]) ->
 
 
 def _md_escape(text: str) -> str:
+    """
+    Summary
+    Execute `_md_escape` for its module-level responsibility.
+
+    Inputs
+    text: `str` parameter from the function signature.
+
+    Outputs
+    Returns `str`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_render.py:_md_escape` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_render.py`.
+
+    Why this exists
+    Keeps `_md_escape` explicit, testable, and maintainable.
+    """
     safe = (text or "").replace("\\", "\\\\").replace("|", "\\|").replace("\n", " ").strip()
     return safe if safe else " "
 
 
 def _format_unix_ms(unix_ms: int) -> str:
+    """
+    Summary
+    Execute `_format_unix_ms` for its module-level responsibility.
+
+    Inputs
+    unix_ms: `int` parameter from the function signature.
+
+    Outputs
+    Returns `str`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_render.py:_format_unix_ms` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_render.py`.
+
+    Why this exists
+    Keeps `_format_unix_ms` explicit, testable, and maintainable.
+    """
     dt = _dt.datetime.fromtimestamp(unix_ms / 1000.0).astimezone()
     return dt.isoformat(timespec="seconds")
 
 
 def _json_pretty(value: Mapping[str, object]) -> str:
+    """
+    Summary
+    Execute `_json_pretty` for its module-level responsibility.
+
+    Inputs
+    value: `Mapping[str, object]` parameter from the function signature.
+
+    Outputs
+    Returns `str`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_render.py:_json_pretty` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_render.py`.
+
+    Why this exists
+    Keeps `_json_pretty` explicit, testable, and maintainable.
+    """
     import json
 
     return json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False)
 
 
 def _get_color(source: Mapping[str, object], key: str, default: str) -> str:
+    """
+    Summary
+    Execute `_get_color` for its module-level responsibility.
+
+    Inputs
+    source: `Mapping[str, object]` parameter from the function signature.
+    key: `str` parameter from the function signature.
+    default: `str` parameter from the function signature.
+
+    Outputs
+    Returns `str`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_render.py:_get_color` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_render.py`.
+
+    Why this exists
+    Keeps `_get_color` explicit, testable, and maintainable.
+    """
     value = source.get(key)
     return value if isinstance(value, str) and value.strip() else default
 
 
 def _get_str(source: Mapping[str, object], key: str, default: str) -> str:
+    """
+    Summary
+    Execute `_get_str` for its module-level responsibility.
+
+    Inputs
+    source: `Mapping[str, object]` parameter from the function signature.
+    key: `str` parameter from the function signature.
+    default: `str` parameter from the function signature.
+
+    Outputs
+    Returns `str`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `mac_health_checkup/app/reports/snapshot_render.py:_get_str` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `mac_health_checkup/app/reports/snapshot_render.py`.
+
+    Why this exists
+    Keeps `_get_str` explicit, testable, and maintainable.
+    """
     value = source.get(key)
     return value if isinstance(value, str) and value.strip() else default

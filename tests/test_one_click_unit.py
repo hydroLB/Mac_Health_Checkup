@@ -75,7 +75,16 @@ class OneClickUnitTests(unittest.TestCase):
                 self.assertEqual(api.get("enabled"), True)
                 self.assertEqual(api.get("port"), 9999)
                 self.assertEqual(api.get("auth_token"), "t")
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:OneClickUnitTests.test_build_config_with_api_overrides_merges_only_api_section failed: {exc}"
             ) from exc
@@ -109,7 +118,16 @@ class OneClickUnitTests(unittest.TestCase):
                 path.write_text(json.dumps([1, 2, 3]), encoding="utf-8")
                 with self.assertRaises(RuntimeError):
                     _ = one_click._read_json_dict(path)
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:OneClickUnitTests.test_read_json_dict_requires_object_root failed: {exc}"
             ) from exc
@@ -146,7 +164,16 @@ class OneClickUnitTests(unittest.TestCase):
                     found = one_click._find_executable("openssl")
                     self.assertEqual(found, str(exe))
                 self.assertIsNone(one_click._find_executable(""))
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:OneClickUnitTests.test_find_executable_searches_path failed: {exc}"
             ) from exc
@@ -200,7 +227,16 @@ class OneClickUnitTests(unittest.TestCase):
                         ready2, msg2 = one_click._ensure_self_signed_cert(cert_path=cert, key_path=key)
                         self.assertFalse(ready2)
                         self.assertIn("timed out", str(msg2))
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:OneClickUnitTests.test_ensure_self_signed_cert_handles_missing_openssl_and_timeouts failed: {exc}"
             ) from exc
@@ -232,25 +268,124 @@ class OneClickUnitTests(unittest.TestCase):
 
             class _Sock:
                 def __enter__(self) -> "_Sock":
+                    """
+                    Summary
+                    Execute `__enter__` for its module-level responsibility.
+
+                    Inputs
+                    None.
+
+                    Outputs
+                    Returns `'_Sock'`.
+
+                    Side effects
+                    None beyond this method boundary.
+
+                    Error handling
+                    Raises contextual errors from `tests/test_one_click_unit.py:__enter__` when this method encounters invalid state or runtime failures.
+
+                    Ties to other methods
+                    Used by workflows in `tests/test_one_click_unit.py`.
+
+                    Why this exists
+                    Keeps `__enter__` explicit, testable, and maintainable.
+                    """
                     return self
 
                 def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+                    """
+                    Summary
+                    Execute `__exit__` for its module-level responsibility.
+
+                    Inputs
+                    exc_type: `object` parameter from the function signature.
+                    exc: `object` parameter from the function signature.
+                    tb: `object` parameter from the function signature.
+
+                    Outputs
+                    None.
+
+                    Side effects
+                    None beyond this method boundary.
+
+                    Error handling
+                    Raises contextual errors from `tests/test_one_click_unit.py:__exit__` when this method encounters invalid state or runtime failures.
+
+                    Ties to other methods
+                    Used by workflows in `tests/test_one_click_unit.py`.
+
+                    Why this exists
+                    Keeps `__exit__` explicit, testable, and maintainable.
+                    """
                     _ = exc_type
                     _ = exc
                     _ = tb
                     return
 
                 def connect(self, _addr: object) -> None:
+                    """
+                    Summary
+                    Execute `connect` for its module-level responsibility.
+
+                    Inputs
+                    _addr: `object` parameter from the function signature.
+
+                    Outputs
+                    None.
+
+                    Side effects
+                    None beyond this method boundary.
+
+                    Error handling
+                    Raises contextual errors from `tests/test_one_click_unit.py:connect` when this method encounters invalid state or runtime failures.
+
+                    Ties to other methods
+                    Used by workflows in `tests/test_one_click_unit.py`.
+
+                    Why this exists
+                    Keeps `connect` explicit, testable, and maintainable.
+                    """
                     return
 
                 def getsockname(self) -> tuple[str, int]:
+                    """
+                    Summary
+                    Execute `getsockname` for its module-level responsibility.
+
+                    Inputs
+                    None.
+
+                    Outputs
+                    Returns `tuple[str, int]`.
+
+                    Side effects
+                    None beyond this method boundary.
+
+                    Error handling
+                    Raises contextual errors from `tests/test_one_click_unit.py:getsockname` when this method encounters invalid state or runtime failures.
+
+                    Ties to other methods
+                    Used by workflows in `tests/test_one_click_unit.py`.
+
+                    Why this exists
+                    Keeps `getsockname` explicit, testable, and maintainable.
+                    """
                     return ("127.0.0.1", 0)
 
             with patch(
                 "mac_health_checkup.app.backend.one_click.socket.socket", autospec=True, return_value=_Sock()
             ):
                 self.assertIsNone(one_click._best_effort_lan_ip())
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:OneClickUnitTests.test_best_effort_lan_ip_returns_none_on_loopback failed: {exc}"
             ) from exc

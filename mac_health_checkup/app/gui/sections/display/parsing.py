@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 
 from mac_health_checkup.core.config import get_config
-from mac_health_checkup.core.utils.errors import format_error
-from mac_health_checkup.core.utils.regex_utils import hz_from_text
+from mac_health_checkup.core.utils import format_error
+from mac_health_checkup.core.utils import hz_from_text
 
 MODULE_PATH = "mac_health_checkup/app/gui/sections/display/parsing.py"
 

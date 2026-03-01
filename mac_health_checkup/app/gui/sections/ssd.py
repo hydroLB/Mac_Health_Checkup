@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from mac_health_checkup.app.gui.sections.types import SectionHost
+from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.data import fmt_bytes, fmt_percent
-from mac_health_checkup.core.utils.errors import format_error
-from mac_health_checkup.core.utils.health import health_from_percent
-from mac_health_checkup.diagnostics.ssd import SSDDiagnostics
+from mac_health_checkup.core.utils import fmt_bytes, fmt_percent
+from mac_health_checkup.core.utils import format_error
+from mac_health_checkup.core.utils import health_from_percent
+from mac_health_checkup.diagnostics.ssd import SSDDiagnostics as SSDDiagnostics
 
 MODULE_PATH = "mac_health_checkup/app/gui/sections/ssd.py"
+__all__ = ["SSDDiagnostics", "update_section"]
 
 
 def update_section(host: SectionHost) -> JsonDict:
@@ -35,11 +37,21 @@ def update_section(host: SectionHost) -> JsonDict:
     """
     try:
         data = SSDDiagnostics.fetch()
+        thresholds = get_config().thresholds
         summary = str(data.get("health_text", "SSD info unavailable"))
         host.set_field("ssd", summary)
         percent_left = data.get("percent_left")
         percent_val = float(percent_left) if isinstance(percent_left, (int, float)) else None
-        health_label = health_from_percent(percent_val) if percent_val is not None else "unknown"
+        health_label = (
+            health_from_percent(
+                percent_val,
+                excellent_min=thresholds.health_excellent_min_percent,
+                good_min=thresholds.health_good_min_percent,
+                fair_min=thresholds.health_fair_min_percent,
+            )
+            if percent_val is not None
+            else "unknown"
+        )
         health_status = "unknown"
         if health_label in {"excellent", "good"}:
             health_status = "ok"
@@ -66,10 +78,10 @@ def update_section(host: SectionHost) -> JsonDict:
         if written_val is not None:
             rows.append(("Total written", fmt_bytes(written_val * 1e12), "info"))
         if isinstance(unsafe_shutdowns, int):
-            status = "warn" if unsafe_shutdowns > 0 else "ok"
+            status = "warn" if unsafe_shutdowns >= int(thresholds.ssd_unsafe_shutdowns_warn_count) else "ok"
             rows.append(("Unsafe shutdowns", f"{unsafe_shutdowns:,}", status))
         if isinstance(media_errors, int):
-            status = "bad" if media_errors > 0 else "ok"
+            status = "bad" if media_errors >= int(thresholds.ssd_media_errors_bad_count) else "ok"
             rows.append(("Media errors", f"{media_errors:,}", status))
         if isinstance(power_cycles, int):
             rows.append(("Power cycles", f"{power_cycles:,}", "info"))

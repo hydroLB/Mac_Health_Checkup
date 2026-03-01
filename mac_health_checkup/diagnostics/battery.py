@@ -4,11 +4,11 @@ from dataclasses import dataclass
 
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.data import fmt_percent, fmt_temp_c, safe_int
-from mac_health_checkup.core.utils.errors import format_error
-from mac_health_checkup.core.utils.health import health_from_percent
-from mac_health_checkup.core.utils.regex_utils import regex_extract_int
-from mac_health_checkup.core.utils.shell import safe_run
+from mac_health_checkup.core.utils import fmt_percent, fmt_temp_c, safe_int
+from mac_health_checkup.core.utils import format_error
+from mac_health_checkup.core.utils import health_from_percent
+from mac_health_checkup.core.utils import regex_extract_int
+from mac_health_checkup.core.utils import safe_run
 from mac_health_checkup.diagnostics.base import Cache, cached_fetch, get_diagnostics_logger, new_context
 
 MODULE_PATH = "mac_health_checkup/diagnostics/battery.py"
@@ -209,9 +209,15 @@ class BatteryDiagnostics:
             if stats is None:
                 logger.warning("battery stats missing", event="battery_missing", context=context, payload={})
                 return {"present": False, "health_text": "Battery info incomplete", "raw": out}
+            thresholds = get_config().thresholds
             percent = stats.percent_health()
             temp_c = stats.temperature_c()
-            health = health_from_percent(percent)
+            health = health_from_percent(
+                percent,
+                excellent_min=thresholds.health_excellent_min_percent,
+                good_min=thresholds.health_good_min_percent,
+                fair_min=thresholds.health_fair_min_percent,
+            )
             summary = f"{fmt_percent(percent)} health | Cycles: {stats.cycle_count or '?'} | {fmt_temp_c(temp_c)} | {health}"
             return {
                 "present": True,

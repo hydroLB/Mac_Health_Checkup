@@ -68,7 +68,16 @@ class StartupItemsParsingTests(unittest.TestCase):
                 ):
                     label = _best_effort_plist_label(plist_path, timeout=1)
                     self.assertEqual(label, "com.vendor.agent")
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:StartupItemsParsingTests.test_best_effort_plist_label_prefers_plutil_output failed: {exc}"
             ) from exc
@@ -106,6 +115,29 @@ class StartupItemsParsingTests(unittest.TestCase):
                 labels = ["Com.Example.B", "com.example.a", "com.example.a"]
 
                 def _fake_label(path: Path, *, timeout: int) -> str:
+                    """
+                    Summary
+                    Execute `_fake_label` for its module-level responsibility.
+
+                    Inputs
+                    path: `Path` parameter from the function signature.
+                    timeout: keyword-only `int` parameter.
+
+                    Outputs
+                    Returns `str`.
+
+                    Side effects
+                    None beyond this method boundary.
+
+                    Error handling
+                    Raises contextual errors from `tests/test_startup_items_parsing.py:_fake_label` when this method encounters invalid state or runtime failures.
+
+                    Ties to other methods
+                    Used by workflows in `tests/test_startup_items_parsing.py`.
+
+                    Why this exists
+                    Keeps `_fake_label` explicit, testable, and maintainable.
+                    """
                     _ = path
                     _ = timeout
                     return labels.pop(0)
@@ -120,7 +152,16 @@ class StartupItemsParsingTests(unittest.TestCase):
 
                 missing = _read_launch_items(directory / "missing", timeout=1)
                 self.assertEqual(missing, [])
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:StartupItemsParsingTests.test_read_launch_items_sorts_and_dedupes failed: {exc}"
             ) from exc

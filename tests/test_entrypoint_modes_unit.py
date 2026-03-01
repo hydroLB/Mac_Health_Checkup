@@ -8,12 +8,34 @@ from unittest.mock import patch
 
 import mac_health_checkup.__main__ as package_main
 import mac_health_checkup.app.entrypoint as entrypoint
-from mac_health_checkup.app.backend.snapshot import Snapshot, SnapshotTheme
+from mac_health_checkup.app.backend import Snapshot, SnapshotTheme
 
 MODULE_PATH = "tests/test_entrypoint_modes_unit.py"
 
 
 def _minimal_snapshot(*, ok: bool) -> Snapshot:
+    """
+    Summary
+    Execute `_minimal_snapshot` for its module-level responsibility.
+
+    Inputs
+    ok: keyword-only `bool` parameter.
+
+    Outputs
+    Returns `Snapshot`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `tests/test_entrypoint_modes_unit.py:_minimal_snapshot` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `tests/test_entrypoint_modes_unit.py`.
+
+    Why this exists
+    Keeps `_minimal_snapshot` explicit, testable, and maintainable.
+    """
     return Snapshot(
         schema_version=2,
         generated_at_unix_ms=0,
@@ -77,7 +99,16 @@ class EntrypointModesUnitTests(unittest.TestCase):
                 with self.assertRaises(SystemExit) as exc:
                     package_main._run()
                 self.assertEqual(exc.exception.code, 0)
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:EntrypointModesUnitTests.test_package_main_run_exits_with_entrypoint_code failed: {exc}"
             ) from exc
@@ -110,9 +141,53 @@ class EntrypointModesUnitTests(unittest.TestCase):
 
             class _StubBuilder:
                 def __init__(self, _handlers: object) -> None:
+                    """
+                    Summary
+                    Execute `__init__` for its module-level responsibility.
+
+                    Inputs
+                    _handlers: `object` parameter from the function signature.
+
+                    Outputs
+                    None.
+
+                    Side effects
+                    None beyond this method boundary.
+
+                    Error handling
+                    Raises contextual errors from `tests/test_entrypoint_modes_unit.py:__init__` when this method encounters invalid state or runtime failures.
+
+                    Ties to other methods
+                    Used by workflows in `tests/test_entrypoint_modes_unit.py`.
+
+                    Why this exists
+                    Keeps `__init__` explicit, testable, and maintainable.
+                    """
                     return
 
                 def build(self) -> Snapshot:
+                    """
+                    Summary
+                    Execute `build` for its module-level responsibility.
+
+                    Inputs
+                    None.
+
+                    Outputs
+                    Returns `Snapshot`.
+
+                    Side effects
+                    None beyond this method boundary.
+
+                    Error handling
+                    Raises contextual errors from `tests/test_entrypoint_modes_unit.py:build` when this method encounters invalid state or runtime failures.
+
+                    Ties to other methods
+                    Used by workflows in `tests/test_entrypoint_modes_unit.py`.
+
+                    Why this exists
+                    Keeps `build` explicit, testable, and maintainable.
+                    """
                     return snap
 
             argv = ["prog", "--snapshot-json", "--snapshot-pretty"]
@@ -122,14 +197,23 @@ class EntrypointModesUnitTests(unittest.TestCase):
                 ) as shutdown_mock:
                     shutdown_mock.return_value.install_handlers.return_value = None
                     shutdown_mock.return_value.trigger_shutdown.return_value = None
-                    with patch("mac_health_checkup.app.backend.snapshot.SnapshotBuilder", _StubBuilder):
+                    with patch("mac_health_checkup.app.entrypoint.SnapshotBuilder", _StubBuilder):
                         with patch("builtins.print") as print_mock:
                             code = entrypoint.main()
                             self.assertEqual(code, 0)
                             printed = str(print_mock.call_args[0][0])
                             payload = json.loads(printed)
                             self.assertEqual(payload.get("schema_version"), 2)
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:EntrypointModesUnitTests.test_snapshot_json_mode_prints_json failed: {exc}"
             ) from exc
@@ -162,15 +246,59 @@ class EntrypointModesUnitTests(unittest.TestCase):
 
             class _StubBuilder:
                 def __init__(self, _handlers: object) -> None:
+                    """
+                    Summary
+                    Execute `__init__` for its module-level responsibility.
+
+                    Inputs
+                    _handlers: `object` parameter from the function signature.
+
+                    Outputs
+                    None.
+
+                    Side effects
+                    None beyond this method boundary.
+
+                    Error handling
+                    Raises contextual errors from `tests/test_entrypoint_modes_unit.py:__init__` when this method encounters invalid state or runtime failures.
+
+                    Ties to other methods
+                    Used by workflows in `tests/test_entrypoint_modes_unit.py`.
+
+                    Why this exists
+                    Keeps `__init__` explicit, testable, and maintainable.
+                    """
                     return
 
                 def build(self) -> Snapshot:
+                    """
+                    Summary
+                    Execute `build` for its module-level responsibility.
+
+                    Inputs
+                    None.
+
+                    Outputs
+                    Returns `Snapshot`.
+
+                    Side effects
+                    None beyond this method boundary.
+
+                    Error handling
+                    Raises contextual errors from `tests/test_entrypoint_modes_unit.py:build` when this method encounters invalid state or runtime failures.
+
+                    Ties to other methods
+                    Used by workflows in `tests/test_entrypoint_modes_unit.py`.
+
+                    Why this exists
+                    Keeps `build` explicit, testable, and maintainable.
+                    """
                     return snap
 
             with patch("mac_health_checkup.app.entrypoint.ShutdownManager", autospec=True) as shutdown_mock:
                 shutdown_mock.return_value.install_handlers.return_value = None
                 shutdown_mock.return_value.trigger_shutdown.return_value = None
-                with patch("mac_health_checkup.app.backend.snapshot.SnapshotBuilder", _StubBuilder):
+                with patch("mac_health_checkup.app.entrypoint.SnapshotBuilder", _StubBuilder):
                     with tempfile_path() as out_path:
                         argv = ["prog", "--snapshot-json-out", str(out_path)]
                         with patch.object(sys, "argv", argv):
@@ -179,7 +307,16 @@ class EntrypointModesUnitTests(unittest.TestCase):
                             text = out_path.read_text(encoding="utf-8")
                             payload = json.loads(text)
                             self.assertTrue(payload.get("ok"))
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:EntrypointModesUnitTests.test_snapshot_json_out_mode_writes_file failed: {exc}"
             ) from exc
@@ -217,7 +354,16 @@ class EntrypointModesUnitTests(unittest.TestCase):
                     shutdown_mock.return_value.trigger_shutdown.return_value = None
                     code = entrypoint.main()
                     self.assertEqual(code, 1)
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:EntrypointModesUnitTests.test_diff_against_requires_export failed: {exc}"
             ) from exc
@@ -225,12 +371,80 @@ class EntrypointModesUnitTests(unittest.TestCase):
 
 class _TempPath:
     def __init__(self, path: Path) -> None:
+        """
+        Summary
+        Execute `__init__` for its module-level responsibility.
+
+        Inputs
+        path: `Path` parameter from the function signature.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_entrypoint_modes_unit.py:__init__` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_entrypoint_modes_unit.py`.
+
+        Why this exists
+        Keeps `__init__` explicit, testable, and maintainable.
+        """
         self._path = path
 
     def __enter__(self) -> Path:
+        """
+        Summary
+        Execute `__enter__` for its module-level responsibility.
+
+        Inputs
+        None.
+
+        Outputs
+        Returns `Path`.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_entrypoint_modes_unit.py:__enter__` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_entrypoint_modes_unit.py`.
+
+        Why this exists
+        Keeps `__enter__` explicit, testable, and maintainable.
+        """
         return self._path
 
     def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        """
+        Summary
+        Execute `__exit__` for its module-level responsibility.
+
+        Inputs
+        exc_type: `object` parameter from the function signature.
+        exc: `object` parameter from the function signature.
+        tb: `object` parameter from the function signature.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_entrypoint_modes_unit.py:__exit__` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_entrypoint_modes_unit.py`.
+
+        Why this exists
+        Keeps `__exit__` explicit, testable, and maintainable.
+        """
         _ = exc_type
         _ = exc
         _ = tb

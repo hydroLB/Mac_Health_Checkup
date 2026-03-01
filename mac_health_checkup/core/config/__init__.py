@@ -13,7 +13,14 @@ from mac_health_checkup.core.config.models.runtime import (
     TimeoutConfig,
 )
 from mac_health_checkup.core.config.models.ui import ColorsConfig, FontsConfig, UiConfig
-from mac_health_checkup.core.config.public import get_config, get_config_value, reset_config_cache
+from mac_health_checkup.core.config.parsing import parse_config
+from mac_health_checkup.core.config.public import (
+    StartupConfigValidationReport,
+    build_startup_config_validation_report,
+    get_config,
+    get_config_value,
+    reset_config_cache,
+)
 from mac_health_checkup.core.config.validation.primitives import (
     require_bool,
     require_float,
@@ -32,6 +39,9 @@ __all__ = [
     "GuiConfig",
     "IoConfig",
     "LoggingConfig",
+    "parse_config",
+    "StartupConfigValidationReport",
+    "build_startup_config_validation_report",
     "RateLimitConfig",
     "RetryConfig",
     "ShutdownConfig",

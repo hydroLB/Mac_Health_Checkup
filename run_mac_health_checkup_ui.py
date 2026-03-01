@@ -9,7 +9,8 @@ from pathlib import Path
 from shutil import rmtree, which
 from typing import Iterable, Sequence, cast
 
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
+from mac_health_checkup.core.utils.error_boundary import ErrorBoundary, map_boundary_exception
 
 MODULE_PATH = "run_mac_health_checkup_ui.py"
 
@@ -201,6 +202,45 @@ def _run_make_swift_run_with_retry(*, repo_root: Path, env: dict[str, str]) -> i
         ) from exc
 
 
+def _emit_boundary_error(method: str, message: str, exc: Exception) -> None:
+    """
+    Summary
+    Write a formatted boundary error for the SwiftUI one-click launcher.
+
+    Inputs
+    method: Boundary method name associated with the failure.
+    message: High-level failure context.
+    exc: Captured exception instance.
+
+    Outputs
+    None.
+
+    Side effects
+    Writes one line to stderr.
+
+    Error handling
+    Raises contextual errors from `run_mac_health_checkup_ui.py:_emit_boundary_error` when output formatting fails unexpectedly.
+
+    Ties to other methods
+    Used by `main` to emit final script-boundary failures.
+
+    Why this exists
+    Boundary failures should be actionable and clean without exposing stack traces for routine environment issues.
+    """
+    try:
+        mapped = map_boundary_exception(exc, boundary=ErrorBoundary.UI, default_message=message)
+        print(mapped.to_stderr_line(module_path=MODULE_PATH, method=method), file=sys.stderr)
+    except (RuntimeError, ValueError, TypeError, OSError) as emit_exc:
+        raise RuntimeError(
+            format_error(
+                MODULE_PATH,
+                "_emit_boundary_error",
+                "Failed while emitting boundary error",
+                emit_exc,
+            )
+        ) from emit_exc
+
+
 def main() -> int:
     """
     Summary
@@ -216,7 +256,8 @@ def main() -> int:
     Builds Swift targets and launches the macOS SwiftUI dashboard process.
 
     Error handling
-    Raises RuntimeError with a location-tagged message when prerequisites are missing or when the launch fails.
+    Returns exit code `2` after emitting a formatted boundary error for runtime failures. `argparse` can still raise
+    `SystemExit` for `--help`.
 
     Ties to other methods
     Sets `SWIFT_APP_ARGS` for the Makefile target and delegates execution to `_run_make_swift_run_with_retry`.
@@ -248,7 +289,8 @@ def main() -> int:
 
         return int(_run_make_swift_run_with_retry(repo_root=repo_root, env=env))
     except (RuntimeError, ValueError, TypeError, OSError) as exc:
-        raise RuntimeError(format_error(MODULE_PATH, "main", "Failed to launch macOS UI", exc)) from exc
+        _emit_boundary_error("main", "Failed to launch macOS UI", exc)
+        return 2
 
 
 if __name__ == "__main__":

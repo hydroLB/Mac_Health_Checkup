@@ -5,8 +5,8 @@ import re
 
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.errors import format_error
-from mac_health_checkup.core.utils.shell import safe_run
+from mac_health_checkup.core.utils import format_error
+from mac_health_checkup.core.utils import safe_run
 from mac_health_checkup.diagnostics.base import Cache, cached_fetch, get_diagnostics_logger, new_context
 
 MODULE_PATH = "mac_health_checkup/diagnostics/backups.py"
@@ -135,7 +135,7 @@ class TimeMachineDiagnostics:
                 "error": latest_err or "",
                 "guidance": guidance,
             }
-        except Exception as exc:
+        except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
             logger.warning(
                 "time machine collection failed",
                 event="backup_error",
@@ -211,7 +211,7 @@ def _parse_tm_timestamp(text: str) -> dt.datetime | None:
         naive = dt.datetime.strptime(text.strip(), "%Y-%m-%d-%H%M%S")
         local_tz = dt.datetime.now().astimezone().tzinfo
         return naive.replace(tzinfo=local_tz)
-    except Exception:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return None
 
 
@@ -242,7 +242,7 @@ def _age_days(value: dt.datetime) -> float:
         now = dt.datetime.now().astimezone()
         delta = now - value
         return max(0.0, float(delta.total_seconds()) / 86400.0)
-    except Exception:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return 0.0
 
 

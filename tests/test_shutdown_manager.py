@@ -62,6 +62,29 @@ class ShutdownManagerTests(unittest.TestCase):
             calls: list[int] = []
 
             def _fake_signal(sig: int, _handler: object) -> None:
+                """
+                Summary
+                Execute `_fake_signal` for its module-level responsibility.
+
+                Inputs
+                sig: `int` parameter from the function signature.
+                _handler: `object` parameter from the function signature.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_shutdown_manager.py:_fake_signal` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_shutdown_manager.py`.
+
+                Why this exists
+                Keeps `_fake_signal` explicit, testable, and maintainable.
+                """
                 calls.append(int(sig))
 
             with patch(
@@ -72,7 +95,16 @@ class ShutdownManagerTests(unittest.TestCase):
                 mgr = ShutdownManager()
                 mgr.install_handlers()
             self.assertGreaterEqual(len(calls), 2)
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:ShutdownManagerTests.test_install_handlers_registers_sigint_and_sigterm failed: {exc}"
             ) from exc
@@ -116,7 +148,16 @@ class ShutdownManagerTests(unittest.TestCase):
 
             self.assertTrue(mgr.shutdown_requested())
             self.assertEqual(calls, ["a", "b"])
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:ShutdownManagerTests.test_trigger_shutdown_runs_cleanup_once failed: {exc}"
             ) from exc
@@ -152,12 +193,79 @@ class ShutdownManagerTests(unittest.TestCase):
 
             class _ImmediateTimer:
                 def __init__(self, _timeout: float, fn: Callable[[], None]) -> None:
+                    """
+                    Summary
+                    Execute `__init__` for its module-level responsibility.
+
+                    Inputs
+                    _timeout: `float` parameter from the function signature.
+                    fn: `Callable[[], None]` parameter from the function signature.
+
+                    Outputs
+                    None.
+
+                    Side effects
+                    None beyond this method boundary.
+
+                    Error handling
+                    Raises contextual errors from `tests/test_shutdown_manager.py:__init__` when this method encounters invalid state or runtime failures.
+
+                    Ties to other methods
+                    Used by workflows in `tests/test_shutdown_manager.py`.
+
+                    Why this exists
+                    Keeps `__init__` explicit, testable, and maintainable.
+                    """
                     self._fn = fn
 
                 def start(self) -> None:
+                    """
+                    Summary
+                    Execute `start` for its module-level responsibility.
+
+                    Inputs
+                    None.
+
+                    Outputs
+                    None.
+
+                    Side effects
+                    None beyond this method boundary.
+
+                    Error handling
+                    Raises contextual errors from `tests/test_shutdown_manager.py:start` when this method encounters invalid state or runtime failures.
+
+                    Ties to other methods
+                    Used by workflows in `tests/test_shutdown_manager.py`.
+
+                    Why this exists
+                    Keeps `start` explicit, testable, and maintainable.
+                    """
                     self._fn()
 
                 def cancel(self) -> None:
+                    """
+                    Summary
+                    Execute `cancel` for its module-level responsibility.
+
+                    Inputs
+                    None.
+
+                    Outputs
+                    None.
+
+                    Side effects
+                    None beyond this method boundary.
+
+                    Error handling
+                    Raises contextual errors from `tests/test_shutdown_manager.py:cancel` when this method encounters invalid state or runtime failures.
+
+                    Ties to other methods
+                    Used by workflows in `tests/test_shutdown_manager.py`.
+
+                    Why this exists
+                    Keeps `cancel` explicit, testable, and maintainable.
+                    """
                     return
 
             cfg = get_config()
@@ -176,7 +284,16 @@ class ShutdownManagerTests(unittest.TestCase):
                     mgr.trigger_shutdown()
 
             self.assertEqual(calls, [])
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:ShutdownManagerTests.test_cleanup_is_time_bounded failed: {exc}"
             ) from exc

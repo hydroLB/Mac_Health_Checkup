@@ -57,7 +57,16 @@ class PowerParsingTests(unittest.TestCase):
         try:
             self.assertEqual(_parse_thermal_state("Thermal Level: Nominal"), "nominal")
             self.assertEqual(_parse_thermal_state("no match"), "unknown")
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:PowerParsingTests.test_parse_thermal_state_is_case_insensitive failed: {exc}"
             ) from exc
@@ -89,7 +98,16 @@ class PowerParsingTests(unittest.TestCase):
             self.assertEqual(_parse_charging_state("Charging: Yes"), True)
             self.assertEqual(_parse_charging_state("Charging: No"), False)
             self.assertIsNone(_parse_charging_state("no charging key"))
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:PowerParsingTests.test_parse_charging_state_is_best_effort failed: {exc}"
             ) from exc
@@ -135,7 +153,16 @@ class PowerParsingTests(unittest.TestCase):
             self.assertIsInstance(devices, list)
             if isinstance(devices, list):
                 self.assertEqual(devices[0].get("name"), "Keyboard")
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:PowerParsingTests.test_parse_usb_power_extracts_hubs_and_devices failed: {exc}"
             ) from exc

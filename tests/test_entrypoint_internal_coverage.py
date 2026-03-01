@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 import mac_health_checkup.app.entrypoint as entrypoint
-from mac_health_checkup.app.backend.snapshot import Snapshot, SnapshotSection, SnapshotTheme
+from mac_health_checkup.app.backend import Snapshot, SnapshotSection, SnapshotTheme
 from mac_health_checkup.app.cli import ConsoleHost
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.utils.loggers import LogContext, LoggingFields, StructuredLogger
@@ -19,6 +19,28 @@ MODULE_PATH = "tests/test_entrypoint_internal_coverage.py"
 
 
 def _snapshot_with_warn_section(*, ok: bool) -> Snapshot:
+    """
+    Summary
+    Execute `_snapshot_with_warn_section` for its module-level responsibility.
+
+    Inputs
+    ok: keyword-only `bool` parameter.
+
+    Outputs
+    Returns `Snapshot`.
+
+    Side effects
+    None beyond this method boundary.
+
+    Error handling
+    Raises contextual errors from `tests/test_entrypoint_internal_coverage.py:_snapshot_with_warn_section` when this method encounters invalid state or runtime failures.
+
+    Ties to other methods
+    Used by workflows in `tests/test_entrypoint_internal_coverage.py`.
+
+    Why this exists
+    Keeps `_snapshot_with_warn_section` explicit, testable, and maintainable.
+    """
     return Snapshot(
         schema_version=2,
         generated_at_unix_ms=0,
@@ -70,9 +92,53 @@ def test_snapshot_json_out_fail_on_warn_sets_exit_code(
 
         class _StubBuilder:
             def __init__(self, _handlers: object) -> None:
+                """
+                Summary
+                Execute `__init__` for its module-level responsibility.
+
+                Inputs
+                _handlers: `object` parameter from the function signature.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_internal_coverage.py:__init__` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_internal_coverage.py`.
+
+                Why this exists
+                Keeps `__init__` explicit, testable, and maintainable.
+                """
                 return
 
             def build(self) -> Snapshot:
+                """
+                Summary
+                Execute `build` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                Returns `Snapshot`.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_internal_coverage.py:build` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_internal_coverage.py`.
+
+                Why this exists
+                Keeps `build` explicit, testable, and maintainable.
+                """
                 return snap
 
         monkeypatch.setattr(sys, "argv", ["prog", "--snapshot-json-out", str(out_path), "--fail-on", "warn"])
@@ -81,13 +147,22 @@ def test_snapshot_json_out_fail_on_warn_sets_exit_code(
             "ShutdownManager",
             lambda: types.SimpleNamespace(install_handlers=lambda: None, trigger_shutdown=lambda: None),
         )
-        monkeypatch.setattr("mac_health_checkup.app.backend.snapshot.SnapshotBuilder", _StubBuilder)
+        monkeypatch.setattr("mac_health_checkup.app.entrypoint.SnapshotBuilder", _StubBuilder)
 
         code = entrypoint.main()
         assert code == 1
         payload = json.loads(out_path.read_text(encoding="utf-8"))
         assert payload.get("ok") is True
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_snapshot_json_out_fail_on_warn_sets_exit_code failed: {exc}"
         ) from exc
@@ -121,9 +196,53 @@ def test_snapshot_json_broken_pipe_returns_code(monkeypatch: pytest.MonkeyPatch)
 
         class _StubBuilder:
             def __init__(self, _handlers: object) -> None:
+                """
+                Summary
+                Execute `__init__` for its module-level responsibility.
+
+                Inputs
+                _handlers: `object` parameter from the function signature.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_internal_coverage.py:__init__` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_internal_coverage.py`.
+
+                Why this exists
+                Keeps `__init__` explicit, testable, and maintainable.
+                """
                 return
 
             def build(self) -> Snapshot:
+                """
+                Summary
+                Execute `build` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                Returns `Snapshot`.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_internal_coverage.py:build` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_internal_coverage.py`.
+
+                Why this exists
+                Keeps `build` explicit, testable, and maintainable.
+                """
                 return snap
 
         monkeypatch.setattr(sys, "argv", ["prog", "--snapshot-json"])
@@ -132,11 +251,20 @@ def test_snapshot_json_broken_pipe_returns_code(monkeypatch: pytest.MonkeyPatch)
             "ShutdownManager",
             lambda: types.SimpleNamespace(install_handlers=lambda: None, trigger_shutdown=lambda: None),
         )
-        monkeypatch.setattr("mac_health_checkup.app.backend.snapshot.SnapshotBuilder", _StubBuilder)
+        monkeypatch.setattr("mac_health_checkup.app.entrypoint.SnapshotBuilder", _StubBuilder)
         monkeypatch.setattr(builtins, "print", lambda _s: (_ for _ in ()).throw(BrokenPipeError()))
 
         assert entrypoint.main() == 1
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_snapshot_json_broken_pipe_returns_code failed: {exc}"
         ) from exc
@@ -185,18 +313,129 @@ def test_serve_mode_lan_tls_disabled_warns(
 
         class _StubServer:
             def __init__(self, _handlers: object, _api: object) -> None:
+                """
+                Summary
+                Execute `__init__` for its module-level responsibility.
+
+                Inputs
+                _handlers: `object` parameter from the function signature.
+                _api: `object` parameter from the function signature.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_internal_coverage.py:__init__` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_internal_coverage.py`.
+
+                Why this exists
+                Keeps `__init__` explicit, testable, and maintainable.
+                """
                 return
 
             def start(self) -> None:
+                """
+                Summary
+                Execute `start` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_internal_coverage.py:start` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_internal_coverage.py`.
+
+                Why this exists
+                Keeps `start` explicit, testable, and maintainable.
+                """
                 return
 
             def stop(self) -> None:
+                """
+                Summary
+                Execute `stop` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                None.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_internal_coverage.py:stop` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_internal_coverage.py`.
+
+                Why this exists
+                Keeps `stop` explicit, testable, and maintainable.
+                """
                 return
 
             def url(self) -> str:
+                """
+                Summary
+                Execute `url` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                Returns `str`.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_internal_coverage.py:url` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_internal_coverage.py`.
+
+                Why this exists
+                Keeps `url` explicit, testable, and maintainable.
+                """
                 return "http://127.0.0.1:9999"
 
             def tls_certificate_fingerprint_sha256(self) -> str | None:
+                """
+                Summary
+                Execute `tls_certificate_fingerprint_sha256` for its module-level responsibility.
+
+                Inputs
+                None.
+
+                Outputs
+                Returns `str | None`.
+
+                Side effects
+                None beyond this method boundary.
+
+                Error handling
+                Raises contextual errors from `tests/test_entrypoint_internal_coverage.py:tls_certificate_fingerprint_sha256` when this method encounters invalid state or runtime failures.
+
+                Ties to other methods
+                Used by workflows in `tests/test_entrypoint_internal_coverage.py`.
+
+                Why this exists
+                Keeps `tls_certificate_fingerprint_sha256` explicit, testable, and maintainable.
+                """
                 return None
 
         monkeypatch.setattr(entrypoint, "SnapshotApiServer", _StubServer)
@@ -212,7 +451,16 @@ def test_serve_mode_lan_tls_disabled_warns(
         out = capsys.readouterr().out
         assert "Public base URL:" in out
         assert "Warning: TLS is disabled." in out
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(f"{MODULE_PATH}:test_serve_mode_lan_tls_disabled_warns failed: {exc}") from exc
 
 
@@ -250,7 +498,16 @@ def test_serve_mode_requires_api_enabled(
         assert entrypoint.main() == 1
         err = capsys.readouterr().err
         assert "api.enabled must be true" in err
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(f"{MODULE_PATH}:test_serve_mode_requires_api_enabled failed: {exc}") from exc
 
 
@@ -295,13 +552,48 @@ def test_gui_import_failure_falls_back_to_cli(monkeypatch: pytest.MonkeyPatch) -
             fromlist: tuple[str, ...] = (),
             level: int = 0,
         ) -> object:
+            """
+            Summary
+            Execute `_import` for its module-level responsibility.
+
+            Inputs
+            name: `str` parameter from the function signature.
+            globals: `dict[str, object] | None` parameter from the function signature with a default.
+            locals: `dict[str, object] | None` parameter from the function signature with a default.
+            fromlist: `tuple[str, ...]` parameter from the function signature with a default.
+            level: `int` parameter from the function signature with a default.
+
+            Outputs
+            Returns `object`.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `tests/test_entrypoint_internal_coverage.py:_import` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `tests/test_entrypoint_internal_coverage.py`.
+
+            Why this exists
+            Keeps `_import` explicit, testable, and maintainable.
+            """
             if name == "mac_health_checkup.app.gui.app" and fromlist and "DashboardApp" in fromlist:
                 raise ImportError("no tkinter")
             return real_import(name, globals, locals, fromlist, level)
 
         monkeypatch.setattr(builtins, "__import__", _import)
         assert entrypoint.main() == 0
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_gui_import_failure_falls_back_to_cli failed: {exc}"
         ) from exc
@@ -337,7 +629,16 @@ def test_main_error_write_broken_pipe_returns_one(monkeypatch: pytest.MonkeyPatc
         )
         monkeypatch.setattr(sys.stderr, "write", lambda _s: (_ for _ in ()).throw(BrokenPipeError()))
         assert entrypoint.main() == 1
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_main_error_write_broken_pipe_returns_one failed: {exc}"
         ) from exc
@@ -374,7 +675,16 @@ def test_print_console_output_prints_tables(capsys: pytest.CaptureFixture[str]) 
         assert "[devices table]" in out
         assert "Bus | Device" in out
         assert "usb | Keyboard" in out
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(f"{MODULE_PATH}:test_print_console_output_prints_tables failed: {exc}") from exc
 
 
@@ -409,14 +719,23 @@ def test_print_pairing_qr_best_effort(
         assert capsys.readouterr().out == ""
 
         monkeypatch.setattr(
-            "mac_health_checkup.core.utils.qr.maybe_render_qr_ansiutf8",
+            "mac_health_checkup.core.utils.maybe_render_qr_ansiutf8",
             lambda _payload, timeout_sec: "QR",
         )
         entrypoint._print_pairing_qr_best_effort("{}", enabled=True)
         out = capsys.readouterr().out
         assert "Pairing QR" in out
         assert "QR" in out
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(f"{MODULE_PATH}:test_print_pairing_qr_best_effort failed: {exc}") from exc
 
 
@@ -451,6 +770,29 @@ def test_run_sections_best_effort_emits_logs(monkeypatch: pytest.MonkeyPatch) ->
         )
 
         def _fake_run_section(_host: ConsoleHost, key: str) -> dict[str, object]:
+            """
+            Summary
+            Execute `_fake_run_section` for its module-level responsibility.
+
+            Inputs
+            _host: `ConsoleHost` parameter from the function signature.
+            key: `str` parameter from the function signature.
+
+            Outputs
+            Returns `dict[str, object]`.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `tests/test_entrypoint_internal_coverage.py:_fake_run_section` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `tests/test_entrypoint_internal_coverage.py`.
+
+            Why this exists
+            Keeps `_fake_run_section` explicit, testable, and maintainable.
+            """
             if key == "bad":
                 raise RuntimeError("boom")
             return {"ok": True}
@@ -468,11 +810,61 @@ def test_run_sections_best_effort_emits_logs(monkeypatch: pytest.MonkeyPatch) ->
         context = LogContext(component="test", corr_id="corr")
 
         def _info(_msg: str, *, event: str, context: LogContext, payload: dict[str, object]) -> None:
+            """
+            Summary
+            Execute `_info` for its module-level responsibility.
+
+            Inputs
+            _msg: `str` parameter from the function signature.
+            event: keyword-only `str` parameter.
+            context: keyword-only `LogContext` parameter.
+            payload: keyword-only `dict[str, object]` parameter.
+
+            Outputs
+            None.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `tests/test_entrypoint_internal_coverage.py:_info` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `tests/test_entrypoint_internal_coverage.py`.
+
+            Why this exists
+            Keeps `_info` explicit, testable, and maintainable.
+            """
             _ = context
             _ = payload
             events.append(event)
 
         def _error(_msg: str, *, event: str, context: LogContext, payload: dict[str, object]) -> None:
+            """
+            Summary
+            Execute `_error` for its module-level responsibility.
+
+            Inputs
+            _msg: `str` parameter from the function signature.
+            event: keyword-only `str` parameter.
+            context: keyword-only `LogContext` parameter.
+            payload: keyword-only `dict[str, object]` parameter.
+
+            Outputs
+            None.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `tests/test_entrypoint_internal_coverage.py:_error` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `tests/test_entrypoint_internal_coverage.py`.
+
+            Why this exists
+            Keeps `_error` explicit, testable, and maintainable.
+            """
             _ = context
             _ = payload
             events.append(event)
@@ -484,5 +876,14 @@ def test_run_sections_best_effort_emits_logs(monkeypatch: pytest.MonkeyPatch) ->
         assert "section_start" in events
         assert "section_end" in events
         assert "section_error" in events
-    except Exception as exc:
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
         raise AssertionError(f"{MODULE_PATH}:test_run_sections_best_effort_emits_logs failed: {exc}") from exc

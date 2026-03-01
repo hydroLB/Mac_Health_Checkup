@@ -74,7 +74,16 @@ class DisplayTransportParsingTests(unittest.TestCase):
             parsed = _parse_transports(raw)
             self.assertEqual(parsed, ["Internal", "DisplayPort", "HDMI", "USB", "Wireless"])
             self.assertEqual(_normalize_transport("Built-in"), "Internal")
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:DisplayTransportParsingTests.test_parse_transports_and_normalize failed: {exc}"
             ) from exc
@@ -118,7 +127,16 @@ class DisplayTransportParsingTests(unittest.TestCase):
             self.assertEqual((w0, h0), (2560, 1600))
             self.assertEqual(_parse_refresh_hz(blocks[0]), 60.0)
             self.assertEqual(_parse_refresh_hz("no refresh"), None)
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:DisplayTransportParsingTests.test_split_blocks_and_parse_resolution_refresh failed: {exc}"
             ) from exc
@@ -150,7 +168,16 @@ class DisplayTransportParsingTests(unittest.TestCase):
             merged = _merge_transports(["Internal", "HDMI"], [12.345, None])
             self.assertEqual(merged[0], "Internal 12.35 Gbps")
             self.assertEqual(merged[1], "HDMI")
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:DisplayTransportParsingTests.test_merge_transports_formats_estimates failed: {exc}"
             ) from exc

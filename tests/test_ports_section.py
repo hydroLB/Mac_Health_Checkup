@@ -70,7 +70,16 @@ class PortsSectionHelpersTests(unittest.TestCase):
             ]
             depths = _compute_depths(items)
             self.assertEqual(depths, [0, 1, 2, 2, 1, 0, 1])
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:PortsSectionHelpersTests.test_compute_depths_handles_irregular_indentation failed: {exc}"
             ) from exc
@@ -113,7 +122,16 @@ class PortsSectionHelpersTests(unittest.TestCase):
             self.assertEqual(updated[0], "USB 3.1 Bus")
             self.assertIn("(Display: DELL U2720Q)", updated[5])
             self.assertEqual(updated[6], "Display Alt Mode: DELL U2720Q")
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:PortsSectionHelpersTests.test_annotate_usb_tree_labels_marks_display_ports_and_billboard_nodes failed: {exc}"
             ) from exc
@@ -159,7 +177,16 @@ Graphics/Displays:
           Connection Type: USB-C
 """
             self.assertEqual(_extract_external_display_names(raw), ["DELL U2720Q"])
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:PortsSectionHelpersTests.test_extract_external_display_names_ignores_gpu_headers_and_builtin_panels failed: {exc}"
             ) from exc

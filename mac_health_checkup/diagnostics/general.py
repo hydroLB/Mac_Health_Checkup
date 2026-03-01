@@ -4,9 +4,9 @@ import platform
 
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.errors import format_error
-from mac_health_checkup.core.utils.regex_utils import regex_extract_str
-from mac_health_checkup.core.utils.shell import system_profiler_out
+from mac_health_checkup.core.utils import format_error
+from mac_health_checkup.core.utils import regex_extract_str
+from mac_health_checkup.core.utils import system_profiler_out
 from mac_health_checkup.diagnostics.base import Cache, cached_fetch, get_diagnostics_logger, new_context
 
 MODULE_PATH = "mac_health_checkup/diagnostics/general.py"

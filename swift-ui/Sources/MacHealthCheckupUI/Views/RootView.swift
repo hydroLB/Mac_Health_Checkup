@@ -59,7 +59,20 @@ public struct RootView: View {
         NavigationSplitView {
             SidebarView(model: model)
         } detail: {
-            DetailView(model: model)
+            VStack(spacing: 0) {
+                if let err = model.lastError {
+                    ErrorBanner(theme: model.theme, message: err.userFacingMessage) {
+                        showErrorDetails = true
+                    }
+                    .padding(.horizontal, model.theme.layout.pagePadding)
+                    .padding(.top, max(10, model.theme.layout.pagePadding * 0.6))
+                    .padding(.bottom, max(8, model.theme.layout.cardSpacing * 0.5))
+                }
+
+                DetailView(model: model)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
+            .background(model.theme.colors.background)
         }
         .toolbar {
             #if os(macOS)
@@ -84,17 +97,25 @@ public struct RootView: View {
         .background(model.theme.colors.background)
         .task { model.startAutoRefresh() }
         .onDisappear { model.stopAutoRefresh() }
-        .overlay(alignment: .top) {
-            if let err = model.lastError {
-                ErrorBanner(theme: model.theme, message: err.description) {
-                    showErrorDetails = true
-                }
-                .padding(.horizontal, model.theme.layout.pagePadding)
-                .padding(.top, max(10, model.theme.layout.pagePadding * 0.6))
-            }
-        }
         .sheet(isPresented: $showErrorDetails) {
-            ErrorDetailView(theme: model.theme, error: model.lastError)
+            NavigationStack {
+                ErrorDetailView(theme: model.theme, error: model.lastError)
+                    .navigationTitle("Error Details")
+#if os(iOS)
+                    .navigationBarTitleDisplayMode(.inline)
+#endif
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                showErrorDetails = false
+                            }
+                        }
+                    }
+            }
+#if os(iOS)
+            .presentationDragIndicator(.visible)
+            .presentationDetents([.medium, .large])
+#endif
         }
         .sheet(isPresented: $model.isSettingsPresented) {
             SettingsView(theme: model.theme, model: model)
@@ -136,10 +157,16 @@ private struct ErrorBanner: View {
             Text(message)
                 .font(theme.fonts.caption)
                 .foregroundStyle(theme.colors.foreground)
+                .multilineTextAlignment(.leading)
                 .lineLimit(2)
+                .truncationMode(.tail)
+                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(1)
             Spacer()
             Button("Details", action: onDetails)
                 .font(theme.fonts.caption)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
         }
         .padding(10)
         .background(theme.colors.bad.opacity(0.18))
@@ -179,19 +206,48 @@ private struct ErrorDetailView: View {
          Provides an accessible place to copy and inspect failure details.
          */
         VStack(alignment: .leading, spacing: 12) {
-            Text("Error Details")
-                .font(theme.fonts.sectionTitle)
-                .foregroundStyle(theme.colors.section)
+            let summary = error?.userFacingMessage ?? "No error"
+            let technical = error.map { String(describing: $0) } ?? "No error"
+            let underlying = error?.underlying.map { String(describing: $0) }?.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
 
             ScrollView {
-                Text(error?.description ?? "No error")
-                    .font(theme.fonts.mono)
-                    .foregroundStyle(theme.colors.field)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .textSelection(.enabled)
-            }
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Summary")
+                        .font(theme.fonts.sectionTitle)
+                        .foregroundStyle(theme.colors.section)
+                    Text(summary)
+                        .font(theme.fonts.body)
+                        .foregroundStyle(theme.colors.foreground)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer(minLength: 0)
+                    if let underlying, !underlying.isEmpty {
+                        Divider().overlay(theme.colors.cardBorder)
+                        Text("Underlying Error")
+                            .font(theme.fonts.caption)
+                            .foregroundStyle(theme.colors.label)
+                        Text(underlying)
+                            .font(theme.fonts.mono)
+                            .foregroundStyle(theme.colors.field)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    Divider().overlay(theme.colors.cardBorder)
+                    Text("Technical Details")
+                        .font(theme.fonts.caption)
+                        .foregroundStyle(theme.colors.label)
+                    Text(technical)
+                        .font(theme.fonts.mono)
+                        .foregroundStyle(theme.colors.field)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 20)
+            }
         }
         .padding(16)
         .frame(minWidth: 520, minHeight: 260)

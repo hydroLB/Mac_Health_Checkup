@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from mac_health_checkup.app.gui.sections.types import SectionHost
+from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.data import fmt_percent, fmt_temp_c
-from mac_health_checkup.core.utils.errors import format_error
-from mac_health_checkup.core.utils.health import health_from_percent
+from mac_health_checkup.core.utils import fmt_percent, fmt_temp_c
+from mac_health_checkup.core.utils import format_error
+from mac_health_checkup.core.utils import health_from_percent
 from mac_health_checkup.diagnostics.battery import BatteryDiagnostics
 
 MODULE_PATH = "mac_health_checkup/app/gui/sections/battery.py"
@@ -35,11 +36,21 @@ def update_section(host: SectionHost) -> JsonDict:
     """
     try:
         data = BatteryDiagnostics.fetch()
+        thresholds = get_config().thresholds
         summary = str(data.get("health_text", "Battery info unavailable"))
         host.set_field("battery", summary)
         percent = data.get("percent_health")
         percent_val = float(percent) if isinstance(percent, (int, float)) else None
-        health_label = health_from_percent(percent_val) if percent_val is not None else "unknown"
+        health_label = (
+            health_from_percent(
+                percent_val,
+                excellent_min=thresholds.health_excellent_min_percent,
+                good_min=thresholds.health_good_min_percent,
+                fair_min=thresholds.health_fair_min_percent,
+            )
+            if percent_val is not None
+            else "unknown"
+        )
         health_status = "unknown"
         if health_label in {"excellent", "good"}:
             health_status = "ok"

@@ -58,8 +58,8 @@ struct SectionTableView: View {
          */
         let maxRows = key.flatMap { model.preferredTableVisibleRows(for: $0) }
         let targetRows = maxRows ?? min(10, max(3, table.rows.count))
-        let headerHeight: CGFloat = 26
-        let rowHeight: CGFloat = 22
+        let headerHeight = theme.layout.verticalScaled(26)
+        let rowHeight = theme.layout.verticalScaled(22)
         let maxHeight = headerHeight + (CGFloat(targetRows) * rowHeight)
 
         ScrollView([.horizontal, .vertical]) {
@@ -69,7 +69,7 @@ struct SectionTableView: View {
                     count: max(1, table.headers.count)
                 ),
                 alignment: .leading,
-                spacing: 8
+                spacing: theme.layout.verticalScaled(8)
             ) {
                 ForEach(Array(table.headers.enumerated()), id: \.offset) { _, header in
                     Text(header)
@@ -93,17 +93,16 @@ struct SectionTableView: View {
                             .foregroundStyle(theme.colors.field)
                             .lineLimit(2)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 2)
+                            .padding(.vertical, theme.layout.verticalScaled(2))
                             .background(rowIndex.isMultiple(of: 2) ? Color.clear : theme.colors.background.opacity(0.08))
                             .help(HelpText.tableCell(sectionKey: key, header: header, value: value))
                     }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 2)
+            .padding(.vertical, theme.layout.verticalScaled(2))
         }
         .textSelection(.enabled)
         .frame(maxHeight: maxHeight)
     }
 }
-

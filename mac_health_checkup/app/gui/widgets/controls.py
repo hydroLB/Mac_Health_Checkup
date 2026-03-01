@@ -4,7 +4,7 @@ import tkinter as tk
 from dataclasses import dataclass
 from typing import Callable, Literal
 
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 
 MODULE_PATH = "mac_health_checkup/app/gui/widgets/controls.py"
 
@@ -41,7 +41,9 @@ class ButtonTheme:
     active_bg: str
     disabled_bg: str
     disabled_fg: str
+    disabled_border: str
     focus_border: str
+    selected_bg: str
 
 
 @dataclass(frozen=True)
@@ -154,6 +156,7 @@ class InteractiveButton(tk.Button):
             self._is_focused = False
             self._is_loading = False
             self._is_enabled = True
+            self._is_selected = False
             super().__init__(
                 parent,
                 text=self._default_text,
@@ -250,6 +253,39 @@ class InteractiveButton(tk.Button):
                 format_error(MODULE_PATH, "InteractiveButton.set_loading", "Failed to set loading state", exc)
             ) from exc
 
+    def set_selected(self, selected: bool) -> None:
+        """
+        Summary
+        Toggle selected-state visuals for segmented and toggle-style buttons.
+
+        Inputs
+        selected: True to render selected state.
+
+        Outputs
+        None.
+
+        Side effects
+        Updates button visual styling.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when updates fail.
+
+        Ties to other methods
+        Works with `_sync_style` and focus/hover handlers.
+
+        Why this exists
+        Selected state is needed for segmented controls and avoids ad hoc selection styling.
+        """
+        try:
+            self._is_selected = bool(selected)
+            self._sync_style()
+        except (tk.TclError, RuntimeError, ValueError, TypeError) as exc:
+            raise RuntimeError(
+                format_error(
+                    MODULE_PATH, "InteractiveButton.set_selected", "Failed to set selected state", exc
+                )
+            ) from exc
+
     def _on_enter(self, _event: tk.Event[tk.Misc]) -> None:
         """
         Summary
@@ -276,7 +312,16 @@ class InteractiveButton(tk.Button):
         try:
             self._is_hovered = True
             self._sync_style()
-        except Exception:
+        except (
+            tk.TclError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ):
             return
 
     def _on_leave(self, _event: tk.Event[tk.Misc]) -> None:
@@ -306,7 +351,16 @@ class InteractiveButton(tk.Button):
             self._is_hovered = False
             self._is_pressed = False
             self._sync_style()
-        except Exception:
+        except (
+            tk.TclError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ):
             return
 
     def _on_press(self, _event: tk.Event[tk.Misc]) -> None:
@@ -335,7 +389,16 @@ class InteractiveButton(tk.Button):
         try:
             self._is_pressed = True
             self._sync_style()
-        except Exception:
+        except (
+            tk.TclError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ):
             return
 
     def _on_release(self, _event: tk.Event[tk.Misc]) -> None:
@@ -364,7 +427,16 @@ class InteractiveButton(tk.Button):
         try:
             self._is_pressed = False
             self._sync_style()
-        except Exception:
+        except (
+            tk.TclError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ):
             return
 
     def _on_focus_in(self, _event: tk.Event[tk.Misc]) -> None:
@@ -393,7 +465,16 @@ class InteractiveButton(tk.Button):
         try:
             self._is_focused = True
             self._sync_style()
-        except Exception:
+        except (
+            tk.TclError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ):
             return
 
     def _on_focus_out(self, _event: tk.Event[tk.Misc]) -> None:
@@ -422,7 +503,16 @@ class InteractiveButton(tk.Button):
         try:
             self._is_focused = False
             self._sync_style()
-        except Exception:
+        except (
+            tk.TclError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ):
             return
 
     def _sync_style(self) -> None:
@@ -454,25 +544,36 @@ class InteractiveButton(tk.Button):
             if not interactive:
                 bg = self._theme.disabled_bg
                 fg = self._theme.disabled_fg
+                border = self._theme.disabled_border
                 cursor = "watch" if self._is_loading else "arrow"
                 state = "disabled"
             elif self._is_pressed:
                 bg = self._theme.active_bg
                 fg = self._theme.fg
+                border = self._theme.border
                 cursor = "hand2"
                 state = "normal"
             elif self._is_hovered:
                 bg = self._theme.hover_bg
                 fg = self._theme.fg
+                border = self._theme.border
+                cursor = "hand2"
+                state = "normal"
+            elif self._is_selected:
+                bg = self._theme.selected_bg
+                fg = self._theme.fg
+                border = self._theme.focus_border
                 cursor = "hand2"
                 state = "normal"
             else:
                 bg = self._theme.bg
                 fg = self._theme.fg
+                border = self._theme.border
                 cursor = "hand2"
                 state = "normal"
 
-            border = self._theme.focus_border if self._is_focused else self._theme.border
+            if self._is_focused:
+                border = self._theme.focus_border
             thickness = 2 if self._is_focused else 1
             label = self._loading_text if self._is_loading else self._default_text
             self.configure(
@@ -612,5 +713,7 @@ class InlineStatusBadge(tk.Label):
             self.configure(text=str(text).strip(), fg=fg)
         except (tk.TclError, RuntimeError, ValueError, TypeError) as exc:
             raise RuntimeError(
-                format_error(MODULE_PATH, "InlineStatusBadge.set_message", "Failed to set status message", exc)
+                format_error(
+                    MODULE_PATH, "InlineStatusBadge.set_message", "Failed to set status message", exc
+                )
             ) from exc

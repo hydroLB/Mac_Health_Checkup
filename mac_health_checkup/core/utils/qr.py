@@ -33,7 +33,7 @@ def qrencode_available() -> bool:
     """
     try:
         return shutil.which("qrencode") is not None
-    except Exception:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
         return False
 
 

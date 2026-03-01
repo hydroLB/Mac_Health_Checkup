@@ -61,7 +61,7 @@ struct DisplayListTableView: View {
                     Spacer()
                 }
                 .help("\(HelpText.section(key: "display"))\n\nName: \(name)\nDetails: \(details.isEmpty ? "(none)" : details)")
-                .padding(.vertical, 7)
+                .padding(.vertical, theme.layout.verticalScaled(7))
 
                 if index < table.rows.count - 1 {
                     Divider()
@@ -131,7 +131,7 @@ struct InputDevicesListTableView: View {
                     }
                 }
                 .help("\(HelpText.section(key: "input"))\n\nDevice: \(device)\nType: \(kind)\nTransport: \(transport.isEmpty ? "(unknown)" : transport)")
-                .padding(.vertical, 7)
+                .padding(.vertical, theme.layout.verticalScaled(7))
 
                 if index < table.rows.count - 1 {
                     Divider()
@@ -190,7 +190,7 @@ struct DevicesListTableView: View {
                 let rows = grouped[bus] ?? []
                 return !rows.isEmpty
             }
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: theme.layout.verticalScaled(12)) {
             ForEach(buses, id: \.self) { bus in
                 let rows = grouped[bus] ?? []
                 VStack(alignment: .leading, spacing: 0) {
@@ -203,7 +203,7 @@ struct DevicesListTableView: View {
                             .foregroundStyle(theme.colors.label)
                         Spacer()
                     }
-                    .padding(.bottom, 6)
+                    .padding(.bottom, theme.layout.verticalScaled(6))
 
                     ForEach(Array(rows.enumerated()), id: \.offset) { index, device in
                         HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -217,13 +217,14 @@ struct DevicesListTableView: View {
                             Spacer()
                         }
                         .help("\(HelpText.section(key: "devices"))\n\nBus: \(bus)\nDevice: \(device)")
-                        .padding(.vertical, 7)
+                        .padding(.vertical, theme.layout.verticalScaled(7))
                         if index < rows.count - 1 {
                             Divider().opacity(0.6)
                         }
                     }
                 }
-                .padding(10)
+                .padding(.horizontal, 10)
+                .padding(.vertical, theme.layout.verticalScaled(10))
                 .background(theme.colors.background.opacity(0.08))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
@@ -369,7 +370,7 @@ struct IndentedTreeTableView: View {
 
     var body: some View {
         let nodes = buildTree(rows: rows)
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: theme.layout.verticalScaled(6)) {
             if let title, !title.isEmpty {
                 Text(title)
                     .font(theme.fonts.caption)
@@ -521,7 +522,7 @@ struct IndentedTreeTableView: View {
                     Spacer()
                 }
                 .help("\(HelpText.section(key: "ports"))\n\nUSB node: \(label)")
-                .padding(.vertical, 7)
+                .padding(.vertical, theme.layout.verticalScaled(7))
             }
 
             private func _iconName(for label: String) -> String {

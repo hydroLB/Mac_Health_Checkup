@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, TypeAlias, cast
 
 from mac_health_checkup.app.gui.app import DashboardApp, _SectionWidgets
 from mac_health_checkup.app.gui.widgets.scroll_container import ScrollContainer
-from mac_health_checkup.core.config.models.root import Config
+from mac_health_checkup.core.config import Config
 
 MODULE_PATH = "tests/test_gui_accessibility.py"
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "config.json"
@@ -166,25 +166,157 @@ def _record_after_call(store: list[tuple[int, object]], delay_ms: int, callback:
 
 class _CardStub:
     def __init__(self) -> None:
+        """
+        Summary
+        Execute `__init__` for its module-level responsibility.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_gui_accessibility.py:__init__` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_gui_accessibility.py`.
+
+        Why this exists
+        Keeps `__init__` explicit, testable, and maintainable.
+        """
         self.configure_calls: list[dict[str, object]] = []
 
     def configure(self, **kwargs: object) -> None:
+        """
+        Summary
+        Execute `configure` for its module-level responsibility.
+
+        Inputs
+        **kwargs: variadic keyword `object` parameters.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_gui_accessibility.py:configure` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_gui_accessibility.py`.
+
+        Why this exists
+        Keeps `configure` explicit, testable, and maintainable.
+        """
         self.configure_calls.append(dict(kwargs))
 
 
 class _ScrollStub:
     def __init__(self) -> None:
+        """
+        Summary
+        Execute `__init__` for its module-level responsibility.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_gui_accessibility.py:__init__` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_gui_accessibility.py`.
+
+        Why this exists
+        Keeps `__init__` explicit, testable, and maintainable.
+        """
         self.top_calls = 0
         self.bottom_calls = 0
         self.page_calls: list[int] = []
 
     def scroll_to_top(self) -> None:
+        """
+        Summary
+        Execute `scroll_to_top` for its module-level responsibility.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_gui_accessibility.py:scroll_to_top` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_gui_accessibility.py`.
+
+        Why this exists
+        Keeps `scroll_to_top` explicit, testable, and maintainable.
+        """
         self.top_calls += 1
 
     def scroll_to_bottom(self) -> None:
+        """
+        Summary
+        Execute `scroll_to_bottom` for its module-level responsibility.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_gui_accessibility.py:scroll_to_bottom` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_gui_accessibility.py`.
+
+        Why this exists
+        Keeps `scroll_to_bottom` explicit, testable, and maintainable.
+        """
         self.bottom_calls += 1
 
     def scroll_pages(self, pages: int) -> None:
+        """
+        Summary
+        Execute `scroll_pages` for its module-level responsibility.
+
+        Inputs
+        pages: `int` parameter from the function signature.
+
+        Outputs
+        None.
+
+        Side effects
+        None beyond this method boundary.
+
+        Error handling
+        Raises contextual errors from `tests/test_gui_accessibility.py:scroll_pages` when this method encounters invalid state or runtime failures.
+
+        Ties to other methods
+        Used by workflows in `tests/test_gui_accessibility.py`.
+
+        Why this exists
+        Keeps `scroll_pages` explicit, testable, and maintainable.
+        """
         self.page_calls.append(int(pages))
 
 
@@ -266,7 +398,16 @@ class GuiAccessibilityTests(unittest.TestCase):
                 3.0,
                 msg=f"Focus indicator contrast dropped below 3.0:1 (actual {focus_ratio:.2f}:1)",
             )
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:GuiAccessibilityTests.test_theme_contrast_pairs_from_config failed: {exc}"
             ) from exc
@@ -325,7 +466,16 @@ class GuiAccessibilityTests(unittest.TestCase):
             self.assertEqual(normal_call.get("highlightthickness"), 1)
             self.assertEqual(focus_call.get("highlightbackground"), "#58a6ff")
             self.assertEqual(focus_call.get("highlightthickness"), 2)
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:GuiAccessibilityTests.test_focus_visibility_uses_distinct_color_and_thickness failed: {exc}"
             ) from exc
@@ -388,7 +538,16 @@ class GuiAccessibilityTests(unittest.TestCase):
             self.assertEqual(scroll_stub.top_calls, 1)
             self.assertEqual(scroll_stub.bottom_calls, 1)
             self.assertEqual(scroll_stub.page_calls, [-1, 1])
-        except Exception as exc:
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:GuiAccessibilityTests.test_keyboard_only_operability_shortcuts_and_scroll_delegation failed: {exc}"
             ) from exc

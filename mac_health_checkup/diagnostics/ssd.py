@@ -4,15 +4,15 @@ import re
 
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.data import fmt_bytes, fmt_percent
-from mac_health_checkup.core.utils.errors import format_error
-from mac_health_checkup.core.utils.health import health_from_percent
-from mac_health_checkup.core.utils.regex_utils import (
+from mac_health_checkup.core.utils import fmt_bytes, fmt_percent
+from mac_health_checkup.core.utils import format_error
+from mac_health_checkup.core.utils import health_from_percent
+from mac_health_checkup.core.utils import (
     regex_extract_float,
     regex_extract_int,
     regex_extract_str,
 )
-from mac_health_checkup.core.utils.shell import safe_run
+from mac_health_checkup.core.utils import safe_run
 from mac_health_checkup.diagnostics.base import Cache, cached_fetch, get_diagnostics_logger, new_context
 
 MODULE_PATH = "mac_health_checkup/diagnostics/ssd.py"
@@ -129,7 +129,17 @@ class SSDDiagnostics:
             media_errors = regex_extract_int(
                 out, re.escape("Media and Data Integrity Errors") + r":\s+([^\n]+)"
             )
-            health_label = health_from_percent(percent_left) if percent_left is not None else "unknown"
+            thresholds = get_config().thresholds
+            health_label = (
+                health_from_percent(
+                    percent_left,
+                    excellent_min=thresholds.health_excellent_min_percent,
+                    good_min=thresholds.health_good_min_percent,
+                    fair_min=thresholds.health_fair_min_percent,
+                )
+                if percent_left is not None
+                else "unknown"
+            )
             summary = "SSD health unavailable"
             if percent_left is not None:
                 summary = f"{fmt_percent(percent_left)} left | {fmt_bytes((written_tb or 0.0) * 1e12)} written | {health_label}"

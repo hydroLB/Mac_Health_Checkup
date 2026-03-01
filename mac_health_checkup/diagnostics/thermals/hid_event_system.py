@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from mac_health_checkup.core.config import get_config
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 from mac_health_checkup.diagnostics.thermals.iohid import collect_temperature_samples_once, load_hid_api
 from mac_health_checkup.diagnostics.thermals.iohid.constants import TEMPERATURE_USAGE_CANDIDATES
 from mac_health_checkup.diagnostics.thermals.iohid.types import HidApi
@@ -74,7 +74,7 @@ def collect_temperature_readings() -> HidTemperatureResult:
             return HidTemperatureResult(readings=[], raw_lines=[], error="IOKit/CoreFoundation unavailable")
 
         return _collect_with_api(api)
-    except Exception as exc:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
         return HidTemperatureResult(
             readings=[],
             raw_lines=[],

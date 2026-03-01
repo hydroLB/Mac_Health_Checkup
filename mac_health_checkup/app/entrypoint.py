@@ -7,20 +7,22 @@ import os
 import sys
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
-from mac_health_checkup.app.backend.server import SnapshotApiServer
+from mac_health_checkup.app.backend import Snapshot, SnapshotApiServer, SnapshotBuilder
 from mac_health_checkup.app.cli import ConsoleHost
 from mac_health_checkup.app.gui.dashboard.lifecycle import ShutdownManager
 from mac_health_checkup.app.gui.dashboard.sections import SECTION_HANDLERS, run_section
-from mac_health_checkup.core.config import get_config
-from mac_health_checkup.core.utils.errors import format_error
-from mac_health_checkup.core.utils.loggers import (
+from mac_health_checkup.core.config import build_startup_config_validation_report, get_config
+from mac_health_checkup.core.utils import (
     LogContext,
     LoggingFields,
     StructuredLogger,
     configure_logging_once,
+    format_error,
     new_correlation_id,
 )
+from mac_health_checkup.core.utils.error_boundary import ErrorBoundary, map_boundary_exception
 
 MODULE_PATH = "mac_health_checkup/app/entrypoint.py"
 
@@ -49,9 +51,11 @@ def main() -> int:
     Why this exists
     Provides a single deterministic entrypoint with clear mode selection and safe fallbacks.
     """
+    args: argparse.Namespace | None = None
     try:
         args = _parse_args()
         cfg = get_config()
+        startup_config_report = build_startup_config_validation_report(cfg)
         fields = LoggingFields(
             event_field=cfg.logging.event_field,
             corr_id_field=cfg.logging.correlation_id_field,
@@ -62,12 +66,16 @@ def main() -> int:
         corr_id = new_correlation_id()
         logger = StructuredLogger("mac_health_checkup", cfg.logging.redaction(), fields)
         context = LogContext(component="entrypoint", corr_id=corr_id)
+        logger.info(
+            "startup config validated",
+            event="startup_config_validated",
+            context=context,
+            payload=startup_config_report.to_log_payload(),
+        )
         shutdown = ShutdownManager()
         shutdown.install_handlers()
 
         if args.snapshot_json_out:
-            from mac_health_checkup.app.backend.snapshot import SnapshotBuilder
-
             snapshot = SnapshotBuilder(SECTION_HANDLERS).build()
             code = 0 if snapshot.ok else 1
             if args.fail_on and _should_fail_on_snapshot(snapshot, fail_on=str(args.fail_on)):
@@ -81,8 +89,6 @@ def main() -> int:
             return code
 
         if args.snapshot_json:
-            from mac_health_checkup.app.backend.snapshot import SnapshotBuilder
-
             snapshot = SnapshotBuilder(SECTION_HANDLERS).build()
             code = 0 if snapshot.ok else 1
             if args.fail_on and _should_fail_on_snapshot(snapshot, fail_on=str(args.fail_on)):
@@ -114,7 +120,7 @@ def main() -> int:
                 raise RuntimeError("api.enabled must be true in config to use --serve")
             server = SnapshotApiServer(SECTION_HANDLERS, cfg.api)
             server.start()
-            public_url = os.environ.get("MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL") or server.url()
+            public_url = _resolve_public_base_url(default_url=server.url())
             print(
                 f"Snapshot API running at {server.url()} (endpoints: /v1/health, /v1/snapshot, /v1/section)"
             )
@@ -188,14 +194,16 @@ def main() -> int:
         app.start()
         return 0
     except Exception as exc:
-        err = format_error(MODULE_PATH, "main", "Entrypoint failed", exc)
+        boundary = _boundary_from_args(args)
+        mapped = map_boundary_exception(exc, boundary=boundary, default_message="Entrypoint failed")
+        err = mapped.to_stderr_line(module_path=MODULE_PATH, method="main")
         try:
             sys.stderr.write(err + "\n")
         except BrokenPipeError:
             return 1
         except Exception:
             return 1
-        return 1
+        return int(mapped.exit_code)
 
 
 def _print_console_output(host: ConsoleHost) -> None:
@@ -330,6 +338,103 @@ def _parse_args() -> argparse.Namespace:
         raise RuntimeError(format_error(MODULE_PATH, "_parse_args", "Failed to parse args", exc)) from exc
 
 
+def _boundary_from_args(args: argparse.Namespace | None) -> ErrorBoundary:
+    """
+    Summary
+    Resolve the runtime boundary from parsed entrypoint args.
+
+    Inputs
+    args: Parsed args or `None` when parsing failed before boundary mode could be inferred.
+
+    Outputs
+    `ErrorBoundary` enum value.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when boundary resolution fails unexpectedly.
+
+    Ties to other methods
+    Used by `main` for centralized boundary error mapping.
+
+    Why this exists
+    Entrypoint failures should map to a boundary-aware error policy instead of ad-hoc generic handling.
+    """
+    try:
+        if args is None:
+            return ErrorBoundary.CLI
+        if bool(getattr(args, "serve", False)):
+            return ErrorBoundary.API
+        if bool(getattr(args, "cli", False)):
+            return ErrorBoundary.CLI
+        if bool(getattr(args, "snapshot_json", False)) or bool(getattr(args, "snapshot_json_out", None)):
+            return ErrorBoundary.CLI
+        if bool(getattr(args, "export", None)) or bool(getattr(args, "diff_snapshots", None)):
+            return ErrorBoundary.CLI
+        return ErrorBoundary.UI
+    except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
+        raise RuntimeError(
+            format_error(MODULE_PATH, "_boundary_from_args", "Failed to resolve entrypoint boundary", exc)
+        ) from exc
+
+
+def _resolve_public_base_url(*, default_url: str) -> str:
+    """
+    Summary
+    Resolve and validate the optional public base URL environment override.
+
+    Inputs
+    default_url: Fallback URL from the running server bind.
+
+    Outputs
+    Validated public base URL string.
+
+    Side effects
+    Reads `MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL` from environment.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when the override is present but invalid.
+
+    Ties to other methods
+    Used by `main` in `--serve` mode before printing pairing payloads.
+
+    Why this exists
+    Invalid public URLs should fail fast with actionable guidance instead of silently emitting unusable pairing data.
+    """
+    try:
+        override = os.getenv("MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL")
+        if override is None:
+            return default_url
+        candidate = override.strip()
+        if not candidate:
+            raise ValueError(
+                "MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL is set but empty. "
+                "Set it to an absolute http(s) URL or unset the variable."
+            )
+        parsed = urlparse(candidate)
+        if parsed.scheme not in {"http", "https"}:
+            raise ValueError(
+                "MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL must start with http:// or https:// "
+                f"(received {candidate!r})"
+            )
+        if not parsed.netloc:
+            raise ValueError(
+                "MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL must include host[:port], "
+                f"for example https://example.test:7878 (received {candidate!r})"
+            )
+        if parsed.path not in ("", "/") or parsed.params or parsed.query or parsed.fragment:
+            raise ValueError(
+                "MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL must not include path, query, or fragment. "
+                f"Use only scheme://host[:port] (received {candidate!r})"
+            )
+        return candidate
+    except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
+        raise RuntimeError(
+            format_error(MODULE_PATH, "_resolve_public_base_url", "Invalid public base URL override", exc)
+        ) from exc
+
+
 def _run_diff_mode(args: argparse.Namespace) -> int:
     """
     Summary
@@ -424,7 +529,6 @@ def _run_export_mode(args: argparse.Namespace) -> int:
 
         if args.diff_against:
             baseline = load_snapshot_from_path(Path(str(args.diff_against)))
-            from mac_health_checkup.app.backend.snapshot import SnapshotBuilder
 
             current = SnapshotBuilder(SECTION_HANDLERS).build()
             diff = diff_snapshots(baseline, current)
@@ -446,8 +550,6 @@ def _run_export_mode(args: argparse.Namespace) -> int:
             if fail_on and _should_fail_on_snapshot(snapshot, fail_on=fail_on):
                 code = 1
             return code
-
-        from mac_health_checkup.app.backend.snapshot import SnapshotBuilder
 
         snapshot = SnapshotBuilder(SECTION_HANDLERS).build()
         content = (
@@ -558,7 +660,7 @@ def _print_pairing_qr_best_effort(pairing_payload: str, *, enabled: bool) -> Non
     try:
         if not enabled:
             return
-        from mac_health_checkup.core.utils.qr import maybe_render_qr_ansiutf8
+        from mac_health_checkup.core.utils import maybe_render_qr_ansiutf8
 
         qr = maybe_render_qr_ansiutf8(pairing_payload, timeout_sec=3)
         if not qr:
@@ -567,7 +669,7 @@ def _print_pairing_qr_best_effort(pairing_payload: str, *, enabled: bool) -> Non
         print("Pairing QR (scan in iOS app):")
         print(qr)
         print()
-    except Exception:
+    except (ImportError, RuntimeError, ValueError, TypeError, AttributeError, OSError):
         return
 
 
@@ -684,7 +786,7 @@ def _should_fail_on_host(host: ConsoleHost, *, fail_on: str) -> bool:
             if severity in {"ok", "warn", "bad"} and should_fail_on(cast(AdviceSeverity, severity), fail_on):
                 return True
         return False
-    except Exception:
+    except (ImportError, RuntimeError, ValueError, TypeError, AttributeError, KeyError):
         return False
 
 
@@ -716,7 +818,6 @@ def _should_fail_on_snapshot(snapshot: object, *, fail_on: str) -> bool:
         from typing import cast
 
         from mac_health_checkup.app.actionability import AdviceSeverity, build_section_advice, should_fail_on
-        from mac_health_checkup.app.backend.snapshot import Snapshot
 
         if not isinstance(snapshot, Snapshot):
             return False
@@ -731,7 +832,7 @@ def _should_fail_on_snapshot(snapshot: object, *, fail_on: str) -> bool:
             if severity in {"ok", "warn", "bad"} and should_fail_on(cast(AdviceSeverity, severity), fail_on):
                 return True
         return False
-    except Exception:
+    except (ImportError, RuntimeError, ValueError, TypeError, AttributeError, KeyError):
         return False
 
 

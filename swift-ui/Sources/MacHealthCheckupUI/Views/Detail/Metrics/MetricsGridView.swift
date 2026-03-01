@@ -30,7 +30,7 @@ struct MetricsGridView: View {
          Why this exists
          Presents metrics in a clean, scannable layout while keeping status styling consistent.
          */
-        VStack(spacing: 8) {
+        VStack(spacing: theme.layout.verticalScaled(8)) {
             if sectionKey == "performance" {
                 HStack {
                     Text("Sensor")
@@ -44,7 +44,7 @@ struct MetricsGridView: View {
                         TemperatureUnitToggleLabel(theme: theme)
                     }
                 }
-                .padding(.bottom, 2)
+                .padding(.bottom, theme.layout.verticalScaled(2))
             }
             ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                 let health = SectionHealth.fromStatusString(row.status)
@@ -74,6 +74,7 @@ struct MetricsGridView: View {
                     }
                     SectionHealthBadge(theme: theme, health: health)
                 }
+                .padding(.vertical, theme.layout.verticalScaled(1.5))
             }
         }
     }

@@ -1,0 +1,2 @@
+# Runtime dependencies for mac-health-checkup.
+# Intentionally empty because the runtime package currently uses only the Python standard library.

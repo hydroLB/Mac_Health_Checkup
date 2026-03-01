@@ -595,13 +595,54 @@ public final class DashboardViewModel: ObservableObject {
 
         // For sections that already render richer metrics/tables, prefer those summaries over a potentially redundant
         // `field` string emitted by the backend.
-        if ["battery", "fan", "ssd", "network", "input"].contains(normalizedKey) {
+        if ["battery", "fan", "ssd", "network", "input", "system", "updates"].contains(normalizedKey) {
             if let metrics = payload.metrics, !metrics.isEmpty {
                 if normalizedKey == "network" {
                     let preferredLabels = ["SSID", "IPv4", "RSSI", "Interface"]
                     for label in preferredLabels {
                         if let row = metrics.first(where: { $0.label == label }) {
                             return _truncate("\(row.label): \(row.value)", maxChars: 160)
+                        }
+                    }
+                }
+                if normalizedKey == "system" {
+                    let disk = metrics.first(where: {
+                        $0.label.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "disk free"
+                    })
+                    let memory = metrics.first(where: {
+                        $0.label.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "memory free"
+                    })
+                    var parts: [String] = []
+                    if let disk {
+                        parts.append("Disk free: \(disk.value)")
+                    }
+                    if let memory {
+                        parts.append("Memory free: \(memory.value)")
+                    }
+                    if !parts.isEmpty {
+                        return _truncate(parts.joined(separator: " | "), maxChars: 160)
+                    }
+                }
+                if normalizedKey == "updates" {
+                    let updatesRow = metrics.first(where: {
+                        $0.label.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "updates"
+                    })
+                    if let updatesRow {
+                        let value = updatesRow.value.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if value.lowercased() == "up to date" {
+                            return "Updates: 0 available"
+                        }
+                        if !value.isEmpty {
+                            return _truncate("Updates: \(value)", maxChars: 160)
+                        }
+                    }
+                    let firstRow = metrics.first(where: {
+                        $0.label.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "first"
+                    })
+                    if let firstRow {
+                        let value = firstRow.value.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !value.isEmpty {
+                            return _truncate("First update: \(value)", maxChars: 160)
                         }
                     }
                 }
@@ -864,27 +905,37 @@ public final class DashboardViewModel: ObservableObject {
             return nil
         }
 
-        let failures = _failedSectionSummaries(snapshot: snapshot)
-        let snapshotErr = if !failures.isEmpty {
-            "Failed sections: \(failures.joined(separator: " | "))"
-        } else {
-            snapshot.error ?? "snapshot ok=false"
+        let failedSections = _failedSectionKeys(snapshot: snapshot)
+        if !failedSections.isEmpty {
+            let sectionCount = failedSections.count
+            let sectionNoun = sectionCount == 1 ? "section check failed" : "section checks failed"
+            let listed = _formattedFailedSectionList(failedSections)
+            let message =
+                "Backend completed with partial results (exit code \(exitCode)). \(sectionCount) \(sectionNoun): \(listed). " +
+                "Review backend logs for details."
+            return AppError.context(#fileID, #function, message)
         }
+
+        let fallback = snapshot.error?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Snapshot reported ok=false."
         let trimmedStderr = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
-        let stderrSuffix = trimmedStderr.isEmpty ? "" : " stderr=\(trimmedStderr)"
-        return AppError.context(#fileID, #function, "Backend reported issues (exit=\(exitCode)): \(snapshotErr).\(stderrSuffix)")
+        let stderrSuffix = trimmedStderr.isEmpty ? "" : " stderr=\(_truncate(trimmedStderr, maxChars: 240))"
+        return AppError.context(
+            #fileID,
+            #function,
+            "Backend completed with warnings (exit code \(exitCode)). \(fallback)\(stderrSuffix)"
+        )
     }
 
-    private func _failedSectionSummaries(snapshot: Snapshot) -> [String] {
+    private func _failedSectionKeys(snapshot: Snapshot) -> [String] {
         /**
          Summary
-         Extract a compact list of per-section failures from a snapshot payload.
+         Extract section keys that reported collector failures.
 
          Inputs
          snapshot: Snapshot to scan.
 
          Outputs
-         Array of compact failure strings like `power: <message>`.
+         Array of failed section keys.
 
          Side effects
          None.
@@ -893,32 +944,53 @@ public final class DashboardViewModel: ObservableObject {
          None.
 
          Ties to other methods
-         Used by `_backendWarningIfAny` to provide actionable errors instead of a generic `ok=false`.
+         Used by `_backendWarningIfAny` to build concise partial-result warnings.
 
          Why this exists
-         A single failing collector should not hide the reason; the UI needs to show which section failed and why.
+         Users need quick visibility into which sections failed without scanning raw diagnostics.
          */
         var out: [String] = []
         for section in snapshot.sections {
             guard let diagnostics = section.diagnostics else { continue }
             if case let .bool(ok) = diagnostics["ok"], ok == false {
-                let err = if case let .string(error) = diagnostics["error"] {
-                    error.trimmingCharacters(in: .whitespacesAndNewlines)
-                } else {
-                    ""
-                }
-                if err.isEmpty {
-                    out.append("\(section.key): failed")
-                } else {
-                    out.append("\(section.key): \(_truncate(err, maxChars: 120))")
-                }
+                out.append(section.key)
             }
         }
-        if out.count > 4 {
-            let head = Array(out.prefix(4))
-            return head + ["+\(out.count - 4) more"]
-        }
         return out
+    }
+
+    private func _formattedFailedSectionList(_ sectionKeys: [String]) -> String {
+        /**
+         Summary
+         Format failed section keys into a compact human-readable list.
+
+         Inputs
+         sectionKeys: Failed section keys.
+
+         Outputs
+         String suitable for warning banners.
+
+         Side effects
+         None.
+
+         Error handling
+         None.
+
+         Ties to other methods
+         Used by `_backendWarningIfAny` to render stable warning text.
+
+         Why this exists
+         Warnings should stay readable even when many sections fail.
+         */
+        if sectionKeys.isEmpty {
+            return "none"
+        }
+        if sectionKeys.count <= 4 {
+            return sectionKeys.joined(separator: ", ")
+        }
+        let head = sectionKeys.prefix(4).joined(separator: ", ")
+        let remaining = sectionKeys.count - 4
+        return "\(head), and \(remaining) more"
     }
 
     private func _truncate(_ text: String, maxChars: Int) -> String {

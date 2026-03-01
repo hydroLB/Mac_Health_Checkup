@@ -4,7 +4,7 @@ import json
 import unittest
 from typing import cast
 
-from mac_health_checkup.app.backend.snapshot import emit_snapshot_json
+from mac_health_checkup.app.backend import emit_snapshot_json
 from mac_health_checkup.app.gui.sections.types import SectionHost
 from mac_health_checkup.core.types import JsonDict
 

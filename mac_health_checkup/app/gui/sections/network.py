@@ -5,7 +5,7 @@ from typing import Optional
 from mac_health_checkup.app.gui.sections.types import SectionHost
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 from mac_health_checkup.diagnostics.network import NetworkQualityDiagnostics
 
 MODULE_PATH = "mac_health_checkup/app/gui/sections/network.py"

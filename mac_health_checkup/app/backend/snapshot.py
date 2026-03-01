@@ -9,7 +9,7 @@ from mac_health_checkup.app.cli import ConsoleHost
 from mac_health_checkup.app.gui.sections.types import SectionHost
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict, JsonValue
-from mac_health_checkup.core.utils.errors import format_error
+from mac_health_checkup.core.utils import format_error
 
 MODULE_PATH = "mac_health_checkup/app/backend/snapshot.py"
 
@@ -321,7 +321,7 @@ class SnapshotBuilder:
                 ok=ok,
                 error=error_text,
             )
-        except Exception as exc:
+        except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
             return Snapshot(
                 schema_version=2,
                 generated_at_unix_ms=int(time.time() * 1000),
@@ -363,7 +363,7 @@ class SnapshotBuilder:
                 raise TypeError(f"handler for {key} returned non-dict diagnostics")
             diagnostics.setdefault("ok", True)
             return diagnostics
-        except Exception as exc:
+        except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
             return {
                 "ok": False,
                 "error": format_error(MODULE_PATH, "_run_handler", f"Section {key} failed", exc),
@@ -426,7 +426,7 @@ class SnapshotBuilder:
                 table=table,
                 diagnostics=_coerce_json_dict(diag),
             )
-        except Exception as exc:
+        except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
             raise RuntimeError(
                 format_error(
                     MODULE_PATH, "SnapshotBuilder._build_section_payload", "Failed to build section", exc
@@ -487,7 +487,7 @@ class SnapshotBuilder:
                 "scrollable_rows": cfg.gui.scrollable_rows,
             }
             return SnapshotTheme(ui=ui, colors=colors, fonts=fonts, gui=gui)
-        except Exception as exc:
+        except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
             raise RuntimeError(
                 format_error(MODULE_PATH, "SnapshotBuilder._build_theme", "Failed to build theme", exc)
             ) from exc
@@ -518,7 +518,7 @@ class SnapshotBuilder:
         try:
             cfg = get_config()
             return [SnapshotSectionDescriptor(title=t, subtitle=s, key=k) for t, s, k in cfg.gui.section_rows]
-        except Exception as exc:
+        except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
             raise RuntimeError(
                 format_error(
                     MODULE_PATH, "SnapshotBuilder._build_section_catalog", "Failed to build catalog", exc
@@ -553,7 +553,7 @@ def emit_snapshot_json(handlers: Mapping[str, SectionHandler], *, pretty: bool) 
     try:
         snapshot = SnapshotBuilder(handlers).build()
         return (0 if snapshot.ok else 1, snapshot.to_json(pretty=pretty))
-    except Exception as exc:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
         snapshot = Snapshot(
             schema_version=2,
             generated_at_unix_ms=int(time.time() * 1000),
@@ -624,7 +624,7 @@ def emit_section_json(
             error=error_text,
         )
         return (0 if snapshot.ok else 1, snapshot.to_json(pretty=pretty))
-    except Exception as exc:
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError) as exc:
         snapshot = Snapshot(
             schema_version=2,
             generated_at_unix_ms=int(time.time() * 1000),

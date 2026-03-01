@@ -7,7 +7,7 @@ from typing import cast
 
 import pytest
 
-from mac_health_checkup.app.backend.snapshot import (
+from mac_health_checkup.app.backend import (
     Snapshot,
     SnapshotSection,
     SnapshotSectionDescriptor,
@@ -252,6 +252,29 @@ def test_maybe_render_qr_ansiutf8_best_effort(monkeypatch: pytest.MonkeyPatch) -
         )
 
         def _fake_run(*_args: object, **_kwargs: object) -> object:
+            """
+            Summary
+            Execute `_fake_run` for its module-level responsibility.
+
+            Inputs
+            *_args: variadic `object` parameters.
+            **_kwargs: variadic keyword `object` parameters.
+
+            Outputs
+            Returns `object`.
+
+            Side effects
+            None beyond this method boundary.
+
+            Error handling
+            Raises contextual errors from `tests/test_reports_export.py:_fake_run` when this method encounters invalid state or runtime failures.
+
+            Ties to other methods
+            Used by workflows in `tests/test_reports_export.py`.
+
+            Why this exists
+            Keeps `_fake_run` explicit, testable, and maintainable.
+            """
             return SimpleNamespace(returncode=0, stdout="QR", stderr="")
 
         monkeypatch.setattr("mac_health_checkup.core.utils.qr.subprocess.run", _fake_run)
