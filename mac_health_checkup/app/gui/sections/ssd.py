@@ -3,9 +3,7 @@ from __future__ import annotations
 from mac_health_checkup.app.gui.sections.types import SectionHost
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils import fmt_bytes, fmt_percent
-from mac_health_checkup.core.utils import format_error
-from mac_health_checkup.core.utils import health_from_percent
+from mac_health_checkup.core.utils import fmt_bytes, fmt_percent, format_error, health_from_percent
 from mac_health_checkup.diagnostics.ssd import SSDDiagnostics as SSDDiagnostics
 
 MODULE_PATH = "mac_health_checkup/app/gui/sections/ssd.py"

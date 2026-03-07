@@ -8,20 +8,18 @@ from typing import Callable
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
 from mac_health_checkup.core.utils import (
-    fmt_bytes,
-    fmt_percent,
-    fmt_temp_c,
-    fmt_temp_f,
-    safe_float,
-    safe_int,
-)
-from mac_health_checkup.core.utils import format_error
-from mac_health_checkup.core.utils import (
     LogContext,
     LoggingFields,
     StructuredLogger,
     configure_logging_once,
+    fmt_bytes,
+    fmt_percent,
+    fmt_temp_c,
+    fmt_temp_f,
+    format_error,
     new_correlation_id,
+    safe_float,
+    safe_int,
 )
 
 MODULE_PATH = "mac_health_checkup/diagnostics/base.py"

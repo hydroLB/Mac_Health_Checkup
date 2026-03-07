@@ -4,15 +4,16 @@ import re
 
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils import fmt_bytes, fmt_percent
-from mac_health_checkup.core.utils import format_error
-from mac_health_checkup.core.utils import health_from_percent
 from mac_health_checkup.core.utils import (
+    fmt_bytes,
+    fmt_percent,
+    format_error,
+    health_from_percent,
     regex_extract_float,
     regex_extract_int,
     regex_extract_str,
+    safe_run,
 )
-from mac_health_checkup.core.utils import safe_run
 from mac_health_checkup.diagnostics.base import Cache, cached_fetch, get_diagnostics_logger, new_context
 
 MODULE_PATH = "mac_health_checkup/diagnostics/ssd.py"
