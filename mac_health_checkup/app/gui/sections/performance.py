@@ -51,13 +51,6 @@ def update_section(host: SectionHost) -> JsonDict:
                     if hottest_c is None or float(value) > hottest_c:
                         hottest_c = float(value)
                         hottest_label = label
-        if hottest_c is not None:
-            host.set_field("performance", f"Hottest: {hottest_c:.0f}C {hottest_label}".strip())
-        else:
-            guidance = thermals.get("guidance")
-            guidance_text = str(guidance).strip() if isinstance(guidance, str) else ""
-            message = guidance_text if guidance_text else "Thermal sensors unavailable"
-            host.set_field("performance", message)
         cpu_w = power.get("cpu_w")
         gpu_w = power.get("gpu_w")
         ane_w = power.get("ane_w")
@@ -67,9 +60,51 @@ def update_section(host: SectionHost) -> JsonDict:
             rows.append(("GPU Power", f"{gpu_w} W", "info"))
         if ane_w is not None:
             rows.append(("ANE Power", f"{ane_w} W", "info"))
+        if hottest_c is not None:
+            host.set_field("performance", f"Hottest: {hottest_c:.0f}C {hottest_label}".strip())
+        else:
+            power_summary = _power_summary(cpu_w=cpu_w, gpu_w=gpu_w, ane_w=ane_w)
+            host.set_field("performance", power_summary or "Performance data unavailable")
         host.render_metrics_table("performance", rows, columns=2)
         return {"thermals": thermals, "power": power}
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(
             format_error(MODULE_PATH, "update_section", "Failed to update Performance section", exc)
         ) from exc
+
+
+def _power_summary(*, cpu_w: object, gpu_w: object, ane_w: object) -> str:
+    """
+    Summary
+    Build a one-line power summary field from available component power values.
+
+    Inputs
+    cpu_w: Optional CPU watts value.
+    gpu_w: Optional GPU watts value.
+    ane_w: Optional ANE watts value.
+
+    Outputs
+    Summary string or empty string when no usable values exist.
+
+    Side effects
+    None.
+
+    Error handling
+    Never raises; malformed values are ignored.
+
+    Ties to other methods
+    Used by `update_section` when temperature sensors are unavailable.
+
+    Why this exists
+    Keeps the section informative without showing temperature-unavailable warnings.
+    """
+    parts: list[str] = []
+    if isinstance(cpu_w, (int, float)):
+        parts.append(f"CPU {cpu_w} W")
+    if isinstance(gpu_w, (int, float)):
+        parts.append(f"GPU {gpu_w} W")
+    if isinstance(ane_w, (int, float)):
+        parts.append(f"ANE {ane_w} W")
+    if not parts:
+        return ""
+    return "Power: " + " | ".join(parts)

@@ -6,6 +6,7 @@ from mac_health_checkup.core.utils import format_error
 from mac_health_checkup.diagnostics.updates import SoftwareUpdateDiagnostics
 
 MODULE_PATH = "mac_health_checkup/app/gui/sections/updates.py"
+_MAX_UPDATE_ROWS = 5
 
 
 def update_section(host: SectionHost) -> JsonDict:
@@ -33,9 +34,7 @@ def update_section(host: SectionHost) -> JsonDict:
     """
     try:
         data = SoftwareUpdateDiagnostics.fetch()
-        labels = data.get("update_labels")
-        updates = [str(item).strip() for item in labels] if isinstance(labels, list) else []
-        updates = [item for item in updates if item]
+        updates = _coerce_update_items(data)
         count = len(updates)
         available = data.get("updates_available")
         available_bool = bool(available) if isinstance(available, bool) else None
@@ -52,7 +51,7 @@ def update_section(host: SectionHost) -> JsonDict:
         if available_bool is True:
             rows.append(("Updates", f"{count} available", status))
             if count:
-                rows.append(("First", updates[0], "info"))
+                rows.extend(_build_update_rows(updates))
         elif available_bool is False:
             rows.append(("Updates", "Up to date", "ok"))
         else:
@@ -71,3 +70,81 @@ def update_section(host: SectionHost) -> JsonDict:
         raise RuntimeError(
             format_error(MODULE_PATH, "update_section", "Failed to update Updates section", exc)
         ) from exc
+
+
+def _coerce_update_items(data: JsonDict) -> list[tuple[str, str]]:
+    """
+    Summary
+    Normalize update diagnostics into `(label, size)` tuples for section rendering.
+
+    Inputs
+    data: Diagnostics payload from `SoftwareUpdateDiagnostics.fetch`.
+
+    Outputs
+    List of `(label, size)` tuples where `size` may be an empty string.
+
+    Side effects
+    None.
+
+    Error handling
+    Never raises; malformed data is ignored and results in an empty list.
+
+    Ties to other methods
+    Used by `update_section`.
+
+    Why this exists
+    Keeps section rendering resilient while supporting both legacy `update_labels` and new `update_items`.
+    """
+    items: list[tuple[str, str]] = []
+    raw_items = data.get("update_items")
+    if isinstance(raw_items, list):
+        for item in raw_items:
+            if not isinstance(item, dict):
+                continue
+            label = str(item.get("label", "")).strip()
+            size = str(item.get("size", "")).strip()
+            if label:
+                items.append((label, size))
+    if items:
+        return items
+
+    labels = data.get("update_labels")
+    if not isinstance(labels, list):
+        return []
+    return [(str(item).strip(), "") for item in labels if str(item).strip()]
+
+
+def _build_update_rows(updates: list[tuple[str, str]]) -> list[tuple[str, str, str]]:
+    """
+    Summary
+    Build metrics rows for per-update label and size display.
+
+    Inputs
+    updates: Parsed update tuples as `(label, size)`.
+
+    Outputs
+    List of metrics rows for `render_metrics_table`.
+
+    Side effects
+    None.
+
+    Error handling
+    Never raises; malformed rows are skipped.
+
+    Ties to other methods
+    Used by `update_section`.
+
+    Why this exists
+    Explicit rows make update details visible without requiring users to inspect raw command output.
+    """
+    rows: list[tuple[str, str, str]] = []
+    for index, (label, size) in enumerate(updates[:_MAX_UPDATE_ROWS], start=1):
+        normalized_label = str(label).strip()
+        normalized_size = str(size).strip()
+        if not normalized_label:
+            continue
+        value = normalized_label if not normalized_size else f"{normalized_label} ({normalized_size})"
+        rows.append((f"Update {index}", value, "info"))
+    if len(updates) > _MAX_UPDATE_ROWS:
+        rows.append(("More", f"+{len(updates) - _MAX_UPDATE_ROWS} additional updates", "info"))
+    return rows

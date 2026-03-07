@@ -17,7 +17,7 @@ from mac_health_checkup.diagnostics.security import (
     _parse_sip_status,
 )
 from mac_health_checkup.diagnostics.system import _parse_df_root, _parse_memory_pressure
-from mac_health_checkup.diagnostics.updates import _parse_update_labels
+from mac_health_checkup.diagnostics.updates import _parse_update_items, _parse_update_labels
 
 MODULE_PATH = "tests/test_diagnostics_parsing_extended.py"
 
@@ -270,7 +270,7 @@ class SoftwareUpdateParsingTests(unittest.TestCase):
     None.
 
     Outputs
-    Assertions on parsed labels.
+    Assertions on parsed labels and sizes.
 
     Side effects
     None.
@@ -282,7 +282,7 @@ class SoftwareUpdateParsingTests(unittest.TestCase):
     Exercises `_parse_update_labels` in `mac_health_checkup/diagnostics/updates.py`.
 
     Why this exists
-    Update labels are used in reports and diffs; duplicates and noise should be handled deterministically.
+    Update details are used in reports and diffs; duplicates and noise should be handled deterministically.
     """
 
     def test_parse_update_labels_dedupes_and_preserves_order(self) -> None:
@@ -334,6 +334,65 @@ class SoftwareUpdateParsingTests(unittest.TestCase):
         ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:SoftwareUpdateParsingTests.test_parse_update_labels_dedupes_and_preserves_order failed: {exc}"
+            ) from exc
+
+    def test_parse_update_items_extracts_modern_and_legacy_sizes(self) -> None:
+        """
+        Summary
+        Ensure update item parsing captures labels and sizes across common output formats.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        None.
+
+        Error handling
+        Raises AssertionError with context if parsing fails.
+
+        Ties to other methods
+        Exercises `_parse_update_items`.
+
+        Why this exists
+        macOS has changed `softwareupdate` formatting over time, and size parsing should remain stable.
+        """
+        try:
+            raw = "\n".join(
+                [
+                    "Software Update Tool",
+                    "* Label: CommandLineTools-15.3",
+                    "    Title: Command Line Tools for Xcode-15.3, Version: 15.3, Size: 712345KiB, Recommended: YES,",
+                    "* macOS Ventura 13.6.6-22G630",
+                    "    macOS Ventura 13.6.6, 2553796K [recommended] [restart]",
+                    "* label: commandlinetools-15.3",
+                    "    Title: duplicate without size",
+                    "",
+                ]
+            )
+            items = _parse_update_items(raw)
+            self.assertEqual(
+                items,
+                [
+                    {"label": "CommandLineTools-15.3", "size": "712345KiB"},
+                    {"label": "macOS Ventura 13.6.6-22G630", "size": "2553796K"},
+                ],
+            )
+            self.assertEqual(_parse_update_items(""), [])
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
+            raise AssertionError(
+                f"{MODULE_PATH}:SoftwareUpdateParsingTests.test_parse_update_items_extracts_modern_and_legacy_sizes failed: {exc}"
             ) from exc
 
 

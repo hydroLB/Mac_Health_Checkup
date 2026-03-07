@@ -71,9 +71,7 @@ def update_section(host: SectionHost) -> JsonDict:
                 "source": "+".join([s for s in sources if s]) or "unknown",
                 "ok": True,
             }
-        guidance = thermals.get("guidance")
-        guidance_text = str(guidance).strip() if isinstance(guidance, str) else ""
-        host.set_field("fan", guidance_text or "Fan speeds unavailable")
+        host.set_field("fan", "Fan speeds unavailable")
         data["ok"] = False
         return data
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
