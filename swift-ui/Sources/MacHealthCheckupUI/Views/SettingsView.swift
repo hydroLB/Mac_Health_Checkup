@@ -83,7 +83,7 @@ public struct SettingsView: View {
                             .tint(theme.colors.section)
                         }
 
-                        Text("Toggle sections to show or hide them from the sidebar and the overview. Data collection still runs in the background.")
+                        Text("Toggle sections to show or hide them from the sidebar and the overview. Data collection still runs in the background. Sections with unreadable data stay hidden from the main UI until collection succeeds again.")
                             .font(theme.fonts.body)
                             .foregroundStyle(theme.colors.field)
                             .fixedSize(horizontal: false, vertical: true)
@@ -102,6 +102,12 @@ public struct SettingsView: View {
                                     Text(section.subtitle)
                                         .font(theme.fonts.caption)
                                         .foregroundStyle(theme.colors.label)
+                                    if model.isSectionAutomaticallyHidden(key: section.key) {
+                                        Text("Hidden from the main UI because the current data could not be read.")
+                                            .font(theme.fonts.caption)
+                                            .foregroundStyle(theme.colors.warn)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
 
