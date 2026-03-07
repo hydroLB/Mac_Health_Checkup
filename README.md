@@ -95,6 +95,7 @@ make dev
 Environment template:
 
 - `.env.example` documents all supported environment overrides and valid value formats.
+- Set live secrets such as the agent token with `MAC_HEALTH_CHECKUP_API_AUTH_TOKEN` instead of editing committed config.
 - Empty override values are treated as invalid and fail startup immediately with actionable errors.
 
 Deterministic new-contributor flow:
@@ -213,7 +214,7 @@ iOS cannot run macOS collectors locally. Run the Mac agent API and connect from 
 - Set `api.allow_lan` to `true` to allow iPhone access over your LAN
 - By default, LAN mode requires TLS. If you insist on HTTP, set `api.allow_insecure_http_lan` to `true` (not recommended)
 - Set `api.bind_host` to `0.0.0.0` to listen on all interfaces (keep `127.0.0.1` if you only want local access)
-- Set `api.auth_token` to a strong random value
+- Keep `api.auth_token` as a placeholder in Git and export `MAC_HEALTH_CHECKUP_API_AUTH_TOKEN` with a strong random value before starting the server
 
 2) Start the server:
 

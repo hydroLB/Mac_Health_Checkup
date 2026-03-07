@@ -234,6 +234,7 @@ def test_build_startup_config_validation_report_lists_active_env_overrides(
     Startup observability should prove which env overrides were active when config validation succeeded.
     """
     try:
+        monkeypatch.setenv("MAC_HEALTH_CHECKUP_API_AUTH_TOKEN", "runtime-token-abcdefghijklmnopqrstuvwxyz")
         monkeypatch.setenv("MAC_HEALTH_CHECKUP_API_PORT", "0")
         monkeypatch.setenv("MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL", "https://example.test:7878")
         reset_config_cache()
@@ -242,8 +243,10 @@ def test_build_startup_config_validation_report_lists_active_env_overrides(
         payload = report.to_log_payload()
         env_overrides = payload.get("env_overrides")
         assert isinstance(env_overrides, list)
+        assert "MAC_HEALTH_CHECKUP_API_AUTH_TOKEN" in env_overrides
         assert "MAC_HEALTH_CHECKUP_API_PORT" in env_overrides
         assert "MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL" in env_overrides
+        assert cfg.api.auth_token == "runtime-token-abcdefghijklmnopqrstuvwxyz"
         assert payload["api_enabled"] == cfg.api.enabled
         assert payload["api_bind_host"] == cfg.api.bind_host
         assert payload["api_port"] == cfg.api.port
@@ -367,6 +370,48 @@ def test_parse_api_bind_host_env_override_applies(monkeypatch: pytest.MonkeyPatc
         OSError,
     ) as exc:
         raise AssertionError(f"{MODULE_PATH}:test_parse_api_bind_host_env_override_applies failed: {exc}") from exc
+
+
+def test_parse_api_auth_token_env_override_applies(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Summary
+    Verify `MAC_HEALTH_CHECKUP_API_AUTH_TOKEN` overrides config token parsing.
+
+    Inputs
+    Monkeypatched auth-token env var and raw API config.
+
+    Outputs
+    Assertion on parsed `auth_token`.
+
+    Side effects
+    Updates process environment during test execution.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `parse_api` secret-friendly environment override logic.
+
+    Why this exists
+    Production tokens should come from runtime secret injection rather than committed config files.
+    """
+    try:
+        monkeypatch.setenv("MAC_HEALTH_CHECKUP_API_AUTH_TOKEN", "runtime-token-abcdefghijklmnopqrstuvwxyz")
+        monkeypatch.delenv("MAC_HEALTH_CHECKUP_API_BIND_HOST", raising=False)
+        monkeypatch.delenv("MAC_HEALTH_CHECKUP_API_PORT", raising=False)
+        parsed = parse_api(_raw_with_api(auth_token="change-me"))
+        assert parsed.auth_token == "runtime-token-abcdefghijklmnopqrstuvwxyz"
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
+        raise AssertionError(f"{MODULE_PATH}:test_parse_api_auth_token_env_override_applies failed: {exc}") from exc
 
 
 def test_parse_api_invalid_port_env_override_raises_runtime_error(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -497,6 +542,53 @@ def test_parse_api_empty_port_env_override_raises_runtime_error(monkeypatch: pyt
     ) as exc:
         raise AssertionError(
             f"{MODULE_PATH}:test_parse_api_empty_port_env_override_raises_runtime_error failed: {exc}"
+        ) from exc
+
+
+def test_parse_api_empty_auth_token_env_override_raises_runtime_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Summary
+    Verify empty auth-token env override fails fast with an actionable error.
+
+    Inputs
+    Empty `MAC_HEALTH_CHECKUP_API_AUTH_TOKEN` value.
+
+    Outputs
+    Assertion that `parse_api` raises `RuntimeError`.
+
+    Side effects
+    Updates process environment during test execution.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `parse_api` strict secret override validation.
+
+    Why this exists
+    Secret injection mistakes should fail closed instead of silently falling back to insecure defaults.
+    """
+    try:
+        monkeypatch.delenv("MAC_HEALTH_CHECKUP_API_BIND_HOST", raising=False)
+        monkeypatch.delenv("MAC_HEALTH_CHECKUP_API_PORT", raising=False)
+        monkeypatch.setenv("MAC_HEALTH_CHECKUP_API_AUTH_TOKEN", "   ")
+        with pytest.raises(RuntimeError) as exc_info:
+            parse_api(_raw_with_api())
+        assert "MAC_HEALTH_CHECKUP_API_AUTH_TOKEN is set but empty" in str(exc_info.value)
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
+        raise AssertionError(
+            f"{MODULE_PATH}:test_parse_api_empty_auth_token_env_override_raises_runtime_error failed: {exc}"
         ) from exc
 
 

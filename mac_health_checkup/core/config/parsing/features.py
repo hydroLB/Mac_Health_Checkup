@@ -74,6 +74,17 @@ def parse_api(raw: JsonDict) -> ApiConfig:
                     f"Invalid MAC_HEALTH_CHECKUP_API_PORT override: {port_override!r} (expected 0-65535)"
                 ) from exc
 
+        auth_token = require_str(section.get("auth_token"))
+        auth_token_override = os.getenv("MAC_HEALTH_CHECKUP_API_AUTH_TOKEN")
+        if auth_token_override is not None:
+            auth_token_override_stripped = auth_token_override.strip()
+            if not auth_token_override_stripped:
+                raise ValueError(
+                    "MAC_HEALTH_CHECKUP_API_AUTH_TOKEN is set but empty. "
+                    "Set it to a non-empty token value or unset the variable."
+                )
+            auth_token = require_str(auth_token_override_stripped)
+
         return ApiConfig(
             enabled=require_bool(section.get("enabled")),
             bind_host=bind_host,
@@ -83,7 +94,7 @@ def parse_api(raw: JsonDict) -> ApiConfig:
             tls_enabled=require_bool(section.get("tls_enabled")),
             tls_cert_path=require_str(section.get("tls_cert_path")),
             tls_key_path=require_str(section.get("tls_key_path")),
-            auth_token=require_str(section.get("auth_token")),
+            auth_token=auth_token,
             min_auth_token_length=require_int(1, 256)(section.get("min_auth_token_length")),
             blocked_auth_tokens=_require_list_str_default(section.get("blocked_auth_tokens"), default=[]),
             rate_limit_requests_per_minute=require_int(1, 10_000)(

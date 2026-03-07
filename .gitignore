@@ -6,6 +6,7 @@ Thumbs.db
 Desktop.ini
 .idea/
 .vscode/
+.codex/
 *.iml
 *.swp
 *.swo
