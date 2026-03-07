@@ -4,13 +4,21 @@ import re
 
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils import format_error
-from mac_health_checkup.core.utils import safe_run
+from mac_health_checkup.core.utils import format_error, safe_run
 from mac_health_checkup.diagnostics.base import Cache, cached_fetch, get_diagnostics_logger, new_context
 
 MODULE_PATH = "mac_health_checkup/diagnostics/updates.py"
 
 _UPDATE_LINE_RE = re.compile(r"^\s*\*\s+(.+?)\s*$")
+_LABEL_PREFIX_RE = re.compile(r"^label:\s*(.+)$", re.IGNORECASE)
+_SIZE_FIELD_RE = re.compile(
+    r"\bsize:\s*([0-9][0-9,]*(?:\.[0-9]+)?\s*(?:[kmgtp]?i?b|[kmgtp]?b|k))\b",
+    re.IGNORECASE,
+)
+_LEGACY_SIZE_RE = re.compile(
+    r"(?:^|,\s*)([0-9][0-9,]*(?:\.[0-9]+)?\s*(?:[kmgtp]?i?b|[kmgtp]?b|k))(?:\s|$|\[)",
+    re.IGNORECASE,
+)
 
 
 class SoftwareUpdateDiagnostics:
@@ -22,7 +30,7 @@ class SoftwareUpdateDiagnostics:
     None.
 
     Outputs
-    Dict with whether updates are available and a list of update labels.
+    Dict with whether updates are available, update labels, and parsed update entries with optional sizes.
 
     Side effects
     Executes `softwareupdate --list`.
@@ -108,6 +116,7 @@ class SoftwareUpdateDiagnostics:
                 timeout=timeout,
             )
             text = out or ""
+            update_items = _parse_update_items(text)
             labels = _parse_update_labels(text)
             no_updates = "no new software available" in text.lower()
             available = bool(labels) or (not no_updates and bool(text.strip()))
@@ -123,6 +132,7 @@ class SoftwareUpdateDiagnostics:
                 "ok": ok,
                 "updates_available": available if ok else None,
                 "update_labels": labels,
+                "update_items": update_items,
                 "raw": text,
                 "error": err or "",
             }
@@ -167,21 +177,141 @@ def _parse_update_labels(text: str) -> list[str]:
     Why this exists
     Update output is unstructured and contains extra guidance lines; labels are the most useful shareable summary.
     """
-    labels: list[str] = []
-    for line in (text or "").splitlines():
-        match = _UPDATE_LINE_RE.match(line)
-        if not match:
+    return [str(item.get("label", "")).strip() for item in _parse_update_items(text) if str(item.get("label", "")).strip()]
+
+
+def _parse_update_items(text: str) -> list[JsonDict]:
+    """
+    Summary
+    Parse update labels and optional package sizes from `softwareupdate --list` output.
+
+    Inputs
+    text: Raw command output.
+
+    Outputs
+    List of update entries with `label` and optional `size`.
+
+    Side effects
+    None.
+
+    Error handling
+    Never raises; returns an empty list on malformed input.
+
+    Ties to other methods
+    Used by `_parse_update_labels` and `SoftwareUpdateDiagnostics._fetch_uncached`.
+
+    Why this exists
+    Users need concrete package-level update information, including size when available.
+    """
+    parsed_items: list[tuple[str, str]] = []
+    current_label = ""
+    current_size = ""
+
+    for raw_line in (text or "").splitlines():
+        match = _UPDATE_LINE_RE.match(raw_line)
+        if match:
+            if current_label:
+                parsed_items.append((current_label, current_size))
+            current_label = _normalize_update_label(match.group(1))
+            current_size = _extract_size_value(match.group(1)) or ""
             continue
-        label = match.group(1).strip()
-        if label:
-            labels.append(label)
-    # Preserve order but remove duplicates.
-    seen: set[str] = set()
-    unique: list[str] = []
-    for item in labels:
-        lowered = item.lower()
-        if lowered in seen:
+
+        if not current_label:
             continue
-        seen.add(lowered)
-        unique.append(item)
-    return unique
+
+        discovered_size = _extract_size_value(raw_line)
+        if discovered_size:
+            current_size = discovered_size
+
+    if current_label:
+        parsed_items.append((current_label, current_size))
+
+    deduped: list[JsonDict] = []
+    seen: dict[str, int] = {}
+    for label, size in parsed_items:
+        normalized_label = label.strip()
+        if not normalized_label:
+            continue
+        key = normalized_label.lower()
+        if key in seen:
+            existing_index = seen[key]
+            existing_size = str(deduped[existing_index].get("size", "")).strip()
+            if (not existing_size) and size.strip():
+                deduped[existing_index]["size"] = size.strip()
+            continue
+        seen[key] = len(deduped)
+        entry: JsonDict = {"label": normalized_label}
+        if size.strip():
+            entry["size"] = size.strip()
+        deduped.append(entry)
+    return deduped
+
+
+def _normalize_update_label(value: str) -> str:
+    """
+    Summary
+    Normalize a raw update label by removing common output prefixes.
+
+    Inputs
+    value: Raw label text from a bullet line.
+
+    Outputs
+    Normalized label string.
+
+    Side effects
+    None.
+
+    Error handling
+    Never raises; returns an empty string for malformed input.
+
+    Ties to other methods
+    Used by `_parse_update_items`.
+
+    Why this exists
+    Modern `softwareupdate` output prefixes labels with `Label:`, while older output does not.
+    """
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    match = _LABEL_PREFIX_RE.match(raw)
+    if match:
+        return match.group(1).strip()
+    return raw
+
+
+def _extract_size_value(value: str) -> str | None:
+    """
+    Summary
+    Extract a package size token from a raw output line.
+
+    Inputs
+    value: Raw line text from `softwareupdate --list`.
+
+    Outputs
+    Size token string when found, otherwise `None`.
+
+    Side effects
+    None.
+
+    Error handling
+    Never raises; returns `None` when no size token is present.
+
+    Ties to other methods
+    Used by `_parse_update_items`.
+
+    Why this exists
+    `softwareupdate` has at least two common formats for size output and both should parse.
+    """
+    text = (value or "").strip()
+    if not text:
+        return None
+
+    modern_match = _SIZE_FIELD_RE.search(text)
+    if modern_match:
+        return re.sub(r"\s+", "", modern_match.group(1))
+
+    legacy_match = _LEGACY_SIZE_RE.search(text)
+    if legacy_match:
+        return re.sub(r"\s+", "", legacy_match.group(1))
+
+    return None

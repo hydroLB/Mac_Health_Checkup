@@ -71,9 +71,7 @@ def _iter_python_files(roots: list[Path]) -> list[Path]:
         unique_files = sorted(set(files))
         return unique_files
     except (RuntimeError, ValueError, TypeError, OSError) as exc:
-        raise RuntimeError(
-            f"{MODULE_PATH}:_iter_python_files failed: {exc}"
-        ) from exc
+        raise RuntimeError(f"{MODULE_PATH}:_iter_python_files failed: {exc}") from exc
 
 
 def _scan_file(path: Path) -> list[Finding]:
@@ -149,13 +147,13 @@ def _scan_deprecated_labels(path: Path, text: str) -> list[Finding]:
                 line = text.count("\n", 0, match.start()) + 1
                 raw_line = lines[line - 1] if line - 1 < len(lines) else ""
                 findings.append(
-                    Finding(path=path, line=line, kind="deprecated_label", text=f"{label} ({raw_line.strip()})")
+                    Finding(
+                        path=path, line=line, kind="deprecated_label", text=f"{label} ({raw_line.strip()})"
+                    )
                 )
         return findings
     except (RuntimeError, ValueError, TypeError, OSError) as exc:
-        raise RuntimeError(
-            f"{MODULE_PATH}:_scan_deprecated_labels failed for {path}: {exc}"
-        ) from exc
+        raise RuntimeError(f"{MODULE_PATH}:_scan_deprecated_labels failed for {path}: {exc}") from exc
 
 
 def _scan_function_docstrings(path: Path, text: str) -> list[Finding]:
@@ -240,9 +238,7 @@ def _scan_function_docstrings(path: Path, text: str) -> list[Finding]:
                 )
         return findings
     except (RuntimeError, ValueError, TypeError, OSError) as exc:
-        raise RuntimeError(
-            f"{MODULE_PATH}:_scan_function_docstrings failed for {path}: {exc}"
-        ) from exc
+        raise RuntimeError(f"{MODULE_PATH}:_scan_function_docstrings failed for {path}: {exc}") from exc
 
 
 def main(argv: list[str] | None = None) -> int:

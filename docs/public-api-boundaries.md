@@ -27,6 +27,7 @@ The following modules are implementation details and are not approved for cross-
 - `mac_health_checkup.app.backend.security.auth`
 - `mac_health_checkup.app.backend.security.throttling`
 - `mac_health_checkup.app.backend.security.validation`
+- `mac_health_checkup.app.entrypoint_support.*`
 - `mac_health_checkup.core.config.models.*`
 - `mac_health_checkup.core.config.parsing.*`
 - `mac_health_checkup.core.config.validation.*`

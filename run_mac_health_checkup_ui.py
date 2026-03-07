@@ -40,10 +40,76 @@ def _parse_args() -> argparse.Namespace:
     """
     try:
         parser = argparse.ArgumentParser(description="Launch the native macOS SwiftUI UI (one-click).")
+        parser.add_argument("--config", dest="config_path", help="Override config/config.json for the SwiftUI app.")
+        parser.add_argument("--repo-root", dest="repo_root", help="Override the repository root for the SwiftUI app.")
+        parser.add_argument("--python", dest="python_path", help="Override the Python executable for the backend.")
         # Preserve existing behavior of ignoring unknown flags while still supporting `--help`.
         return parser.parse_known_args()[0]
     except (RuntimeError, ValueError, TypeError) as exc:
         raise RuntimeError(format_error(MODULE_PATH, "_parse_args", "Failed to parse args", exc)) from exc
+
+
+def _build_swift_app_args(*, args: argparse.Namespace, repo_root: Path, env: dict[str, str]) -> str:
+    """
+    Summary
+    Build the `SWIFT_APP_ARGS` string for the native SwiftUI launcher.
+
+    Inputs
+    args: Parsed CLI arguments from `_parse_args`.
+    repo_root: Default repository root when no override is supplied.
+    env: Current process environment for override lookups.
+
+    Outputs
+    Shell-escaped argument string for the Makefile `swift-run` target.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with a location-tagged message when overrides are invalid or point to missing files.
+
+    Ties to other methods
+    Used by `main` before delegating to `_run_make_swift_run_with_retry`.
+
+    Why this exists
+    The Python launcher should honor explicit config and repo overrides so QA, automation, and recovery flows can
+    launch the same native app against disposable state without editing repository files.
+    """
+    try:
+        if raw_existing := str(env.get("SWIFT_APP_ARGS", "")).strip():
+            return raw_existing
+
+        repo_root_value = str(args.repo_root or env.get("MAC_HEALTH_CHECKUP_REPO_ROOT") or repo_root).strip()
+        if not repo_root_value:
+            raise ValueError("Repository root override resolved to an empty string")
+        resolved_repo_root = Path(repo_root_value).expanduser().resolve()
+        if not resolved_repo_root.is_dir():
+            raise ValueError(f"Repository root not found: {resolved_repo_root}")
+
+        config_value = str(
+            args.config_path
+            or env.get("MAC_HEALTH_CHECKUP_CONFIG")
+            or resolved_repo_root / "config" / "config.json"
+        ).strip()
+        if not config_value:
+            raise ValueError("Config override resolved to an empty string")
+        resolved_config_path = Path(config_value).expanduser().resolve()
+        if not resolved_config_path.is_file():
+            raise ValueError(f"Missing config file: {resolved_config_path}")
+
+        argv = [
+            "--repo-root",
+            str(resolved_repo_root),
+            "--config",
+            str(resolved_config_path),
+        ]
+        if python_override := str(args.python_path or "").strip():
+            argv.extend(["--python", python_override])
+        return shlex.join(argv)
+    except (RuntimeError, ValueError, TypeError, OSError) as exc:
+        raise RuntimeError(
+            format_error(MODULE_PATH, "_build_swift_app_args", "Failed to build Swift app args", exc)
+        ) from exc
 
 
 def _should_clean_swiftpm_cache(combined_output: str) -> bool:
@@ -266,11 +332,8 @@ def main() -> int:
     Keeps "press Run" ergonomics while ensuring the SwiftUI app always receives the correct repo root and config path.
     """
     try:
-        _parse_args()
+        args = _parse_args()
         repo_root = Path(__file__).resolve().parent
-        config_path = repo_root / "config" / "config.json"
-        if not config_path.is_file():
-            raise ValueError(f"Missing config file: {config_path}")
 
         if which("make") is None:
             raise RuntimeError(
@@ -283,9 +346,7 @@ def main() -> int:
 
         env = dict(os.environ)
         if "SWIFT_APP_ARGS" not in env:
-            repo_arg = shlex.quote(str(repo_root))
-            config_arg = shlex.quote(str(config_path))
-            env["SWIFT_APP_ARGS"] = f"--repo-root {repo_arg} --config {config_arg}"
+            env["SWIFT_APP_ARGS"] = _build_swift_app_args(args=args, repo_root=repo_root, env=env)
 
         return int(_run_make_swift_run_with_retry(repo_root=repo_root, env=env))
     except (RuntimeError, ValueError, TypeError, OSError) as exc:

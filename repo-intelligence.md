@@ -286,7 +286,8 @@ tools/gui_visual_regression.py
 
 3. `mac_health_checkup/app/*`
 - Orchestration and interfaces:
-- `app/entrypoint.py` mode router (GUI, CLI, snapshot JSON, API server, export/diff).
+- `app/entrypoint.py` mode router and compatibility facade for GUI, CLI, snapshot JSON, API server, and export/diff flows.
+- `app/entrypoint_support/*` internal helpers for argument parsing, mode exports, section execution, output formatting, and URL validation.
 - `app/gui/*` Tk UI composition and render sections.
 - `app/backend/*` snapshot builder, HTTP handler/server, auth/rate-limit/TLS.
 - `app/reports/*` export and diff rendering.
