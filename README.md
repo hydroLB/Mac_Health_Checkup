@@ -97,6 +97,7 @@ Environment template:
 - `.env.example` documents all supported environment overrides and valid value formats.
 - Set live secrets such as the agent token with `MAC_HEALTH_CHECKUP_API_AUTH_TOKEN` instead of editing committed config.
 - Empty override values are treated as invalid and fail startup immediately with actionable errors.
+- `make repo-hygiene` rejects tracked local state, secret-like artifacts, and missing recovery-critical files before push.
 
 Deterministic new-contributor flow:
 

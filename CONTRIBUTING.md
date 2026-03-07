@@ -41,6 +41,7 @@ make check
 ```
 
 `make check` is the single required quality gate command for local and CI validation.
+`make repo-hygiene` is included in that gate and blocks tracked caches, tracked local machine state, tracked secret material, and missing recovery/bootstrap files.
 
 ## Branch and PR workflow
 
@@ -55,6 +56,7 @@ make check
 - Use imperative, concise commit subjects.
 - Prefer one logical change per commit.
 - Do not commit secrets, local caches, or generated noise.
+- Keep GitHub recovery-ready: if the local machine disappeared, the tracked repo should still contain everything needed for `make setup` and `./start`.
 
 ## Dependency updates
 
