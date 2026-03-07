@@ -139,6 +139,118 @@ final class DashboardErrorPresentationTests: XCTestCase {
     }
 
     @MainActor
+    func testVisibleSectionsHideUnreadableCollectorsUntilSettings() async throws {
+        /**
+         Summary
+         Ensure sections with unreadable collector output are omitted from the primary UI while remaining in settings metadata.
+
+         Inputs
+         None.
+
+         Outputs
+         None.
+
+         Side effects
+         Updates `DashboardViewModel` published state.
+
+         Error handling
+         Fails via XCTest assertions when unreadable sections remain visible.
+
+         Ties to other methods
+         Exercises `DashboardViewModel.visibleSections`, `sidebarSections`, and `isSectionAutomaticallyHidden`.
+
+         Why this exists
+         The main UI should stay focused on readable data while Settings remains the recovery path for unavailable collectors.
+         */
+        let snapshot = try _decodeSnapshot(
+            _snapshotJSON(
+                ok: false,
+                sectionsJSON: """
+                [
+                  { "key": "fan", "field": "Fan speeds unavailable", "metrics": null, "table": null, "diagnostics": { "ok": false, "error": "IOKit/CoreFoundation unavailable" } },
+                  { "key": "battery", "field": "Battery nominal", "metrics": [["Health", "Normal", "ok"]], "table": null, "diagnostics": { "ok": true } }
+                ]
+                """
+            )
+        )
+        let backend = StaticSnapshotBackend(
+            response: BackendSnapshotResponse(snapshot: snapshot, exitCode: 0, stderr: "", rawJSON: nil)
+        )
+        let model = DashboardViewModel(
+            backend: backend,
+            sections: [
+                SectionDescriptor(title: "Fan", subtitle: "Cooling", key: "fan"),
+                SectionDescriptor(title: "Battery", subtitle: "Power health", key: "battery"),
+            ],
+            refreshIntervalMs: 1_000,
+            fanRefreshIntervalMs: 1_000,
+            scrollableRows: [:],
+            initialTheme: Theme.fallback(appTitle: "Mac Health Checkup"),
+            appTitle: "Mac Health Checkup"
+        )
+
+        await model.refreshOnce()
+
+        XCTAssertEqual(model.visibleSections.map(\.key), ["battery"])
+        XCTAssertEqual(model.sidebarSections.map(\.key), [DashboardViewModel.overviewKey, "battery"])
+        XCTAssertTrue(model.isSectionAutomaticallyHidden(key: "fan"))
+        XCTAssertEqual(model.sections.map(\.key), ["fan", "battery"])
+    }
+
+    @MainActor
+    func testRefreshFallsBackToOverviewWhenSelectedSectionBecomesUnreadable() async throws {
+        /**
+         Summary
+         Ensure the detail selection resets when the chosen section becomes unreadable and hidden from the main UI.
+
+         Inputs
+         None.
+
+         Outputs
+         None.
+
+         Side effects
+         Updates `DashboardViewModel.selectedSectionKey`.
+
+         Error handling
+         Fails via XCTest assertions when selection remains pointed at a hidden section.
+
+         Ties to other methods
+         Exercises `DashboardViewModel.refreshOnce` and selection normalization.
+
+         Why this exists
+         The detail pane should not stay on a destination that disappears from navigation after refresh.
+         */
+        let snapshot = try _decodeSnapshot(
+            _snapshotJSON(
+                ok: false,
+                sectionsJSON: """
+                [
+                  { "key": "fan", "field": "Fan speeds unavailable", "metrics": null, "table": null, "diagnostics": { "ok": false, "error": "IOKit/CoreFoundation unavailable" } }
+                ]
+                """
+            )
+        )
+        let backend = StaticSnapshotBackend(
+            response: BackendSnapshotResponse(snapshot: snapshot, exitCode: 0, stderr: "", rawJSON: nil)
+        )
+        let model = DashboardViewModel(
+            backend: backend,
+            sections: [SectionDescriptor(title: "Fan", subtitle: "Cooling", key: "fan")],
+            refreshIntervalMs: 1_000,
+            fanRefreshIntervalMs: 1_000,
+            scrollableRows: [:],
+            initialTheme: Theme.fallback(appTitle: "Mac Health Checkup"),
+            appTitle: "Mac Health Checkup"
+        )
+        model.selectedSectionKey = "fan"
+
+        await model.refreshOnce()
+
+        XCTAssertEqual(model.selectedSectionKey, DashboardViewModel.overviewKey)
+    }
+
+    @MainActor
     func testSectionSummaryTextUsesConcreteSystemMetrics() async throws {
         /**
          Summary

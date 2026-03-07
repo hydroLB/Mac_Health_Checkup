@@ -1102,3 +1102,7 @@ def _finish_mode(shutdown: ShutdownManager, code: int) -> int:
     """
     shutdown.trigger_shutdown()
     return code
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

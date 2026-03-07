@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 from dataclasses import replace
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -13,6 +15,59 @@ from mac_health_checkup.app.cli import ConsoleHost
 from mac_health_checkup.core.config import get_config
 
 MODULE_PATH = "tests/test_entrypoint_cli_serve.py"
+
+
+def test_module_execution_prints_help_text() -> None:
+    """
+    Summary
+    Ensure module execution via `python -m` invokes `main` and emits argparse help text.
+
+    Inputs
+    None.
+
+    Outputs
+    None.
+
+    Side effects
+    Launches a short-lived subprocess for module execution.
+
+    Error handling
+    Raises `AssertionError` with module and method context when execution fails or emits empty help output.
+
+    Ties to other methods
+    Validates the `if __name__ == "__main__"` execution path in `mac_health_checkup.app.entrypoint`.
+
+    Why this exists
+    Without the module execution guard, CLI invocations can silently no-op while still returning success.
+    """
+    try:
+        repo_root = Path(__file__).resolve().parents[1]
+        env = os.environ.copy()
+        existing_pythonpath = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = str(repo_root) if not existing_pythonpath else f"{repo_root}:{existing_pythonpath}"
+
+        completed = subprocess.run(
+            [sys.executable, "-m", "mac_health_checkup.app.entrypoint", "--help"],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=repo_root,
+        )
+        assert completed.returncode == 0
+        assert "Run Mac Health Checkup." in completed.stdout
+        assert "--snapshot-json" in completed.stdout
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
+        raise AssertionError(f"{MODULE_PATH}:test_module_execution_prints_help_text failed: {exc}") from exc
 
 
 def test_main_cli_advice_and_fail_on(

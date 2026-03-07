@@ -179,7 +179,7 @@ public final class DashboardViewModel: ObservableObject {
          Why this exists
          Centralizes filtering so both navigation and overview remain consistent.
          */
-        sections.filter { !visibilityStore.isHidden(key: $0.key) }
+        sections.filter { !_isSectionHiddenFromPrimaryUI(key: $0.key) }
     }
 
     public func setSectionHidden(_ hidden: Bool, key: String) {
@@ -205,12 +205,10 @@ public final class DashboardViewModel: ObservableObject {
 
          Why this exists
          Hiding the currently selected section should not leave the UI stuck on an invisible destination.
-         */
+        */
         visibilityStore.setHidden(hidden, key: key)
         objectWillChange.send()
-        if hidden, selectedSectionKey == key {
-            selectedSectionKey = Self.overviewKey
-        }
+        _normalizeSelectedSection()
     }
 
     public func resetSectionVisibility() {
@@ -235,9 +233,36 @@ public final class DashboardViewModel: ObservableObject {
 
          Why this exists
          Provides an idiot-proof way to recover when too many sections are hidden.
-         */
+        */
         visibilityStore.reset()
         objectWillChange.send()
+        _normalizeSelectedSection()
+    }
+
+    public func isSectionAutomaticallyHidden(key: String) -> Bool {
+        /**
+         Summary
+         Report whether a section is currently hidden because its data could not be read.
+
+         Inputs
+         key: Section key to evaluate.
+
+         Outputs
+         True when the latest payload indicates an availability or access failure.
+
+         Side effects
+         None.
+
+         Error handling
+         None.
+
+         Ties to other methods
+         Used by `SettingsView` and `visibleSections`.
+
+         Why this exists
+         Settings should explain why a section is absent from the main UI without duplicating diagnostics heuristics.
+         */
+        _isSectionAutomaticallyHidden(key: key)
     }
 
     public var refreshStatusText: String? {
@@ -420,6 +445,7 @@ public final class DashboardViewModel: ObservableObject {
             lastError = _backendWarningIfAny(exitCode: response.exitCode, snapshot: response.snapshot, stderr: response.stderr)
             _writeSnapshotCacheIfPossible(rawJSON: response.rawJSON)
             history?.recordSnapshot(response.snapshot)
+            _normalizeSelectedSection()
         } catch let error as AppError {
             if _isCancellationError(error) { return }
             lastError = error
@@ -786,12 +812,7 @@ public final class DashboardViewModel: ObservableObject {
             SectionDescriptor(title: item.title, subtitle: item.subtitle, key: item.key)
         }
         sections = newSections
-        if let selected = selectedSectionKey,
-           selected != Self.overviewKey,
-           !newSections.contains(where: { $0.key == selected })
-        {
-            selectedSectionKey = Self.overviewKey
-        }
+        _normalizeSelectedSection()
     }
 
     public func sectionHealth(for key: String) -> SectionHealth {
@@ -821,6 +842,98 @@ public final class DashboardViewModel: ObservableObject {
             return .unknown
         }
         return SectionHealth.fromSnapshotSection(payload)
+    }
+
+    private func _isSectionHiddenFromPrimaryUI(key: String) -> Bool {
+        /**
+         Summary
+         Decide whether a section should be omitted from sidebar and overview rendering.
+
+         Inputs
+         key: Section key to evaluate.
+
+         Outputs
+         True when the section is manually hidden or currently unreadable.
+
+         Side effects
+         None.
+
+         Error handling
+         None.
+
+         Ties to other methods
+         Used by `visibleSections` and selection normalization.
+
+         Why this exists
+         Primary UI filtering needs one consistent rule for manual visibility preferences and unreadable collector output.
+         */
+        visibilityStore.isHidden(key: key) || _isSectionAutomaticallyHidden(key: key)
+    }
+
+    private func _isSectionAutomaticallyHidden(key: String) -> Bool {
+        /**
+         Summary
+         Decide whether a section is unreadable and should be hidden automatically.
+
+         Inputs
+         key: Section key to evaluate.
+
+         Outputs
+         True when the latest section payload represents an unavailable or inaccessible collector.
+
+         Side effects
+         None.
+
+         Error handling
+         None.
+
+         Ties to other methods
+         Used by `isSectionAutomaticallyHidden` and `_isSectionHiddenFromPrimaryUI`.
+
+         Why this exists
+         Keeps the unreadable-section rule centralized and aligned with section health heuristics.
+         */
+        guard let payload = sectionPayload(for: key) else {
+            return false
+        }
+        return SectionHealth.shouldAutoHideFromPrimaryUI(payload)
+    }
+
+    private func _normalizeSelectedSection() {
+        /**
+         Summary
+         Keep the selected section aligned with the current visible section set.
+
+         Inputs
+         None.
+
+         Outputs
+         None.
+
+         Side effects
+         May change `selectedSectionKey`.
+
+         Error handling
+         None.
+
+         Ties to other methods
+         Used after refreshes, catalog updates, and visibility changes.
+
+         Why this exists
+         The detail pane should never point at a section that is missing from the main UI.
+         */
+        guard let selected = selectedSectionKey,
+              selected != Self.overviewKey
+        else {
+            return
+        }
+        guard sections.contains(where: { $0.key == selected }) else {
+            selectedSectionKey = Self.overviewKey
+            return
+        }
+        if _isSectionHiddenFromPrimaryUI(key: selected) {
+            selectedSectionKey = Self.overviewKey
+        }
     }
 
     func historyPoints(sectionKey: String, metricLabel: String) -> [MetricHistoryStore.Point] {

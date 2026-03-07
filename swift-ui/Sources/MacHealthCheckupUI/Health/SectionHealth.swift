@@ -157,6 +157,38 @@ public enum SectionHealth: String, Sendable {
         return .unknown
     }
 
+    public static func shouldAutoHideFromPrimaryUI(_ section: SnapshotSection) -> Bool {
+        /**
+         Summary
+         Decide whether a section should be hidden from the primary UI because its data could not be read.
+
+         Inputs
+         section: Snapshot section.
+
+         Outputs
+         True when the section represents an availability or access failure rather than readable content.
+
+         Side effects
+         None.
+
+         Error handling
+         None.
+
+         Ties to other methods
+         Used by `DashboardViewModel.visibleSections` and settings messaging.
+
+         Why this exists
+         Read failures should not clutter the main UI, but users still need to find the section from Settings.
+         */
+        guard let diagnostics = section.diagnostics,
+              case let .bool(ok) = diagnostics["ok"],
+              ok == false
+        else {
+            return false
+        }
+        return _shouldTreatFailedDiagnosticsAsUnknown(diagnostics: diagnostics)
+    }
+
     private static func _shouldTreatFailedDiagnosticsAsUnknown(diagnostics: [String: JSONValue]) -> Bool {
         /**
          Summary
