@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils import format_error
-from mac_health_checkup.core.utils import safe_run, system_profiler_out
+from mac_health_checkup.core.utils import format_error, safe_run, system_profiler_out
 from mac_health_checkup.diagnostics.base import Cache, cached_fetch, get_diagnostics_logger, new_context
 
 MODULE_PATH = "mac_health_checkup/diagnostics/display.py"

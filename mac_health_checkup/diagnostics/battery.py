@@ -4,11 +4,15 @@ from dataclasses import dataclass
 
 from mac_health_checkup.core.config import get_config
 from mac_health_checkup.core.types import JsonDict
-from mac_health_checkup.core.utils import fmt_percent, fmt_temp_c, safe_int
-from mac_health_checkup.core.utils import format_error
-from mac_health_checkup.core.utils import health_from_percent
-from mac_health_checkup.core.utils import regex_extract_int
-from mac_health_checkup.core.utils import safe_run
+from mac_health_checkup.core.utils import (
+    fmt_percent,
+    fmt_temp_c,
+    format_error,
+    health_from_percent,
+    regex_extract_int,
+    safe_int,
+    safe_run,
+)
 from mac_health_checkup.diagnostics.base import Cache, cached_fetch, get_diagnostics_logger, new_context
 
 MODULE_PATH = "mac_health_checkup/diagnostics/battery.py"

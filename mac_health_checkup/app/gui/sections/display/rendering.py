@@ -3,8 +3,7 @@ from __future__ import annotations
 from typing import Sequence
 
 from mac_health_checkup.core.config import get_config
-from mac_health_checkup.core.utils import format_error
-from mac_health_checkup.core.utils import render_table_parts
+from mac_health_checkup.core.utils import format_error, render_table_parts
 
 MODULE_PATH = "mac_health_checkup/app/gui/sections/display/rendering.py"
 
