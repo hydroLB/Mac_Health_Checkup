@@ -1,4 +1,4 @@
-.PHONY: build ensure-python-version preflight-swift preflight-ios setup dev check deps-lock deps-check run serve tls-selfsigned test lint format format-check typecheck docstrings layers config-ref config-ref-check bench profile security ios-build swift-test swift-run visual-capture-baseline visual-capture-candidate visual-diff visual-regression
+.PHONY: build ensure-python-version preflight-swift preflight-ios setup dev check deps-lock deps-check run serve tls-selfsigned test lint format format-check typecheck docstrings layers repo-hygiene config-ref config-ref-check bench profile security ios-build swift-test swift-run visual-capture-baseline visual-capture-candidate visual-diff visual-regression
 
 VENV ?= .venv
 PYTHON_BOOTSTRAP ?= python3.11
@@ -42,7 +42,7 @@ setup: ensure-python-version
 dev:
 	./start
 
-check: deps-check lint format-check typecheck docstrings layers config-ref-check test visual-regression bench security swift-test ios-build
+check: deps-check lint format-check typecheck docstrings layers repo-hygiene config-ref-check test visual-regression bench security swift-test ios-build
 
 deps-lock: ensure-python-version
 	@if [ -x "$(LOCK_PYTHON)" ] && [ "$$($(LOCK_PYTHON) -c 'import sys; print("{}.{}.{}".format(*sys.version_info[:3]))')" != "$(PYTHON_VERSION)" ]; then rm -rf "$(LOCK_VENV)"; fi
@@ -103,6 +103,9 @@ docstrings:
 
 layers:
 	$(PYTHON) tools/enforce_layer_dependencies.py --config tools/layer_rules.json --repo-root .
+
+repo-hygiene:
+	$(PYTHON) tools/audit_repo_hygiene.py --repo-root .
 
 config-ref:
 	$(PYTHON) tools/generate_config_reference.py --config config/config.json --out docs/config_reference.md

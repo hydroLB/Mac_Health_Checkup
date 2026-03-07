@@ -40,3 +40,10 @@ repos:
     hooks:
       - id: detect-secrets
         args: [--baseline, .secrets.baseline]
+  - repo: local
+    hooks:
+      - id: repo-hygiene
+        name: repo hygiene (staged)
+        entry: python tools/audit_repo_hygiene.py --repo-root . --staged-only
+        language: system
+        pass_filenames: false

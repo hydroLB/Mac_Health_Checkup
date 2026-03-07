@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import unittest
@@ -142,7 +143,7 @@ class OneClickRunnerHelpTests(unittest.TestCase):
 
             with (
                 patch.dict(
-                    run_mac_health_checkup_ui.os.environ,
+                    os.environ,
                     {
                         "MAC_HEALTH_CHECKUP_REPO_ROOT": str(repo_root),
                         "MAC_HEALTH_CHECKUP_CONFIG": str(config_path),
