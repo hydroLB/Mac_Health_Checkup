@@ -80,7 +80,7 @@ Dependency reproducibility:
 - Regenerate lockfiles with `make deps-lock`.
 - Verify lockfiles are up to date with `make deps-check`.
 - Lock generation runs inside `.venv-lock` with pinned `pip` and `pip-tools` versions from `Makefile`.
-- Automated dependency update PRs are configured in `.github/dependabot.yml`.
+- `make setup` and `./start` install repository-managed Git hooks via `core.hooksPath=.githooks`.
 
 Standard project commands:
 
@@ -342,7 +342,11 @@ Individual checks can still be run directly when iterating:
 make test
 make typecheck
 make lint
+make verify-push
 ```
+
+`make verify-push` is the local push gate enforced by `.githooks/pre-push`. It blocks pushes when dependency locks drift,
+quality checks fail, secrets are detected, or repo-hygiene rules are violated.
 
 ## Visual regression baseline
 
@@ -412,7 +416,7 @@ For strict merge enforcement with no bypass, configure branch protection or rule
 
 - No telemetry or analytics.
 - Dependency auditing runs in CI with `pip-audit`.
-- Secret scanning runs in CI and via pre commit using `.secrets.baseline`.
+- Secret scanning runs in CI and via the repository-managed push gate using `.secrets.baseline`.
 - Logs are structured and redacted based on `logging.redact_keys`.
 
 ## Release discipline

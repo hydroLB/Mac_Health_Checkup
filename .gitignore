@@ -121,7 +121,6 @@ DerivedData/
 .repo/wrappers/
 .repowizard/
 .repowizard/legacy-hooks*
-.githooks/
 .github/workflows/autosnap-lite.yml
 .github/workflows/initseed-heavy.yml
 git-autosnap.sh
@@ -131,3 +130,7 @@ pre-commit 2
 pre-push
 pre-push 2
 post-commit
+.venv-temp-audit/
+!.githooks/
+!.githooks/pre-commit
+!.githooks/pre-push

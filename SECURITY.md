@@ -11,7 +11,9 @@ Open a GitHub security advisory for this repository with a clear reproduction pa
 ## Security controls
 
 - Dependency scanning runs in CI with `pip-audit`.
-- Secret scanning runs in CI and via pre commit using `.secrets.baseline`.
+- Secret scanning runs in CI and via the repository-managed pre-push hook using `.secrets.baseline`.
 - Logs redact common secret tokens based on configuration.
 - Generated TLS material, virtualenvs, simulator logs, and other local runtime artifacts stay out of Git via `.gitignore`.
 - The recommended way to provide a real agent token is `MAC_HEALTH_CHECKUP_API_AUTH_TOKEN`, so GitHub can remain free of live credentials.
+- Repository-managed hooks are installed with `make setup` or `./start` and use `core.hooksPath=.githooks` so stale local hooks
+  do not bypass or interfere with the current push gate.

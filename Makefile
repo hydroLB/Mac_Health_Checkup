@@ -1,4 +1,4 @@
-.PHONY: build ensure-python-version preflight-swift preflight-ios setup dev check deps-lock deps-check run serve tls-selfsigned test lint format format-check typecheck docstrings layers repo-hygiene config-ref config-ref-check bench profile security ios-build swift-test swift-run visual-capture-baseline visual-capture-candidate visual-diff visual-regression
+.PHONY: build ensure-python-version install-hooks setup dev check verify-push deps-lock deps-check run serve tls-selfsigned test lint format format-check typecheck docstrings layers repo-hygiene repo-hygiene-staged config-ref config-ref-check bench profile security ios-build swift-test swift-run visual-capture-baseline visual-capture-candidate visual-diff visual-regression
 
 VENV ?= .venv
 PYTHON_BOOTSTRAP ?= python3.11
@@ -26,6 +26,9 @@ SWIFT_ENV = CLANG_MODULE_CACHE_PATH=$(PWD)/$(SWIFT_CACHE_DIR)/clang-module-cache
 
 build: setup
 
+install-hooks:
+	git config core.hooksPath .githooks
+
 ensure-python-version:
 	@actual="$$( $(PYTHON_BOOTSTRAP) -c 'import sys; print("{}.{}.{}".format(*sys.version_info[:3]))' )"; \
 	if [ "$$actual" != "$(PYTHON_VERSION)" ]; then \
@@ -38,11 +41,14 @@ setup: ensure-python-version
 	$(PYTHON_BOOTSTRAP) -m venv $(VENV)
 	$(PYTHON) -m pip install --upgrade "pip==$(PIP_VERSION)"
 	$(PYTHON) -m pip install --require-hashes -r requirements-dev.txt
+	$(MAKE) install-hooks
 
 dev:
 	./start
 
 check: deps-check lint format-check typecheck docstrings layers repo-hygiene config-ref-check test visual-regression bench security swift-test ios-build
+
+verify-push: deps-check lint format-check typecheck repo-hygiene test security
 
 deps-lock: ensure-python-version
 	@if [ -x "$(LOCK_PYTHON)" ] && [ "$$($(LOCK_PYTHON) -c 'import sys; print("{}.{}.{}".format(*sys.version_info[:3]))')" != "$(PYTHON_VERSION)" ]; then rm -rf "$(LOCK_VENV)"; fi
@@ -106,6 +112,9 @@ layers:
 
 repo-hygiene:
 	$(PYTHON) tools/audit_repo_hygiene.py --repo-root .
+
+repo-hygiene-staged:
+	$(PYTHON) tools/audit_repo_hygiene.py --repo-root . --staged-only
 
 config-ref:
 	$(PYTHON) tools/generate_config_reference.py --config config/config.json --out docs/config_reference.md

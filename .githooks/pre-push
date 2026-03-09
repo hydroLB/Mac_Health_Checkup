@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+
+set -eu
+
+REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+
+cd "$REPO_ROOT"
+
+if [ ! -x ".venv/bin/python" ]; then
+  echo "[pre-push] Missing .venv/bin/python. Run 'make setup' before pushing." >&2
+  exit 1
+fi
+
+echo "[pre-push] Running verify-push"
+exec make verify-push

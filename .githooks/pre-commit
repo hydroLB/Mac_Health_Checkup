@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+
+set -eu
+
+REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+PYTHON="$REPO_ROOT/.venv/bin/python"
+
+cd "$REPO_ROOT"
+
+if [ ! -x "$PYTHON" ]; then
+  echo "[pre-commit] Missing $PYTHON. Run 'make setup' before committing." >&2
+  exit 1
+fi
+
+echo "[pre-commit] Running staged repo hygiene checks"
+"$PYTHON" tools/audit_repo_hygiene.py --repo-root "$REPO_ROOT" --staged-only
