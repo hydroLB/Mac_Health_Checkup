@@ -60,5 +60,8 @@ fi
 echo "[start] Checking and syncing Python dependencies from requirements-dev.txt"
 "$PYTHON" -m pip install --disable-pip-version-check --require-hashes -r "$REQ_FILE"
 
+echo "[start] Installing repository-managed git hooks"
+git -C "$SCRIPT_DIR" config core.hooksPath .githooks
+
 echo "[start] Launching Mac Health Checkup UI (live mode)"
 exec "$PYTHON" "$SCRIPT_DIR/run_mac_health_checkup_ui.py"
