@@ -1,31 +1,129 @@
-.repo/hooks/
-.repo/wrappers/
-venv/
-.venv/
-env/
-node_modules/
-__pycache__/
-*.pyc
-*.pyo
+# ------------------------------------------------------------------------------
+# OS and editor noise
+# ------------------------------------------------------------------------------
 .DS_Store
+Thumbs.db
+Desktop.ini
 .idea/
 .vscode/
-dist/
+.codex/
+*.iml
+*.swp
+*.swo
+*~
+
+# ------------------------------------------------------------------------------
+# Python caches, bytecode, tooling state
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.pyd
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+.pyre/
+.dmypy.json
+
+# ------------------------------------------------------------------------------
+# Virtual environments
+# ------------------------------------------------------------------------------
+.venv/
+.venv-*/
+.venv-lock/
+venv/
+env/
+ENV/
+
+# ------------------------------------------------------------------------------
+# Build, packaging, and report artifacts
+# ------------------------------------------------------------------------------
 build/
+dist/
+site/
+*.egg
 *.egg-info/
-.repowizard/legacy-hooks*
-.repowizard/
-.githooks/
+.eggs/
+pip-wheel-metadata/
+coverage/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+junit*.xml
+*.pstats
+
+# ------------------------------------------------------------------------------
+# Logs and local runtime outputs
+# ------------------------------------------------------------------------------
+*.log
+*.out
+*.err
+*.pid
+*.pid.lock
+.local/
+.benchmarks/
+
+# ------------------------------------------------------------------------------
+# Secrets and sensitive local material
+# ------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+*.kdbx
+*.sqlite
+*.sqlite3
+*.db
+*.db-*
+*.token
+*.credentials
+secrets.*
+
+# ------------------------------------------------------------------------------
+# JavaScript / front-end
+# ------------------------------------------------------------------------------
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.vite/
+
+# ------------------------------------------------------------------------------
+# Swift / Xcode
+# ------------------------------------------------------------------------------
+.build/
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xccheckout
+*.moved-aside
+*.dSYM/
+*.dSYM.zip
+*.ipa
+
+# ------------------------------------------------------------------------------
+# Repo-specific generated files
+# ------------------------------------------------------------------------------
 .repo/
+.repo/hooks/
+.repo/wrappers/
+.repowizard/
+.repowizard/legacy-hooks*
+.githooks/
 .github/workflows/autosnap-lite.yml
 .github/workflows/initseed-heavy.yml
-
-# ---- Added by audit ----
-# OS / tooling
-.DS_Store
-.vite/
-coverage/
-target/
 git-autosnap.sh
 gitleaks-prepush.json
 pre-commit

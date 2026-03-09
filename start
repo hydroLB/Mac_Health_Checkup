@@ -1,0 +1,64 @@
+#!/usr/bin/env sh
+
+# Guard against sourcing this file (e.g. `. ./start`), which would mutate the caller's shell options.
+if (return 0 2>/dev/null); then
+  echo "Do not source this script. Run it as an executable: ./start" >&2
+  return 2
+fi
+
+set -eu
+(set -o pipefail) 2>/dev/null && set -o pipefail
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+VENV_DIR="$SCRIPT_DIR/.venv"
+PYTHON="$VENV_DIR/bin/python"
+REQ_FILE="$SCRIPT_DIR/requirements-dev.txt"
+PYTHON_VERSION_FILE="$SCRIPT_DIR/.python-version"
+REQUIRED_PYTHON_VERSION=""
+PYTHON_BOOTSTRAP=""
+
+if [ -f "$PYTHON_VERSION_FILE" ]; then
+  REQUIRED_PYTHON_VERSION="$(tr -d ' \r\n' <"$PYTHON_VERSION_FILE")"
+fi
+
+if [ -n "$REQUIRED_PYTHON_VERSION" ]; then
+  REQUIRED_PYTHON_MM="$(printf '%s' "$REQUIRED_PYTHON_VERSION" | awk -F. '{print $1 "." $2}')"
+  if command -v "python$REQUIRED_PYTHON_MM" >/dev/null 2>&1; then
+    PYTHON_BOOTSTRAP="python$REQUIRED_PYTHON_MM"
+  fi
+fi
+
+if [ -z "$PYTHON_BOOTSTRAP" ] && command -v python3 >/dev/null 2>&1; then
+  PYTHON_BOOTSTRAP="python3"
+fi
+
+if [ -z "$PYTHON_BOOTSTRAP" ]; then
+  echo "python3 is required to run ./start" >&2
+  exit 2
+fi
+
+if [ -n "$REQUIRED_PYTHON_VERSION" ]; then
+  ACTUAL_PYTHON_VERSION="$("$PYTHON_BOOTSTRAP" -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}")')"
+  if [ "$ACTUAL_PYTHON_VERSION" != "$REQUIRED_PYTHON_VERSION" ]; then
+    echo "Required Python version: $REQUIRED_PYTHON_VERSION (from .python-version)" >&2
+    echo "Found via $PYTHON_BOOTSTRAP: $ACTUAL_PYTHON_VERSION" >&2
+    echo "Install the pinned runtime and retry." >&2
+    exit 2
+  fi
+fi
+
+if [ ! -f "$REQ_FILE" ]; then
+  echo "Missing dependency lockfile: $REQ_FILE" >&2
+  exit 2
+fi
+
+if [ ! -x "$PYTHON" ]; then
+  echo "[start] Creating virtual environment at $VENV_DIR"
+  "$PYTHON_BOOTSTRAP" -m venv "$VENV_DIR"
+fi
+
+echo "[start] Checking and syncing Python dependencies from requirements-dev.txt"
+"$PYTHON" -m pip install --disable-pip-version-check --require-hashes -r "$REQ_FILE"
+
+echo "[start] Launching Mac Health Checkup UI (live mode)"
+exec "$PYTHON" "$SCRIPT_DIR/run_mac_health_checkup_ui.py"

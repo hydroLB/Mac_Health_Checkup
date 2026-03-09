@@ -1,0 +1,12 @@
+# Default ownership for all files in this repository.
+* @liamsamson
+
+# CI and automation workflows.
+.github/workflows/* @liamsamson
+
+# Core runtime and diagnostics modules.
+mac_health_checkup/** @liamsamson
+
+# Native client surfaces.
+ios/** @liamsamson
+swift-ui/** @liamsamson

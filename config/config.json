@@ -1,0 +1,223 @@
+{
+  "colors": {
+    "bg": "#12181f",
+    "fg": "#f3f7fb",
+    "ok": "#2fbf71",
+    "warn": "#d8a13a",
+    "bad": "#e05d5d",
+    "section": "#58a6ff",
+    "label": "#a8b3c4",
+    "field": "#e3eaf4",
+    "banner_good": "#28a745",
+    "banner_warn": "#ffc107",
+    "banner_bad": "#dc3545"
+  },
+  "fonts": {
+    "family_default": "Helvetica",
+    "family_mono": "Consolas",
+    "size_section": 16,
+    "size_banner": 18,
+    "size_field": 13,
+    "size_tooltip": 10,
+    "weight_bold": "bold",
+    "weight_normal": "normal",
+    "tooltip_bg": "#0f141a",
+    "tooltip_fg": "#eef3f9"
+  },
+  "ui": {
+    "window_size": "820x1180",
+    "window_title": "Mac Health Checkup",
+    "color_mode": "auto"
+  },
+  "logging": {
+    "max_lines": 500,
+    "prefix": "[{timestamp} {level}{context}]",
+    "truncate_len": 1000,
+    "format": "json",
+    "redact_keys": ["password", "passcode", "secret", "token", "apikey", "authorization"],
+    "redact_replacement": "[REDACTED]",
+    "correlation_id_field": "corr_id",
+    "event_field": "event",
+    "component_field": "component"
+  },
+  "retries": {
+    "enabled": true,
+    "max_attempts": 2,
+    "base_delay_ms": 150,
+    "max_delay_ms": 1000,
+    "backoff_factor": 2.0,
+    "jitter_ms": 75
+  },
+  "rate_limits": {
+    "ui_queue_max_items": 200,
+    "refresh_min_interval_ms": 200
+  },
+  "io": {
+    "pty_read_max_bytes": 65536,
+    "file_read_max_bytes": 1048576
+  },
+  "shutdown": {
+    "graceful_timeout_sec": 2,
+    "thread_join_timeout_sec": 1
+  },
+  "benchmarks": {
+    "iterations": 200,
+    "repeats": 5,
+    "max_regression": 0.3
+  },
+  "timeouts": {
+    "cache_ttl": 30,
+    "default_cmd_timeout": 10,
+    "snapshot_backend_timeout_sec": 60,
+    "smartctl_timeout": 10,
+    "sudo_pty_timeout": 10,
+    "powermetrics_timeout": 8,
+    "performance_cache_ttl": 5,
+    "network_quality_timeout": 15,
+    "network_cache_ttl": 12,
+    "display_cache_ttl": 8,
+    "power_sp_cache_ttl": 8,
+    "power_ioreg_cache_ttl": 5,
+    "istats_timeout": 5,
+    "softwareupdate_timeout": 30,
+    "softwareupdate_cache_ttl": 21600
+  },
+  "api": {
+    "enabled": false,
+    "bind_host": "127.0.0.1",
+    "port": 7878,
+    "allow_lan": false,
+    "allow_insecure_http_lan": false,
+    "tls_enabled": false,
+    "tls_cert_path": ".local/tls/agent-cert.pem",
+    "tls_key_path": ".local/tls/agent-key.pem",
+    "auth_token": "change-me",
+    "min_auth_token_length": 24,
+    "blocked_auth_tokens": ["change-me", "changeme", "password", "token"],
+    "rate_limit_requests_per_minute": 120,
+    "max_auth_failures_per_minute": 10,
+    "auth_ban_seconds": 120,
+    "request_timeout_sec": 15,
+    "pairing_qr_enabled": true
+  },
+  "fans": {
+    "use_sudo": false
+  },
+  "thresholds": {
+    "temp_warn_c": 75.0,
+    "temp_bad_c": 90.0,
+    "rssi_warn_dbm": -70,
+    "rssi_bad_dbm": -80,
+    "disk_free_warn_percent": 15.0,
+    "disk_free_bad_percent": 5.0,
+    "memory_free_warn_percent": 20.0,
+    "memory_free_bad_percent": 10.0,
+    "backup_warn_days": 7,
+    "backup_bad_days": 30,
+    "health_excellent_min_percent": 90.0,
+    "health_good_min_percent": 80.0,
+    "health_fair_min_percent": 65.0,
+    "ssd_unsafe_shutdowns_warn_count": 1,
+    "ssd_media_errors_bad_count": 1
+  },
+  "gui": {
+    "section_rows": [
+      ["Performance", "Thermals / Load", "performance"],
+      ["General Info", "Model / OS", "general"],
+      ["Security", "FileVault / SIP", "security"],
+      ["System", "Storage / Memory", "system"],
+      ["Processes", "Top CPU / MEM", "processes"],
+      ["Startup", "Launch Agents", "startup"],
+      ["Backups", "Time Machine", "backups"],
+      ["Updates", "Software Update", "updates"],
+      ["Power", "Adapter / Temps", "power"],
+      ["Fans", "Status", "fan"],
+      ["Battery", "Health", "battery"],
+      ["SSD", "Health", "ssd"],
+      ["Display", "Details", "display"],
+      ["Network", "Quality", "network"],
+      ["Devices", "Connected", "devices"],
+      ["Ports", "USB Ports", "ports"],
+      ["Input", "Keyboards / Mice", "input"]
+    ],
+    "scrollable_rows": {
+      "devices": 14,
+      "processes": 12,
+      "startup": 14
+    },
+    "peripheral_skip_keywords": ["hub", "billboard", "bus"],
+    "peripheral_allow_keywords": ["keyboard", "mouse", "trackpad", "receiver", "gamepad", "controller"],
+    "peripheral_max_name_len": 28,
+    "max_devices_lines": 80,
+    "indent_spaces": 4,
+    "ssd_text_min_lines": 5,
+    "ssd_text_max_lines": 10,
+    "bytes_per_du": 512000.0,
+    "display_headers": ["Name", "Resolution", "Mirror", "Connection", "Refresh", "Transport"],
+    "devices_headers": ["Bus", "Device"],
+    "display_name_keywords": [
+      "display",
+      "lcd",
+      "retina",
+      "macbook",
+      "airplay",
+      "dell",
+      "lg",
+      "benq",
+      "acer",
+      "samsung",
+      "hp",
+      "sony",
+      "viewsonic",
+      "asus",
+      "aoc"
+    ],
+    "token_norm_map": {
+      "lan": "ethernet"
+    },
+    "skip_display_noise": [
+      "sleep timer",
+      "battery power:",
+      "ac power:",
+      "hibernate mode",
+      "state of charge",
+      "cycle count",
+      "current power source"
+    ],
+    "refresh_helper_timeout_sec": 4,
+    "refresh_helper_sample_secs": 1.0,
+    "refresh_helper_max_samples": 600,
+    "refresh_helper_target_samples": 5,
+    "disp_body_min_rows": 8,
+    "disp_body_max_rows": 16,
+    "card_bg": "#1a212a",
+    "card_border": "#313d4b",
+    "section_padx": 4,
+    "section_pady": 3,
+    "content_wrap": 760,
+    "card_max_height": 420,
+    "card_relaxed_height": 520,
+    "window_max_width": 1150,
+    "window_max_height": 1300,
+    "auto_refresh_ms": 10000,
+    "fans_refresh_ms": 5000,
+    "ui_queue_poll_ms": 50,
+    "layout_breakpoint_width": 760,
+    "layout_min_width": 50,
+    "layout_retry_ms": 50,
+    "drag_scroll_divisor": 12,
+    "table_row_height": 22,
+    "table_max_visible_rows": 3,
+    "table_min_col_width": 80,
+    "history_enabled": true,
+    "history_retention_minutes": 60,
+    "history_max_points_per_series": 3600,
+    "history_save_interval_sec": 10,
+    "processes_max_rows": 10,
+    "startup_max_rows": 30
+  },
+  "display_transport": {
+    "overhead_factor": 1.15,
+    "default_bpp": 24
+  }
+}

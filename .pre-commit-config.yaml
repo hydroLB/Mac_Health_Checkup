@@ -1,0 +1,49 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-merge-conflict
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        name: mypy (packages)
+        pass_filenames: false
+        args: [--config-file=pyproject.toml, mac_health_checkup, tests, tools, benchmarks]
+        additional_dependencies: []
+      - id: mypy
+        name: mypy (entry scripts)
+        pass_filenames: false
+        args: [--config-file=pyproject.toml, run.py, run_mac_health_checkup.py, run_mac_health_checkup_ui.py]
+        additional_dependencies: []
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        args: [-r, mac_health_checkup, -x, tests]
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.7.3
+    hooks:
+      - id: pip-audit
+        args: [-r, requirements-dev.txt, -r, requirements.txt]
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: [--baseline, .secrets.baseline]
+  - repo: local
+    hooks:
+      - id: repo-hygiene
+        name: repo hygiene (staged)
+        entry: python tools/audit_repo_hygiene.py --repo-root . --staged-only
+        language: system
+        pass_filenames: false
