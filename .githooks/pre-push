@@ -6,7 +6,7 @@ REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 
 cd "$REPO_ROOT"
 
-if [ ! -x ".venv/bin/python" ]; then
+if [ ! -x ".venv/bin/python" ] || ! ".venv/bin/python" -c 'import sys' >/dev/null 2>&1; then
   echo "[pre-push] Missing .venv/bin/python. Run 'make setup' before pushing." >&2
   exit 1
 fi

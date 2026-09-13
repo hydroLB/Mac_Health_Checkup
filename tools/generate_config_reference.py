@@ -34,6 +34,7 @@ SECTION_PARSERS: dict[str, str] = {
     "timeouts": "mac_health_checkup.core.config.parsing.runtime.parse_timeouts",
     "api": "mac_health_checkup.core.config.parsing.features.parse_api",
     "fans": "mac_health_checkup.core.config.parsing.features.parse_fans",
+    "network": "mac_health_checkup.core.config.parsing.features.parse_network",
     "thresholds": "mac_health_checkup.core.config.parsing.features.parse_thresholds",
     "gui": "mac_health_checkup.core.config.parsing.features.parse_gui",
     "display_transport": "mac_health_checkup.core.config.parsing.features.parse_display_transport",
@@ -157,7 +158,9 @@ def _format_type(annotation: object, fallback_value: object) -> str:
 
     if origin in {list, dict, tuple, set}:
         inner = ", ".join(_format_type(arg, object()) for arg in args) if args else ""
-        return f"{origin.__name__}[{inner}]" if inner else origin.__name__
+        origin_name = getattr(origin, "__name__", str(origin))
+        normalized_origin_name = origin_name if isinstance(origin_name, str) else str(origin_name)
+        return f"{normalized_origin_name}[{inner}]" if inner else normalized_origin_name
 
     if origin in {types.UnionType, type(None)} or origin is None:
         if isinstance(annotation, types.UnionType):
@@ -275,6 +278,10 @@ def _leaf_settings(prefix: str, obj: object, annotation: object) -> list[LeafSet
         notes = "Can be overridden by env var MAC_HEALTH_CHECKUP_API_BIND_HOST."
     elif prefix == "api.port":
         notes = "Can be overridden by env var MAC_HEALTH_CHECKUP_API_PORT."
+    elif prefix == "network.capacity_test_enabled":
+        notes = "Opt-in; runs macOS networkQuality and sends test traffic to external measurement endpoints."
+    elif prefix == "network.capacity_test_cache_ttl":
+        notes = "Minimum interval between opt-in outbound capacity tests."
 
     return [
         LeafSetting(
@@ -313,6 +320,12 @@ def _render_markdown(config_obj: object, *, source_path: Path) -> str:
     if not dataclasses.is_dataclass(config_obj):
         raise TypeError("expected dataclass config object")
 
+    repo_root = Path(__file__).resolve().parent.parent
+    try:
+        display_source_path = source_path.resolve().relative_to(repo_root).as_posix()
+    except ValueError:
+        display_source_path = source_path.as_posix()
+
     lines: list[str] = []
     lines.append("# Configuration reference")
     lines.append("")
@@ -320,7 +333,7 @@ def _render_markdown(config_obj: object, *, source_path: Path) -> str:
     lines.append("")
     lines.append("## Source of truth")
     lines.append("")
-    lines.append(f"- Default config: `{source_path.as_posix()}`")
+    lines.append(f"- Default config: `{display_source_path}`")
     lines.append("- Typed registry: `mac_health_checkup/core/config/models/`")
     lines.append("- Parsing and validation: `mac_health_checkup/core/config/parsing/`")
     lines.append("")

@@ -179,8 +179,10 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MacHealthCheckupMobileApp/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				MARKETING_VERSION = 0.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.example.mac-health-checkup";
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.hydroLB.MacHealthCheckupMobile;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -197,8 +199,10 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MacHealthCheckupMobileApp/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				MARKETING_VERSION = 0.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.example.mac-health-checkup";
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.hydroLB.MacHealthCheckupMobile;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -211,6 +215,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				PRODUCT_NAME = "$(PROJECT_NAME)";
 				SWIFT_VERSION = 6.0;
 			};
@@ -222,6 +228,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				PRODUCT_NAME = "$(PROJECT_NAME)";
 				SWIFT_VERSION = 6.0;
 			};

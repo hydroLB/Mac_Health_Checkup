@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 
-from mac_health_checkup.core.config.models.backend import ApiConfig, FansConfig
+from mac_health_checkup.core.config.models.backend import ApiConfig, FansConfig, NetworkConfig
 from mac_health_checkup.core.config.models.gui import DisplayTransportConfig, GuiConfig, ThresholdsConfig
 from mac_health_checkup.core.config.parsing.base import get_section
 from mac_health_checkup.core.config.validation.collections import (
@@ -177,6 +177,45 @@ def parse_fans(raw: JsonDict) -> FansConfig:
         )
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(format_error(MODULE_PATH, "parse_fans", "Failed to parse fans", exc)) from exc
+
+
+def parse_network(raw: JsonDict) -> NetworkConfig:
+    """
+    Summary
+    Parse outbound network diagnostics controls with a safe default.
+
+    Inputs
+    raw: Raw config dict.
+
+    Outputs
+    `NetworkConfig` with capacity testing disabled unless explicitly enabled.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when a provided value is malformed.
+
+    Ties to other methods
+    Used by `parse_config`; consumed by `NetworkQualityDiagnostics` before invoking `networkQuality`.
+
+    Why this exists
+    Older configs remain compatible while outbound bandwidth tests stay fail-closed.
+    """
+    try:
+        if raw.get("network") is None:
+            return NetworkConfig(capacity_test_enabled=False, capacity_test_cache_ttl=3600)
+        section = get_section(raw, "network")
+        enabled = section.get("capacity_test_enabled")
+        cache_ttl = section.get("capacity_test_cache_ttl")
+        return NetworkConfig(
+            capacity_test_enabled=False if enabled is None else require_bool(enabled),
+            capacity_test_cache_ttl=(3600 if cache_ttl is None else require_int(60, 86_400)(cache_ttl)),
+        )
+    except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
+        raise RuntimeError(
+            format_error(MODULE_PATH, "parse_network", "Failed to parse network", exc)
+        ) from exc
 
 
 def parse_thresholds(raw: JsonDict) -> ThresholdsConfig:

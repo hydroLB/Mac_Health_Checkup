@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import argparse
-import json
-import logging
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,6 +28,48 @@ from mac_health_checkup.app.entrypoint_support.failure_policy import (
 from mac_health_checkup.app.entrypoint_support.failure_policy import (
     should_fail_on_snapshot as _should_fail_on_snapshot_impl,
 )
+from mac_health_checkup.app.entrypoint_support.interactive_modes import (
+    run_cli_mode as _run_cli_mode_impl,
+)
+from mac_health_checkup.app.entrypoint_support.interactive_modes import (
+    run_gui_fallback_mode as _run_gui_fallback_mode_impl,
+)
+from mac_health_checkup.app.entrypoint_support.interactive_modes import (
+    run_gui_mode as _run_gui_mode_impl,
+)
+from mac_health_checkup.app.entrypoint_support.modes import (
+    _RuntimeStateProtocol,
+)
+from mac_health_checkup.app.entrypoint_support.modes import (
+    build_snapshot as _build_snapshot_impl,
+)
+from mac_health_checkup.app.entrypoint_support.modes import (
+    ensure_api_enabled as _ensure_api_enabled_impl,
+)
+from mac_health_checkup.app.entrypoint_support.modes import (
+    print_server_banner as _print_server_banner_impl,
+)
+from mac_health_checkup.app.entrypoint_support.modes import (
+    print_server_network_guidance as _print_server_network_guidance_impl,
+)
+from mac_health_checkup.app.entrypoint_support.modes import (
+    print_server_tls_guidance as _print_server_tls_guidance_impl,
+)
+from mac_health_checkup.app.entrypoint_support.modes import (
+    run_serve_mode as _run_serve_mode_impl,
+)
+from mac_health_checkup.app.entrypoint_support.modes import (
+    run_snapshot_json_mode as _run_snapshot_json_mode_impl,
+)
+from mac_health_checkup.app.entrypoint_support.modes import (
+    run_snapshot_json_out_mode as _run_snapshot_json_out_mode_impl,
+)
+from mac_health_checkup.app.entrypoint_support.modes import (
+    serialize_snapshot as _serialize_snapshot_impl,
+)
+from mac_health_checkup.app.entrypoint_support.modes import (
+    snapshot_exit_code as _snapshot_exit_code_impl,
+)
 from mac_health_checkup.app.entrypoint_support.output import (
     print_cli_advice as _print_cli_advice_impl,
 )
@@ -37,6 +78,18 @@ from mac_health_checkup.app.entrypoint_support.output import (
 )
 from mac_health_checkup.app.entrypoint_support.output import (
     print_pairing_qr_best_effort as _print_pairing_qr_best_effort_impl,
+)
+from mac_health_checkup.app.entrypoint_support.runtime_mode import (
+    _ShutdownManagerProtocol,
+)
+from mac_health_checkup.app.entrypoint_support.runtime_mode import (
+    boundary_from_args as _boundary_from_args_impl,
+)
+from mac_health_checkup.app.entrypoint_support.runtime_mode import (
+    finish_mode as _finish_mode_impl,
+)
+from mac_health_checkup.app.entrypoint_support.runtime_mode import (
+    initialize_runtime as _initialize_runtime_impl,
 )
 from mac_health_checkup.app.entrypoint_support.section_runner import (
     run_sections_best_effort as _run_sections_best_effort_impl,
@@ -163,30 +216,21 @@ def _initialize_runtime() -> _RuntimeState:
     Why this exists
     Startup wiring should remain isolated from mode-specific logic so failures are easier to localize.
     """
-    try:
-        cfg = get_config()
-        startup_config_report = build_startup_config_validation_report(cfg)
-        fields = LoggingFields(
-            event_field=cfg.logging.event_field,
-            corr_id_field=cfg.logging.correlation_id_field,
-            component_field=cfg.logging.component_field,
-        )
-        configure_logging_once(cfg.logging.redaction(), fields, level=logging.INFO, stream=sys.stderr)
-        context = LogContext(component="entrypoint", corr_id=new_correlation_id())
-        logger = StructuredLogger("mac_health_checkup", cfg.logging.redaction(), fields)
-        logger.info(
-            "startup config validated",
-            event="startup_config_validated",
+    return _initialize_runtime_impl(
+        get_config_fn=get_config,
+        build_startup_config_validation_report_fn=build_startup_config_validation_report,
+        configure_logging_once_fn=configure_logging_once,
+        new_correlation_id_fn=new_correlation_id,
+        structured_logger_type=StructuredLogger,
+        logging_fields_type=LoggingFields,
+        shutdown_manager_type=ShutdownManager,
+        state_factory=lambda cfg, logger, context, shutdown: _RuntimeState(
+            cfg=cfg,
+            logger=logger,
             context=context,
-            payload=startup_config_report.to_log_payload(),
-        )
-        shutdown = ShutdownManager()
-        shutdown.install_handlers()
-        return _RuntimeState(cfg=cfg, logger=logger, context=context, shutdown=shutdown)
-    except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
-        raise RuntimeError(
-            format_error(MODULE_PATH, "_initialize_runtime", "Failed to initialize runtime", exc)
-        ) from exc
+            shutdown=shutdown,
+        ),
+    )
 
 
 def _dispatch_mode(args: argparse.Namespace, runtime: _RuntimeState) -> int:
@@ -253,11 +297,19 @@ def _run_snapshot_json_out_mode(args: argparse.Namespace, runtime: _RuntimeState
     Why this exists
     File-backed snapshot emission is a distinct automation path and benefits from a focused helper.
     """
-    snapshot = _build_snapshot()
-    code = _snapshot_exit_code(snapshot, fail_on=str(args.fail_on) if args.fail_on else "")
-    payload = _serialize_snapshot(snapshot, pretty=bool(args.snapshot_pretty), ensure_trailing_newline=True)
-    _write_text_file(Path(str(args.snapshot_json_out)), payload)
-    return _finish_mode(runtime.shutdown, code)
+    return _run_snapshot_json_out_mode_impl(
+        args,
+        runtime,
+        build_snapshot_fn=_build_snapshot,
+        snapshot_exit_code_fn=lambda snapshot, fail_on: _snapshot_exit_code(snapshot, fail_on=fail_on),
+        serialize_snapshot_fn=lambda snapshot, pretty, ensure_trailing_newline: _serialize_snapshot(
+            snapshot,
+            pretty=pretty,
+            ensure_trailing_newline=ensure_trailing_newline,
+        ),
+        write_text_file_fn=_write_text_file,
+        finish_mode_fn=_finish_mode,
+    )
 
 
 def _run_snapshot_json_mode(args: argparse.Namespace, runtime: _RuntimeState) -> int:
@@ -284,14 +336,18 @@ def _run_snapshot_json_mode(args: argparse.Namespace, runtime: _RuntimeState) ->
     Why this exists
     Stdout snapshot emission is a stable machine interface for native frontends and automation.
     """
-    snapshot = _build_snapshot()
-    code = _snapshot_exit_code(snapshot, fail_on=str(args.fail_on) if args.fail_on else "")
-    payload = _serialize_snapshot(snapshot, pretty=bool(args.snapshot_pretty), ensure_trailing_newline=False)
-    try:
-        print(payload)
-    except BrokenPipeError:
-        return _finish_mode(runtime.shutdown, code)
-    return _finish_mode(runtime.shutdown, code)
+    return _run_snapshot_json_mode_impl(
+        args,
+        runtime,
+        build_snapshot_fn=_build_snapshot,
+        snapshot_exit_code_fn=lambda snapshot, fail_on: _snapshot_exit_code(snapshot, fail_on=fail_on),
+        serialize_snapshot_fn=lambda snapshot, pretty, ensure_trailing_newline: _serialize_snapshot(
+            snapshot,
+            pretty=pretty,
+            ensure_trailing_newline=ensure_trailing_newline,
+        ),
+        finish_mode_fn=_finish_mode,
+    )
 
 
 def _run_serve_mode(runtime: _RuntimeState) -> int:
@@ -317,23 +373,31 @@ def _run_serve_mode(runtime: _RuntimeState) -> int:
     Why this exists
     Serve mode has the largest amount of user-facing operational output and should stay isolated from other modes.
     """
-    _ensure_api_enabled(runtime.cfg)
-    server = SnapshotApiServer(SECTION_HANDLERS, runtime.cfg.api)
-    server.start()
-    try:
-        public_url = _resolve_public_base_url(default_url=server.url())
-        _print_server_banner(server_url=server.url(), public_url=public_url)
-        _print_server_network_guidance(runtime.cfg)
-        _print_server_tls_guidance(server=server, runtime=runtime, public_url=public_url)
-        print(
-            "This is the Mac agent (headless). For the macOS UI, run `python3 run.py` or `python3 run_mac_health_checkup_ui.py`."
-        )
-        print("Press Ctrl+C to stop.")
-        runtime.shutdown.wait_for_shutdown()
-        return 0
-    finally:
-        server.stop()
-        runtime.shutdown.trigger_shutdown()
+    return _run_serve_mode_impl(
+        runtime,
+        section_handlers=SECTION_HANDLERS,
+        snapshot_api_server_type=SnapshotApiServer,
+        resolve_public_base_url_fn=lambda default_url: _resolve_public_base_url(default_url=default_url),
+        print_pairing_qr_best_effort_fn=lambda pairing_payload, enabled: _print_pairing_qr_best_effort(
+            pairing_payload,
+            enabled=enabled,
+        ),
+        ensure_api_enabled_fn=_ensure_api_enabled,
+        print_server_banner_fn=lambda server_url, public_url: _print_server_banner(
+            server_url=server_url,
+            public_url=public_url,
+        ),
+        print_server_network_guidance_fn=_print_server_network_guidance,
+        print_server_tls_guidance_fn=lambda server,
+        state,
+        public_url,
+        print_pairing_qr_fn: _print_server_tls_guidance(
+            server=server,
+            runtime=state,
+            public_url=public_url,
+            print_pairing_qr_best_effort_fn=print_pairing_qr_fn,
+        ),
+    )
 
 
 def _run_cli_mode(args: argparse.Namespace, runtime: _RuntimeState) -> int:
@@ -360,14 +424,20 @@ def _run_cli_mode(args: argparse.Namespace, runtime: _RuntimeState) -> int:
     Why this exists
     CLI mode is the canonical non-GUI workflow and should keep its behavior self-contained.
     """
-    host = ConsoleHost()
-    code = _run_sections_best_effort(host, logger=runtime.logger, context=runtime.context)
-    _print_console_output(host)
-    if args.advice:
-        _print_cli_advice(host)
-    if args.fail_on and _should_fail_on_host(host, fail_on=str(args.fail_on)):
-        code = 1
-    return _finish_mode(runtime.shutdown, code)
+    return _run_cli_mode_impl(
+        args,
+        runtime,
+        console_host_type=ConsoleHost,
+        run_sections_best_effort_fn=lambda host, logger, context: _run_sections_best_effort(
+            host,
+            logger=logger,
+            context=context,
+        ),
+        print_console_output_fn=_print_console_output,
+        print_cli_advice_fn=_print_cli_advice,
+        should_fail_on_host_fn=lambda host, fail_on: _should_fail_on_host(host, fail_on=fail_on),
+        finish_mode_fn=_finish_mode,
+    )
 
 
 def _run_gui_mode(args: argparse.Namespace, runtime: _RuntimeState) -> int:
@@ -394,13 +464,15 @@ def _run_gui_mode(args: argparse.Namespace, runtime: _RuntimeState) -> int:
     Why this exists
     GUI availability depends on the local environment, so fallback behavior should stay explicit and easy to test.
     """
-    try:
-        from mac_health_checkup.app.gui.app import DashboardApp
-    except (ImportError, RuntimeError) as exc:
-        return _run_gui_fallback_mode(args, runtime, exc)
-    app = DashboardApp()
-    app.start()
-    return 0
+    return _run_gui_mode_impl(
+        args,
+        runtime,
+        run_gui_fallback_mode_fn=lambda fallback_args, fallback_runtime, exc: _run_gui_fallback_mode(
+            fallback_args,
+            runtime,
+            exc,
+        ),
+    )
 
 
 def _run_gui_fallback_mode(args: argparse.Namespace, runtime: _RuntimeState, exc: Exception) -> int:
@@ -428,20 +500,21 @@ def _run_gui_fallback_mode(args: argparse.Namespace, runtime: _RuntimeState, exc
     Why this exists
     GUI fallback needs different logging and execution semantics than explicit CLI mode.
     """
-    runtime.logger.warning(
-        "tkinter unavailable, falling back to CLI",
-        event="gui_unavailable",
-        context=runtime.context,
-        payload={"error": str(exc)},
+    return _run_gui_fallback_mode_impl(
+        args,
+        runtime,
+        exc,
+        console_host_type=ConsoleHost,
+        run_sections_best_effort_fn=lambda host, logger, context: _run_sections_best_effort(
+            host,
+            logger=logger,
+            context=context,
+        ),
+        print_console_output_fn=_print_console_output,
+        print_cli_advice_fn=_print_cli_advice,
+        should_fail_on_host_fn=lambda host, fail_on: _should_fail_on_host(host, fail_on=fail_on),
+        finish_mode_fn=_finish_mode,
     )
-    host = ConsoleHost()
-    code = _run_sections_best_effort(host, logger=None, context=None)
-    _print_console_output(host)
-    if args.advice:
-        _print_cli_advice(host)
-    if args.fail_on and _should_fail_on_host(host, fail_on=str(args.fail_on)):
-        code = 1
-    return _finish_mode(runtime.shutdown, code)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -493,22 +566,7 @@ def _boundary_from_args(args: argparse.Namespace | None) -> ErrorBoundary:
     Why this exists
     Entrypoint failures should map to a boundary-aware error policy instead of ad-hoc generic handling.
     """
-    try:
-        if args is None:
-            return ErrorBoundary.CLI
-        if bool(getattr(args, "serve", False)):
-            return ErrorBoundary.API
-        if bool(getattr(args, "cli", False)):
-            return ErrorBoundary.CLI
-        if bool(getattr(args, "snapshot_json", False)) or bool(getattr(args, "snapshot_json_out", None)):
-            return ErrorBoundary.CLI
-        if bool(getattr(args, "export", None)) or bool(getattr(args, "diff_snapshots", None)):
-            return ErrorBoundary.CLI
-        return ErrorBoundary.UI
-    except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
-        raise RuntimeError(
-            format_error(MODULE_PATH, "_boundary_from_args", "Failed to resolve entrypoint boundary", exc)
-        ) from exc
+    return _boundary_from_args_impl(args)
 
 
 def _resolve_public_base_url(*, default_url: str) -> str:
@@ -881,7 +939,7 @@ def _build_snapshot() -> Snapshot:
     Why this exists
     Snapshot construction should live behind one helper so dependency injection remains straightforward in tests.
     """
-    return SnapshotBuilder(SECTION_HANDLERS).build()
+    return _build_snapshot_impl(section_handlers=SECTION_HANDLERS, snapshot_builder_type=SnapshotBuilder)
 
 
 def _serialize_snapshot(snapshot: Snapshot, *, pretty: bool, ensure_trailing_newline: bool) -> str:
@@ -909,10 +967,11 @@ def _serialize_snapshot(snapshot: Snapshot, *, pretty: bool, ensure_trailing_new
     Why this exists
     Snapshot serialization rules should stay in one place so file and stdout modes remain consistent.
     """
-    payload = snapshot.to_json(pretty=pretty)
-    if ensure_trailing_newline and not payload.endswith("\n"):
-        return payload + "\n"
-    return payload
+    return _serialize_snapshot_impl(
+        snapshot,
+        pretty=pretty,
+        ensure_trailing_newline=ensure_trailing_newline,
+    )
 
 
 def _snapshot_exit_code(snapshot: Snapshot, *, fail_on: str) -> int:
@@ -939,10 +998,14 @@ def _snapshot_exit_code(snapshot: Snapshot, *, fail_on: str) -> int:
     Why this exists
     Snapshot exit semantics should stay aligned across both machine-readable snapshot outputs.
     """
-    code = 0 if snapshot.ok else 1
-    if fail_on and _should_fail_on_snapshot(snapshot, fail_on=fail_on):
-        return 1
-    return code
+    return _snapshot_exit_code_impl(
+        snapshot,
+        fail_on=fail_on,
+        should_fail_on_snapshot_fn=lambda value, threshold: _should_fail_on_snapshot(
+            value,
+            fail_on=threshold,
+        ),
+    )
 
 
 def _ensure_api_enabled(cfg: Config) -> None:
@@ -968,8 +1031,7 @@ def _ensure_api_enabled(cfg: Config) -> None:
     Why this exists
     Serve mode should fail fast with an actionable config error instead of partially initializing.
     """
-    if not cfg.api.enabled:
-        raise RuntimeError("api.enabled must be true in config to use --serve")
+    _ensure_api_enabled_impl(cfg)
 
 
 def _print_server_banner(*, server_url: str, public_url: str) -> None:
@@ -996,9 +1058,7 @@ def _print_server_banner(*, server_url: str, public_url: str) -> None:
     Why this exists
     Core server connection details should render before the more detailed networking guidance.
     """
-    print(f"Snapshot API running at {server_url} (endpoints: /v1/health, /v1/snapshot, /v1/section)")
-    if public_url != server_url:
-        print(f"Public base URL: {public_url}")
+    _print_server_banner_impl(server_url=server_url, public_url=public_url)
 
 
 def _print_server_network_guidance(cfg: Config) -> None:
@@ -1024,17 +1084,16 @@ def _print_server_network_guidance(cfg: Config) -> None:
     Why this exists
     Networking guidance is a separate concern from banner and pairing output, so it should stay isolated.
     """
-    if cfg.api.allow_lan:
-        print("LAN access is enabled (api.allow_lan=true). Use a strong token and avoid sharing it.")
-        print("If the URL shows 127.0.0.1, use your Mac's LAN IP address with the same port.")
-        if not cfg.api.tls_enabled:
-            print(
-                "Warning: TLS is disabled. This is insecure on untrusted networks. "
-                "Enable api.tls_enabled or disable LAN access."
-            )
+    _print_server_network_guidance_impl(cfg)
 
 
-def _print_server_tls_guidance(*, server: SnapshotApiServer, runtime: _RuntimeState, public_url: str) -> None:
+def _print_server_tls_guidance(
+    *,
+    server: SnapshotApiServer,
+    runtime: _RuntimeStateProtocol,
+    public_url: str,
+    print_pairing_qr_best_effort_fn: Callable[[str, bool], None] | None = None,
+) -> None:
     """
     Summary
     Print TLS pairing details for serve mode when TLS is enabled and a certificate fingerprint is available.
@@ -1059,24 +1118,20 @@ def _print_server_tls_guidance(*, server: SnapshotApiServer, runtime: _RuntimeSt
     Why this exists
     TLS pairing output is substantial enough to deserve its own helper and keeps `_run_serve_mode` readable.
     """
-    if not runtime.cfg.api.tls_enabled:
-        return
-    fingerprint = server.tls_certificate_fingerprint_sha256()
-    if not fingerprint:
-        return
-    print("TLS is enabled (api.tls_enabled=true).")
-    print(f"Certificate fingerprint (sha256): {fingerprint}")
-    print("Pairing payload for the optional iOS app (you can ignore this if using the macOS SwiftUI app):")
-    pairing_payload = json.dumps(
-        {"url": public_url, "token": runtime.cfg.api.auth_token, "pin": fingerprint},
-        separators=(",", ":"),
-        sort_keys=True,
+    qr_fn = (
+        print_pairing_qr_best_effort_fn
+        if print_pairing_qr_best_effort_fn is not None
+        else lambda pairing_payload, enabled: _print_pairing_qr_best_effort(pairing_payload, enabled=enabled)
     )
-    print(pairing_payload)
-    _print_pairing_qr_best_effort(pairing_payload, enabled=bool(runtime.cfg.api.pairing_qr_enabled))
+    _print_server_tls_guidance_impl(
+        server=server,
+        runtime=runtime,
+        public_url=public_url,
+        print_pairing_qr_best_effort_fn=qr_fn,
+    )
 
 
-def _finish_mode(shutdown: ShutdownManager, code: int) -> int:
+def _finish_mode(shutdown: _ShutdownManagerProtocol, code: int) -> int:
     """
     Summary
     Trigger shutdown bookkeeping before returning a mode exit code.
@@ -1100,8 +1155,7 @@ def _finish_mode(shutdown: ShutdownManager, code: int) -> int:
     Why this exists
     Mode helpers should not repeat the same shutdown trigger boilerplate.
     """
-    shutdown.trigger_shutdown()
-    return code
+    return _finish_mode_impl(shutdown, code)
 
 
 if __name__ == "__main__":

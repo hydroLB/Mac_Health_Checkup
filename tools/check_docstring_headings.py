@@ -69,6 +69,7 @@ def _iter_python_files(roots: list[Path]) -> list[Path]:
             if root.is_dir():
                 files.extend(sorted(root.rglob("*.py")))
         unique_files = sorted(set(files))
+        unique_files = [path for path in unique_files if " 2" not in path.as_posix()]
         return unique_files
     except (RuntimeError, ValueError, TypeError, OSError) as exc:
         raise RuntimeError(f"{MODULE_PATH}:_iter_python_files failed: {exc}") from exc

@@ -7,7 +7,7 @@ PYTHON="$REPO_ROOT/.venv/bin/python"
 
 cd "$REPO_ROOT"
 
-if [ ! -x "$PYTHON" ]; then
+if [ ! -x "$PYTHON" ] || ! "$PYTHON" -c 'import sys' >/dev/null 2>&1; then
   echo "[pre-commit] Missing $PYTHON. Run 'make setup' before committing." >&2
   exit 1
 fi

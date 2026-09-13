@@ -70,7 +70,7 @@ public final class LocalAgentBackendClient: SnapshotBackend, @unchecked Sendable
          None.
 
          Side effects
-         Attempts to terminate the child process.
+         Attempts to terminate the child process and remove its derived token-bearing config.
 
          Error handling
          None. Errors are intentionally ignored during deinit.
@@ -145,6 +145,7 @@ private actor LocalAgentState {
     private var process: Process?
     private var stderrBuffer: OutputRingBuffer?
     private var remote: RemoteBackendClient?
+    private var derivedConfigFile: URL?
 
     private var baseURL: URL?
     private var token: String?
@@ -226,7 +227,7 @@ private actor LocalAgentState {
          None.
 
          Side effects
-         Terminates the spawned process.
+         Terminates the spawned process and removes its derived token-bearing config.
 
          Error handling
          None. Best-effort cleanup only.
@@ -237,16 +238,7 @@ private actor LocalAgentState {
          Why this exists
          Ensures the UI does not leave background processes running.
          */
-        if let process {
-            if process.isRunning {
-                process.terminate()
-            }
-            self.process = nil
-        }
-        self.remote = nil
-        self.baseURL = nil
-        self.token = nil
-        self.stderrBuffer = nil
+        resetAgentState()
     }
 
     private func ensureStarted() async throws {
@@ -264,7 +256,7 @@ private actor LocalAgentState {
          Writes a derived config file and starts a child Python process.
 
          Error handling
-         Throws `AppError` when startup fails or health checks do not succeed in time.
+         Throws `AppError` when startup fails or health checks do not succeed in time, after cleaning partial state.
 
          Ties to other methods
          Called by `fetchSnapshot`.
@@ -275,6 +267,7 @@ private actor LocalAgentState {
         if let process, process.isRunning, remote != nil {
             return
         }
+        resetAgentState()
 
         let port = try LocalPortPicker.pickLoopbackPort()
         let token = try TokenGenerator.generateURLSafeToken(minBytes: 24)
@@ -291,20 +284,45 @@ private actor LocalAgentState {
             .appendingPathComponent(".local", isDirectory: true)
             .appendingPathComponent("macos-ui-agent-config.json", isDirectory: false)
         try LocalAgentConfigOverlay.writeDerivedConfig(derivedConfig, to: derivedPath)
+        self.derivedConfigFile = derivedPath
 
-        let stderrBuffer = OutputRingBuffer(maxBytes: 32_000)
-        let process = try startAgentProcess(configFile: derivedPath, stderrBuffer: stderrBuffer)
+        do {
+            let stderrBuffer = OutputRingBuffer(maxBytes: 32_000)
+            let process = try startAgentProcess(configFile: derivedPath, stderrBuffer: stderrBuffer)
 
-        let remoteConfig = RemoteBackendConfig(baseURL: baseURL, authToken: token, timeoutSeconds: runtime.timeoutSeconds)
-        let remoteClient = RemoteBackendClient(config: remoteConfig)
+            let remoteConfig = RemoteBackendConfig(
+                baseURL: baseURL,
+                authToken: token,
+                timeoutSeconds: runtime.timeoutSeconds
+            )
+            let remoteClient = RemoteBackendClient(config: remoteConfig)
 
-        self.process = process
-        self.stderrBuffer = stderrBuffer
-        self.remote = remoteClient
-        self.baseURL = baseURL
-        self.token = token
+            self.process = process
+            self.stderrBuffer = stderrBuffer
+            self.remote = remoteClient
+            self.baseURL = baseURL
+            self.token = token
 
-        try await awaitHealthy(remoteClient: remoteClient, startupTimeoutSeconds: 5.0)
+            try await awaitHealthy(remoteClient: remoteClient, startupTimeoutSeconds: 5.0)
+        } catch {
+            resetAgentState()
+            throw error
+        }
+    }
+
+    private func resetAgentState() {
+        if let process, process.isRunning {
+            process.terminate()
+        }
+        self.process = nil
+        self.remote = nil
+        self.baseURL = nil
+        self.token = nil
+        self.stderrBuffer = nil
+        if let derivedConfigFile {
+            try? FileManager.default.removeItem(at: derivedConfigFile)
+        }
+        self.derivedConfigFile = nil
     }
 
     private func startAgentProcess(configFile: URL, stderrBuffer: OutputRingBuffer) throws -> Process {
@@ -386,15 +404,18 @@ private actor LocalAgentState {
         var lastError: AppError?
 
         while clock.now < deadline {
+            try Task.checkCancellation()
             do {
                 _ = try await remoteClient.fetchHealthStatus()
                 return
+            } catch is CancellationError {
+                throw CancellationError()
             } catch let error as AppError {
                 lastError = error
             } catch {
                 lastError = AppError.context(#fileID, #function, "Local agent health check failed", error)
             }
-            try? await Task.sleep(nanoseconds: 150_000_000)
+            try await Task.sleep(nanoseconds: 150_000_000)
         }
 
         let stderr = stderrBuffer?.asString().trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -408,7 +429,7 @@ private actor LocalAgentState {
     }
 }
 
-private enum LocalAgentConfigOverlay {
+enum LocalAgentConfigOverlay {
     static func buildDerivedConfig(baseConfigFile: URL, bindPort: Int, authToken: String) throws -> [String: Any] {
         /**
          Summary
@@ -476,7 +497,7 @@ private enum LocalAgentConfigOverlay {
          None.
 
          Side effects
-         Creates parent directories and writes the output file.
+         Creates a user-private parent directory and atomically writes a user-readable-only output file.
 
          Error handling
          Throws `AppError` when serialization or IO fails.
@@ -487,11 +508,26 @@ private enum LocalAgentConfigOverlay {
          Why this exists
          The Python backend reads config from a file path; writing a derived overlay avoids manual setup.
          */
+        let fileManager = FileManager.default
         do {
-            try FileManager.default.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true)
+            let parent = path.deletingLastPathComponent()
+            let privateDirectoryAttributes: [FileAttributeKey: Any] = [
+                .posixPermissions: NSNumber(value: 0o700)
+            ]
+            try fileManager.createDirectory(
+                at: parent,
+                withIntermediateDirectories: true,
+                attributes: privateDirectoryAttributes
+            )
+            try fileManager.setAttributes(privateDirectoryAttributes, ofItemAtPath: parent.path)
             let data = try JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys])
             try data.write(to: path, options: [.atomic])
+            try fileManager.setAttributes(
+                [.posixPermissions: NSNumber(value: 0o600)],
+                ofItemAtPath: path.path
+            )
         } catch {
+            try? fileManager.removeItem(at: path)
             throw AppError.context(#fileID, #function, "Failed to write derived config to \(path.path)", error)
         }
     }

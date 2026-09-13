@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import json
 import platform
-import statistics
 import sys
 import time
 from pathlib import Path
@@ -160,17 +159,17 @@ def _sample_display_text() -> str:
     """
     try:
         return (
-            "Graphics/Displays:\\n"
-            "    Color LCD:\\n"
-            "      Resolution: 2560 x 1600\\n"
-            "      Mirror: Off\\n"
-            "      Connection Type: Internal\\n"
-            "      Refresh Rate: 60 Hz\\n"
-            "    DELL U2718Q:\\n"
-            "      Resolution: 3840 x 2160\\n"
-            "      Mirror: Off\\n"
-            "      Connection Type: DisplayPort\\n"
-            "      Refresh Rate: 60 Hz\\n"
+            "Graphics/Displays:\n"
+            "    Color LCD:\n"
+            "      Resolution: 2560 x 1600\n"
+            "      Mirror: Off\n"
+            "      Connection Type: Internal\n"
+            "      Refresh Rate: 60 Hz\n"
+            "    DELL U2718Q:\n"
+            "      Resolution: 3840 x 2160\n"
+            "      Mirror: Off\n"
+            "      Connection Type: DisplayPort\n"
+            "      Refresh Rate: 60 Hz\n"
         )
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(
@@ -203,14 +202,14 @@ def _sample_usb_text() -> str:
     """
     try:
         return (
-            "    USB:\\n"
-            "        USB 3.0 Bus:\\n"
-            "            Vendor Name: Apple Inc.\\n"
-            "            Magic Trackpad:\\n"
-            "                Manufacturer: Apple Inc.\\n"
-            "        USB 2.0 Bus:\\n"
-            "            USB Keyboard:\\n"
-            "                Vendor Name: Logitech\\n"
+            "    USB:\n"
+            "        USB 3.0 Bus:\n"
+            "            Vendor Name: Apple Inc.\n"
+            "            Magic Trackpad:\n"
+            "                Manufacturer: Apple Inc.\n"
+            "        USB 2.0 Bus:\n"
+            "            USB Keyboard:\n"
+            "                Vendor Name: Logitech\n"
         )
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(
@@ -328,20 +327,22 @@ def _run_benchmark(func: Callable[[], None], iterations: int, repeats: int) -> f
     Used by run_benchmarks to measure each target.
 
     Why this exists
-    Provides stable median-based timing for comparisons.
+    Uses the best of several sufficiently long process-CPU samples, matching conventional microbenchmark practice.
+    CPU time excludes periods when a shared runner deschedules this process, while a real code regression affects
+    every sample.
     """
     try:
         normalized_iterations = _validate_positive_int(iterations, field_name="iterations")
         normalized_repeats = _validate_positive_int(repeats, field_name="repeats")
         timings = []
         for _ in range(normalized_repeats):
-            start = time.perf_counter()
+            start = time.process_time()
             for _ in range(normalized_iterations):
                 func()
-            elapsed = time.perf_counter() - start
+            elapsed = time.process_time() - start
             timings.append(elapsed)
-        median = statistics.median(timings)
-        return normalized_iterations / median if median > 0 else float("inf")
+        best = min(timings)
+        return normalized_iterations / best if best > 0 else float("inf")
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(
             format_error(MODULE_PATH, "_run_benchmark", "Benchmark timing failed", exc)
@@ -369,7 +370,8 @@ def run_benchmarks(iterations: int, repeats: int) -> Dict[str, float]:
     Used by the CLI entry point below.
 
     Why this exists
-    Centralizes benchmark execution for baseline and comparison.
+    Centralizes benchmark execution for baseline and comparison, interleaving samples so every target sees similar
+    host load.
     """
     try:
         normalized_iterations = _validate_positive_int(iterations, field_name="iterations")
@@ -379,10 +381,11 @@ def run_benchmarks(iterations: int, repeats: int) -> Dict[str, float]:
             "usb_tree_parse": _bench_usb_parse,
             "hz_parse": _bench_hz_parse,
         }
-        results: Dict[str, float] = {}
-        for name, func in registry.items():
-            results[name] = _run_benchmark(func, normalized_iterations, normalized_repeats)
-        return results
+        samples: dict[str, list[float]] = {name: [] for name in registry}
+        for _ in range(normalized_repeats):
+            for name, func in registry.items():
+                samples[name].append(_run_benchmark(func, normalized_iterations, 1))
+        return {name: max(throughput_samples) for name, throughput_samples in samples.items()}
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(format_error(MODULE_PATH, "run_benchmarks", "Benchmark run failed", exc)) from exc
 
@@ -474,7 +477,7 @@ def compare_to_baseline(
     Compare current benchmark results to a baseline file.
 
     Inputs
-    current results, baseline_path, max_regression as a decimal fraction.
+    Current results, baseline path, and max regression as a decimal fraction.
 
     Outputs
     Exit code: 0 for pass, 1 for regression or errors.
@@ -565,10 +568,15 @@ def main() -> int:
         normalized_max_regression = _validate_regression_fraction(args.max_regression)
         baseline_path = args.baseline.resolve()
 
-        results = run_benchmarks(normalized_iterations, normalized_repeats)
         if args.update:
-            update_baseline(baseline_path, normalized_iterations, normalized_repeats)
+            updated = update_baseline(baseline_path, normalized_iterations, normalized_repeats)
+            print(f"Updated benchmark baseline: {baseline_path}")
+            for name, ops_per_sec in sorted(updated.items()):
+                print(f"  {name}: {ops_per_sec:.2f} ops/sec")
             return 0
+        results = run_benchmarks(normalized_iterations, normalized_repeats)
+        for name, ops_per_sec in sorted(results.items()):
+            print(f"{name}: {ops_per_sec:.2f} ops/sec")
         return compare_to_baseline(results, baseline_path, normalized_max_regression)
     except (RuntimeError, ValueError, TypeError, AttributeError, OSError, json.JSONDecodeError) as exc:
         _emit_boundary_error("main", "Benchmark CLI failed", exc)

@@ -54,7 +54,7 @@ public final class DashboardViewModel: ObservableObject {
     private var fanRefreshTask: Task<Void, Never>?
     private var isFanRefreshInFlight: Bool = false
 
-    public static let overviewKey: String = "_overview"
+    nonisolated public static let overviewKey: String = "_overview"
 
     public init(
         backend: any SnapshotBackend,
@@ -179,7 +179,12 @@ public final class DashboardViewModel: ObservableObject {
          Why this exists
          Centralizes filtering so both navigation and overview remain consistent.
          */
-        sections.filter { !_isSectionHiddenFromPrimaryUI(key: $0.key) }
+        DashboardSectionNavigation.visibleSections(
+            from: sections,
+            isSectionHidden: { [weak self] key in
+                self?._isSectionHiddenFromPrimaryUI(key: key) ?? false
+            }
+        )
     }
 
     public func setSectionHidden(_ hidden: Bool, key: String) {
@@ -315,18 +320,14 @@ public final class DashboardViewModel: ObservableObject {
          Why this exists
          Provides a consistent, searchable navigation model without duplicating filtering logic in views.
          */
-        let query = sectionSearchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let candidates: [SectionDescriptor] = if query.isEmpty {
-            visibleSections
-        } else {
-            visibleSections.filter { section in
-                section.title.lowercased().contains(query)
-                    || section.subtitle.lowercased().contains(query)
-                    || section.key.lowercased().contains(query)
+        DashboardSectionNavigation.sidebarSections(
+            from: sections,
+            overviewKey: Self.overviewKey,
+            searchText: sectionSearchText,
+            isSectionHidden: { [weak self] key in
+                self?._isSectionHiddenFromPrimaryUI(key: key) ?? false
             }
-        }
-        let overview = SectionDescriptor(title: "Overview", subtitle: "All sections", key: Self.overviewKey)
-        return [overview] + candidates
+        )
     }
 
     public func startAutoRefresh() {
@@ -357,8 +358,9 @@ public final class DashboardViewModel: ObservableObject {
             guard let self else { return }
             await self.refreshOnce()
             while !Task.isCancelled {
-                let nanos = UInt64(max(250, self.refreshIntervalMs)) * 1_000_000
-                try? await Task.sleep(nanoseconds: nanos)
+                guard await DashboardRefreshScheduler.wait(milliseconds: self.refreshIntervalMs) else {
+                    return
+                }
                 await self.refreshOnce()
             }
         }
@@ -366,8 +368,9 @@ public final class DashboardViewModel: ObservableObject {
         fanRefreshTask = Task { [weak self] in
             guard let self else { return }
             while !Task.isCancelled {
-                let nanos = UInt64(max(250, self.fanRefreshIntervalMs)) * 1_000_000
-                try? await Task.sleep(nanoseconds: nanos)
+                guard await DashboardRefreshScheduler.wait(milliseconds: self.fanRefreshIntervalMs) else {
+                    return
+                }
                 guard self.snapshot != nil else { continue }
                 await self.refreshFanOnce()
             }
@@ -443,7 +446,9 @@ public final class DashboardViewModel: ObservableObject {
             _applyCatalogIfAvailable(snapshot: response.snapshot)
             appTitle = response.snapshot.theme.ui.window_title
             lastError = _backendWarningIfAny(exitCode: response.exitCode, snapshot: response.snapshot, stderr: response.stderr)
-            _writeSnapshotCacheIfPossible(rawJSON: response.rawJSON)
+            if DashboardSnapshotResponsePolicy.shouldCacheFullSnapshot(response) {
+                _writeSnapshotCacheIfPossible(rawJSON: response.rawJSON)
+            }
             history?.recordSnapshot(response.snapshot)
             _normalizeSelectedSection()
         } catch let error as AppError {
@@ -481,7 +486,7 @@ public final class DashboardViewModel: ObservableObject {
         isSettingsPresented = true
     }
 
-    private func refreshFanOnce() async {
+    func refreshFanOnce() async {
         /**
          Summary
          Refresh the fan section at a higher cadence than the full snapshot.
@@ -510,7 +515,19 @@ public final class DashboardViewModel: ObservableObject {
 
         do {
             let response = try await backend.fetchSectionSnapshotResponse(sectionKey: "fan")
-            guard let section = response.snapshot.sections.first(where: { $0.key == "fan" }) else {
+            guard let section = DashboardSnapshotResponsePolicy.acceptedSection(
+                from: response,
+                key: "fan"
+            ) else {
+                lastError = _backendWarningIfAny(
+                    exitCode: response.exitCode,
+                    snapshot: response.snapshot,
+                    stderr: response.stderr
+                ) ?? AppError.context(
+                    #fileID,
+                    #function,
+                    "Fan refresh returned no usable fan section"
+                )
                 return
             }
             sectionOverrideByKey["fan"] = section
@@ -613,141 +630,7 @@ public final class DashboardViewModel: ObservableObject {
          Why this exists
          Several collectors only publish metrics or tables, matching the original Tk UI; the overview should still show useful information.
          */
-        guard let payload = sectionPayload(for: key) else {
-            return "No data yet"
-        }
-
-        let normalizedKey = key.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-
-        // For sections that already render richer metrics/tables, prefer those summaries over a potentially redundant
-        // `field` string emitted by the backend.
-        if ["battery", "fan", "ssd", "network", "input", "system", "updates"].contains(normalizedKey) {
-            if let metrics = payload.metrics, !metrics.isEmpty {
-                if normalizedKey == "network" {
-                    let preferredLabels = ["SSID", "IPv4", "RSSI", "Interface"]
-                    for label in preferredLabels {
-                        if let row = metrics.first(where: { $0.label == label }) {
-                            return _truncate("\(row.label): \(row.value)", maxChars: 160)
-                        }
-                    }
-                }
-                if normalizedKey == "system" {
-                    let disk = metrics.first(where: {
-                        $0.label.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "disk free"
-                    })
-                    let memory = metrics.first(where: {
-                        $0.label.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "memory free"
-                    })
-                    var parts: [String] = []
-                    if let disk {
-                        parts.append("Disk free: \(disk.value)")
-                    }
-                    if let memory {
-                        parts.append("Memory free: \(memory.value)")
-                    }
-                    if !parts.isEmpty {
-                        return _truncate(parts.joined(separator: " | "), maxChars: 160)
-                    }
-                }
-                if normalizedKey == "updates" {
-                    let updatesRow = metrics.first(where: {
-                        $0.label.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "updates"
-                    })
-                    if let updatesRow {
-                        let value = updatesRow.value.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if value.lowercased() == "up to date" {
-                            return "Updates: 0 available"
-                        }
-                        if !value.isEmpty {
-                            return _truncate("Updates: \(value)", maxChars: 160)
-                        }
-                    }
-                    let firstRow = metrics.first(where: {
-                        $0.label.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "first"
-                    })
-                    if let firstRow {
-                        let value = firstRow.value.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if !value.isEmpty {
-                            return _truncate("First update: \(value)", maxChars: 160)
-                        }
-                    }
-                }
-                if let first = metrics.first {
-                    return _truncate("\(first.label): \(first.value)", maxChars: 160)
-                }
-            }
-
-            if let table = payload.table {
-                let rows = table.rows.count
-                if normalizedKey == "input" {
-                    let names = table.rows.compactMap { row -> String? in
-                        if row.indices.contains(1) {
-                            return row[1].trimmingCharacters(in: .whitespacesAndNewlines)
-                        }
-                        return row.first?.trimmingCharacters(in: .whitespacesAndNewlines)
-                    }
-                        .filter { !$0.isEmpty }
-                    if !names.isEmpty {
-                        return _truncate(names.prefix(2).joined(separator: "  •  "), maxChars: 160)
-                    }
-                    return rows == 1 ? "Input: 1 device" : "Input: \(rows) devices"
-                }
-            }
-            // Fall through to field/diagnostics fallback when no metrics/table summary is available.
-        }
-
-        if let field = payload.field?.trimmingCharacters(in: .whitespacesAndNewlines), !field.isEmpty {
-            return _truncate(field, maxChars: 160)
-        }
-
-        if let metrics = payload.metrics, let first = metrics.first {
-            let summary = "\(first.label): \(first.value)"
-            return _truncate(summary, maxChars: 160)
-        }
-
-        if let table = payload.table {
-            let rows = table.rows.count
-            if key == "display" {
-                let summaries = table.rows.prefix(2).map { row -> String in
-                    let name = row.indices.contains(0) ? row[0] : ""
-                    let resolution = row.indices.contains(1) ? row[1] : ""
-                    let refresh = row.indices.contains(4) ? row[4] : ""
-                    let parts = [name, resolution, refresh].map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                        .filter { !$0.isEmpty && $0 != "?" }
-                    return parts.joined(separator: " | ")
-                }.filter { !$0.isEmpty }
-                if !summaries.isEmpty {
-                    return _truncate(summaries.joined(separator: "  •  "), maxChars: 160)
-                }
-                return rows == 1 ? "Display: 1 row" : "Display: \(rows) rows"
-            }
-            if key == "devices" {
-                let names = table.rows.compactMap { row -> String? in
-                    if row.indices.contains(1) {
-                        return row[1].trimmingCharacters(in: .whitespacesAndNewlines)
-                    }
-                    return row.first?.trimmingCharacters(in: .whitespacesAndNewlines)
-                }
-                    .filter { !$0.isEmpty }
-                if !names.isEmpty {
-                    return _truncate(names.prefix(3).joined(separator: ", "), maxChars: 160)
-                }
-                return rows == 1 ? "Devices: 1 row" : "Devices: \(rows) rows"
-            }
-            if rows == 1 { return "Table: 1 row" }
-            return "Table: \(rows) rows"
-        }
-
-        if let diagnostics = payload.diagnostics {
-            if case let .string(error) = diagnostics["error"], !error.isEmpty {
-                return _truncate("Error: \(error)", maxChars: 160)
-            }
-            if case let .bool(ok) = diagnostics["ok"], ok == false {
-                return "Error: section failed"
-            }
-        }
-
-        return "No data yet"
+        DashboardSectionSummaryFormatter.summary(for: key, payload: sectionPayload(for: key))
     }
 
     private func _applyThemeIfAvailable(snapshot: Snapshot) {
@@ -774,7 +657,11 @@ public final class DashboardViewModel: ObservableObject {
          Allows an iOS client to match the agent’s style without shipping a separate config file.
          */
         do {
-            theme = try Theme(snapshot: snapshot)
+            theme = try DashboardSnapshotThemeResolver.theme(
+                from: snapshot,
+                file: #fileID,
+                function: #function
+            )
         } catch let error as AppError {
             lastError = error
         } catch {
@@ -805,11 +692,8 @@ public final class DashboardViewModel: ObservableObject {
          Why this exists
          Enables the iOS client to render correct labels and ordering without local config duplication.
          */
-        if snapshot.section_catalog.isEmpty {
+        guard let newSections = DashboardSnapshotCatalogMapper.sections(from: snapshot) else {
             return
-        }
-        let newSections = snapshot.section_catalog.map { item in
-            SectionDescriptor(title: item.title, subtitle: item.subtitle, key: item.key)
         }
         sections = newSections
         _normalizeSelectedSection()
@@ -922,18 +806,14 @@ public final class DashboardViewModel: ObservableObject {
          Why this exists
          The detail pane should never point at a section that is missing from the main UI.
          */
-        guard let selected = selectedSectionKey,
-              selected != Self.overviewKey
-        else {
-            return
-        }
-        guard sections.contains(where: { $0.key == selected }) else {
-            selectedSectionKey = Self.overviewKey
-            return
-        }
-        if _isSectionHiddenFromPrimaryUI(key: selected) {
-            selectedSectionKey = Self.overviewKey
-        }
+        selectedSectionKey = DashboardSectionNavigation.normalizedSelectedSectionKey(
+            selectedSectionKey: selectedSectionKey,
+            overviewKey: Self.overviewKey,
+            sections: sections,
+            isSectionHidden: { [weak self] key in
+                self?._isSectionHiddenFromPrimaryUI(key: key) ?? false
+            }
+        )
     }
 
     func historyPoints(sectionKey: String, metricLabel: String) -> [MetricHistoryStore.Point] {
@@ -1014,126 +894,13 @@ public final class DashboardViewModel: ObservableObject {
         Why this exists
         The UI should keep showing the latest data even when one section fails.
          */
-        if exitCode == 0 && snapshot.ok {
-            return nil
-        }
-
-        let failedSections = _failedSectionKeys(snapshot: snapshot)
-        if !failedSections.isEmpty {
-            let sectionCount = failedSections.count
-            let sectionNoun = sectionCount == 1 ? "section check failed" : "section checks failed"
-            let listed = _formattedFailedSectionList(failedSections)
-            let message =
-                "Backend completed with partial results (exit code \(exitCode)). \(sectionCount) \(sectionNoun): \(listed). " +
-                "Review backend logs for details."
-            return AppError.context(#fileID, #function, message)
-        }
-
-        let fallback = snapshot.error?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Snapshot reported ok=false."
-        let trimmedStderr = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
-        let stderrSuffix = trimmedStderr.isEmpty ? "" : " stderr=\(_truncate(trimmedStderr, maxChars: 240))"
-        return AppError.context(
-            #fileID,
-            #function,
-            "Backend completed with warnings (exit code \(exitCode)). \(fallback)\(stderrSuffix)"
+        DashboardBackendWarningFormatter.warning(
+            exitCode: exitCode,
+            snapshot: snapshot,
+            stderr: stderr,
+            file: #fileID,
+            function: #function
         )
-    }
-
-    private func _failedSectionKeys(snapshot: Snapshot) -> [String] {
-        /**
-         Summary
-         Extract section keys that reported collector failures.
-
-         Inputs
-         snapshot: Snapshot to scan.
-
-         Outputs
-         Array of failed section keys.
-
-         Side effects
-         None.
-
-         Error handling
-         None.
-
-         Ties to other methods
-         Used by `_backendWarningIfAny` to build concise partial-result warnings.
-
-         Why this exists
-         Users need quick visibility into which sections failed without scanning raw diagnostics.
-         */
-        var out: [String] = []
-        for section in snapshot.sections {
-            guard let diagnostics = section.diagnostics else { continue }
-            if case let .bool(ok) = diagnostics["ok"], ok == false {
-                out.append(section.key)
-            }
-        }
-        return out
-    }
-
-    private func _formattedFailedSectionList(_ sectionKeys: [String]) -> String {
-        /**
-         Summary
-         Format failed section keys into a compact human-readable list.
-
-         Inputs
-         sectionKeys: Failed section keys.
-
-         Outputs
-         String suitable for warning banners.
-
-         Side effects
-         None.
-
-         Error handling
-         None.
-
-         Ties to other methods
-         Used by `_backendWarningIfAny` to render stable warning text.
-
-         Why this exists
-         Warnings should stay readable even when many sections fail.
-         */
-        if sectionKeys.isEmpty {
-            return "none"
-        }
-        if sectionKeys.count <= 4 {
-            return sectionKeys.joined(separator: ", ")
-        }
-        let head = sectionKeys.prefix(4).joined(separator: ", ")
-        let remaining = sectionKeys.count - 4
-        return "\(head), and \(remaining) more"
-    }
-
-    private func _truncate(_ text: String, maxChars: Int) -> String {
-        /**
-         Summary
-         Truncate a string to a maximum number of characters for compact UI display.
-
-         Inputs
-         text: Input string.
-         max: Maximum character count.
-
-         Outputs
-         Truncated string with ellipsis when needed.
-
-         Side effects
-         None.
-
-         Error handling
-         None.
-
-         Ties to other methods
-         Used by summary and error helpers to keep banners and cards readable.
-
-         Why this exists
-         Backend errors can be long; the UI must remain readable and avoid huge banners.
-         */
-        if maxChars <= 0 { return "" }
-        if text.count <= maxChars { return text }
-        let prefixCount = Swift.max(0, maxChars - 1)
-        return String(text.prefix(prefixCount)) + "…"
     }
 
     private func _loadCachedSnapshotIfAvailable() {
@@ -1159,14 +926,10 @@ public final class DashboardViewModel: ObservableObject {
          Why this exists
          The original Tk UI kept collector state in-process; caching avoids a blank UI while the first snapshot is collected.
          */
-        guard let snapshotCacheFile else { return }
-        if !FileManager.default.fileExists(atPath: snapshotCacheFile.path) { return }
-
         do {
-            let data = try Data(contentsOf: snapshotCacheFile, options: [.mappedIfSafe])
-            if data.isEmpty { return }
-            let decoded = try JSONDecoder().decode(Snapshot.self, from: data)
-            let checked = try decoded.validated()
+            guard let checked = try DashboardSnapshotCache.loadSnapshotIfAvailable(at: snapshotCacheFile) else {
+                return
+            }
             snapshot = checked
             lastRefreshAt = Date(timeIntervalSince1970: TimeInterval(checked.generated_at_unix_ms) / 1000.0)
             _applyThemeIfAvailable(snapshot: checked)
@@ -1175,7 +938,8 @@ public final class DashboardViewModel: ObservableObject {
         } catch let error as AppError {
             lastError = error
         } catch {
-            lastError = AppError.context(#fileID, #function, "Failed to load snapshot cache at \(snapshotCacheFile.path)", error)
+            let cachePath = snapshotCacheFile?.path ?? "<unknown>"
+            lastError = AppError.context(#fileID, #function, "Failed to load snapshot cache at \(cachePath)", error)
         }
     }
 
@@ -1202,14 +966,13 @@ public final class DashboardViewModel: ObservableObject {
          Why this exists
          Users expect the dashboard to render immediately; caching avoids waiting on system_profiler and other slow commands.
          */
-        guard let snapshotCacheFile else { return }
-        guard let rawJSON, !rawJSON.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-
         do {
-            let parent = snapshotCacheFile.deletingLastPathComponent()
-            try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
-            try (rawJSON + "\n").write(to: snapshotCacheFile, atomically: true, encoding: .utf8)
+            _ = try DashboardSnapshotCache.writeSnapshotIfPossible(
+                rawJSON: rawJSON,
+                to: snapshotCacheFile
+            )
         } catch {
+            guard let snapshotCacheFile else { return }
             lastError = AppError.context(#fileID, #function, "Failed to write snapshot cache at \(snapshotCacheFile.path)", error)
         }
     }

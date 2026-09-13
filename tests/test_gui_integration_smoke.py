@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import concurrent.futures
 import tkinter as tk
 import unittest
 from types import SimpleNamespace
@@ -1053,7 +1054,12 @@ class GuiIntegrationSmokeTests(unittest.TestCase):
         try:
             app = object.__new__(DashboardApp)
             app._queue = cast(SectionQueue, _QueueStub())
-            app._shutdown = cast(ShutdownManager, _ShutdownStub(requested=True))
+            app._shutdown = cast(ShutdownManager, _ShutdownStub(requested=False))
+            app._refresh_after_id = None
+            app._refresh_poll_after_id = None
+            app._refresh_future = None
+            app._refresh_cycle = None
+            app._machine_hint = "mac"
             app._cfg = cast(
                 Config,
                 SimpleNamespace(
@@ -1066,6 +1072,9 @@ class GuiIntegrationSmokeTests(unittest.TestCase):
             clear_calls: list[str] = []
             setattr(app, "update_idletasks", lambda: None)
             setattr(app, "_schedule_next_refresh", lambda _delay_ms: None)
+            setattr(app, "after", lambda _delay, _callback: "refresh-poll")
+            setattr(app, "_set_refresh_controls_busy", lambda _busy: None)
+            setattr(app, "_set_section_feedback", lambda _key, _message, level: None)
             setattr(app, "_set_status", lambda _text, level="info": status_levels.append(str(level)))
             setattr(app, "_clear_section_data_views", lambda key, message="": clear_calls.append(str(key)))
             setattr(
@@ -1110,13 +1119,26 @@ class GuiIntegrationSmokeTests(unittest.TestCase):
             with patch("mac_health_checkup.app.gui.app.SECTION_HANDLERS", {"network": object()}):
                 with patch("mac_health_checkup.app.gui.app.run_section", side_effect=_run_section):
                     app._refresh()
+                    first_future = cast(
+                        concurrent.futures.Future[object],
+                        app.__dict__.get("_refresh_future"),
+                    )
+                    first_future.result(timeout=2.0)
+                    app._poll_refresh_result()
                     app._refresh()
+                    second_future = cast(
+                        concurrent.futures.Future[object],
+                        app.__dict__.get("_refresh_future"),
+                    )
+                    second_future.result(timeout=2.0)
+                    app._poll_refresh_result()
 
             self.assertIn("network", state)
             self.assertEqual(state["network"], "Recovered healthy data")
             self.assertEqual(clear_calls, ["network"])
             self.assertIn("warn", status_levels)
             self.assertIn("info", status_levels)
+            app._refresh_executor.shutdown(wait=True)
         except (
             AssertionError,
             RuntimeError,

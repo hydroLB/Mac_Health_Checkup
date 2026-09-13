@@ -9,9 +9,86 @@ from typing import cast
 
 import pytest
 
+from tools.gui_visual_regression import PpmImage, RgbColor, _diff_pair
+
 MODULE_PATH = "tests/test_gui_visual_regression_tool.py"
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "tools" / "gui_visual_regression.py"
+
+
+def test_ppm_fill_rect_clips_against_original_bounds() -> None:
+    """
+    Summary
+    Verify partially off-canvas rectangles clip against their original geometry.
+
+    Inputs
+    None.
+
+    Outputs
+    Assertion on the rendered pixel buffer.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `AssertionError` when clipping paints extra pixels.
+
+    Ties to other methods
+    Exercises `PpmImage.fill_rect` with negative coordinates.
+
+    Why this exists
+    Scrolled visual-regression scenes routinely contain content above the viewport.
+    """
+    image = PpmImage(3, 3, RgbColor(0, 0, 0))
+
+    image.fill_rect(-1, -1, 2, 2, RgbColor(255, 0, 0))
+
+    expected = bytes((255, 0, 0)) + (bytes((0, 0, 0)) * 8)
+    assert bytes(image._data) == expected
+
+
+def test_diff_pair_dims_unchanged_pixels_and_highlights_changed_pixels(tmp_path: Path) -> None:
+    """
+    Summary
+    Verify the byte-buffer diff preserves unchanged and changed pixel rendering semantics.
+
+    Inputs
+    tmp_path: Temporary directory for source and diff PPM files.
+
+    Outputs
+    Assertions on diff statistics and output pixels.
+
+    Side effects
+    Writes three temporary PPM files.
+
+    Error handling
+    Raises `AssertionError` when statistics or diff colors regress.
+
+    Ties to other methods
+    Exercises `_diff_pair` end to end on a two-pixel fixture.
+
+    Why this exists
+    Performance optimizations must not weaken pixel-level regression detection.
+    """
+    before_path = tmp_path / "before.ppm"
+    after_path = tmp_path / "after.ppm"
+    diff_path = tmp_path / "diff.ppm"
+    before = PpmImage(2, 1, RgbColor(0, 0, 0))
+    after = PpmImage(2, 1, RgbColor(0, 0, 0))
+    before._data[:] = bytes((100, 200, 50, 0, 0, 0))
+    after._data[:] = bytes((100, 200, 50, 1, 2, 3))
+    before.write(before_path)
+    after.write(after_path)
+
+    result = _diff_pair(before_path, after_path, diff_path)
+
+    assert result == {
+        "scene": "before",
+        "changed_pixels": 1,
+        "total_pixels": 2,
+        "changed_ratio": 0.5,
+    }
+    assert bytes(PpmImage.read(diff_path)._data) == bytes((45, 90, 22, 255, 0, 180))
 
 
 def _run_visual_tool(args: list[str]) -> subprocess.CompletedProcess[str]:

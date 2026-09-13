@@ -3,10 +3,10 @@ from __future__ import annotations
 import tkinter as tk
 from typing import Callable, Optional, Protocol, Sequence, cast
 
+from mac_health_checkup.app.gui.dashboard import render_support
 from mac_health_checkup.app.gui.dashboard.ui_helpers import (
     _SectionWidgets,
     _segment_at_char,
-    _table_separator_length,
     _UiPalette,
     _UiTokens,
 )
@@ -232,22 +232,12 @@ class _DashboardRenderMixin:
                     lambda event: self._metrics_tooltip_for_event(key=key, widget=widget, event=event),
                 )
             self._set_card_border(key, "normal")
-            widget.configure(state="normal")
-            widget.delete("1.0", tk.END)
-            if rows:
-                for label, value, status in rows:
-                    tag = self._status_to_tag(status)
-                    widget.insert(tk.END, f"{label}: {value} ", ())
-                    widget.insert(tk.END, f"[{status}]\n", (tag,))
-                self._set_section_feedback(
-                    key,
-                    f"Showing {len(rows)} metrics.",
-                    level="success",
-                )
-            else:
-                widget.insert(tk.END, self._ui_tokens.empty_metrics_message + "\n", ("empty",))
-                self._set_section_feedback(key, self._ui_tokens.section_feedback_empty, level="info")
-            widget.configure(state="disabled")
+            plan = render_support.plan_metrics_render(
+                rows=tuple(rows),
+                empty_metrics_message=self._ui_tokens.empty_metrics_message,
+                status_to_tag_fn=self._status_to_tag,
+            )
+            self._apply_text_render_plan(key=key, widget=widget, plan=plan)
         except (tk.TclError, RuntimeError, ValueError, TypeError) as exc:
             raise RuntimeError(
                 format_error(
@@ -303,33 +293,14 @@ class _DashboardRenderMixin:
                     lambda event: self._table_tooltip_for_event(key=key, widget=widget, event=event),
                 )
             self._set_card_border(key, "normal")
-            widget.configure(state="normal")
-            widget.delete("1.0", tk.END)
-            widget.insert(tk.END, " | ".join(headers) + "\n", ("header",))
-            widget.insert(
-                tk.END,
-                "-"
-                * _table_separator_length(
-                    headers,
-                    rows,
-                    minimum=self._ui_tokens.table_separator_min_chars,
-                    maximum=self._ui_tokens.table_separator_max_chars,
-                )
-                + "\n",
-                ("separator",),
+            plan = render_support.plan_table_render(
+                headers=headers,
+                rows=tuple(rows),
+                empty_table_message=self._ui_tokens.empty_table_message,
+                separator_min_chars=self._ui_tokens.table_separator_min_chars,
+                separator_max_chars=self._ui_tokens.table_separator_max_chars,
             )
-            if rows:
-                for row in rows:
-                    widget.insert(tk.END, " | ".join(row) + "\n")
-                self._set_section_feedback(
-                    key,
-                    f"Showing {len(rows)} rows.",
-                    level="success",
-                )
-            else:
-                widget.insert(tk.END, self._ui_tokens.empty_table_message + "\n", ("empty",))
-                self._set_section_feedback(key, self._ui_tokens.section_feedback_empty, level="info")
-            widget.configure(state="disabled")
+            self._apply_text_render_plan(key=key, widget=widget, plan=plan)
         except (tk.TclError, RuntimeError, ValueError, TypeError) as exc:
             raise RuntimeError(
                 format_error(MODULE_PATH, "DashboardApp.render_table", "Failed to render table", exc)
@@ -602,124 +573,23 @@ class _DashboardRenderMixin:
         Keeps table and metric rendering consistent while supporting longer outputs with a native-feeling scrollbar.
         """
         try:
-            base_height = int(self._cfg.gui.scrollable_rows.get(key, self._cfg.gui.table_max_visible_rows))
-            if base_height <= 0:
-                base_height = int(self._cfg.gui.table_max_visible_rows)
             table_base_heights = self.__dict__.setdefault("_table_base_heights", {})
-            if isinstance(table_base_heights, dict):
-                table_base_heights[key] = base_height
-            height = self._effective_table_height(key=key, base_height=base_height)
-            tokens = self.__dict__.get("_ui_tokens")
-            card_bg = self._color("surface.card")
-            inset_bg = self._color("surface.inset")
-            text_primary = self._color("text.primary")
-            select_bg = self._color("table.selection.active")
-            inactive_select_bg = self._color("table.selection.inactive")
-            table_pad_top = tokens.table_container_pad_top if tokens is not None else 8
-            text_pad_x = tokens.text_pad_x if tokens is not None else 8
-            configured_pad_y = tokens.text_pad_y if tokens is not None else 6
-            inner_pad_x = tokens.card_inner_pad_x if tokens is not None else 12
-            inner_pad_y = tokens.card_inner_pad_y if tokens is not None else 10
-            table_row_height = int(getattr(self._cfg.gui, "table_row_height", 22))
-            text_font_size = max(
-                9,
-                min(int(self._cfg.fonts.size_field), max(9, int(round(float(table_row_height) * 0.56)))),
+            if not isinstance(table_base_heights, dict):
+                table_base_heights = {}
+                self.__dict__["_table_base_heights"] = table_base_heights
+            return render_support.create_text_widget(
+                key=key,
+                section=section,
+                kind=kind,
+                cfg=self._cfg,
+                ui_tokens=cast(Optional[_UiTokens], self.__dict__.get("_ui_tokens")),
+                table_base_heights=table_base_heights,
+                color_fn=self._color,
+                effective_table_height_fn=self._effective_table_height,
+                card_state_handler_fn=self._card_state_handler,
+                style_scrollbar_fn=self._style_scrollbar,
+                set_horizontal_scrollbar_visibility_fn=self._set_horizontal_scrollbar_visibility,
             )
-            text_pad_y = max(2, configured_pad_y, int(round((table_row_height - text_font_size) / 2)))
-
-            container = tk.Frame(section.frame, bg=card_bg)
-            container.pack(
-                fill="x",
-                padx=inner_pad_x,
-                pady=(table_pad_top, inner_pad_y),
-            )
-            if kind == "table":
-                section.table_container = container
-            else:
-                section.metrics_container = container
-
-            scrollbar_y = tk.Scrollbar(container, orient="vertical")
-            self._style_scrollbar(scrollbar_y)
-            scrollbar_y.pack(side="right", fill="y")
-
-            scrollbar_x = tk.Scrollbar(container, orient="horizontal")
-            self._style_scrollbar(scrollbar_x)
-
-            horizontal_visible = {"value": False}
-
-            def _on_xscroll(first: float, last: float) -> object:
-                """
-                Summary
-                Synchronize horizontal scrollbar state and auto-hide behavior from xview updates.
-
-                Inputs
-                first: Left viewport fraction as a string.
-                last: Right viewport fraction as a string.
-
-                Outputs
-                None.
-
-                Side effects
-                Updates scrollbar thumb and toggles visibility.
-
-                Error handling
-                Swallows transient parsing and Tk state errors to keep rendering resilient.
-
-                Ties to other methods
-                Bound as the Text widget `xscrollcommand`.
-
-                Why this exists
-                Horizontal scrollbars should only appear when table content overflows.
-                """
-                try:
-                    scrollbar_x.set(str(first), str(last))
-                    first_f = float(first)
-                    last_f = float(last)
-                    has_overflow = first_f > 0.0 or last_f < 1.0
-                    if has_overflow != horizontal_visible["value"]:
-                        horizontal_visible["value"] = has_overflow
-                        self._set_horizontal_scrollbar_visibility(scrollbar_x, visible=has_overflow)
-                    return None
-                except (
-                    tk.TclError,
-                    RuntimeError,
-                    ValueError,
-                    TypeError,
-                    AttributeError,
-                    KeyError,
-                    IndexError,
-                    OSError,
-                ):
-                    return None
-
-            text_widget = tk.Text(
-                container,
-                height=height,
-                bg=inset_bg,
-                fg=text_primary,
-                font=(self._cfg.fonts.family_mono, text_font_size),
-                wrap="none",
-                relief="flat",
-                highlightthickness=0,
-                borderwidth=0,
-                padx=text_pad_x,
-                pady=text_pad_y,
-                yscrollcommand=scrollbar_y.set,
-                xscrollcommand=_on_xscroll,
-                takefocus=1,
-                insertbackground=text_primary,
-                selectbackground=select_bg,
-                selectforeground=text_primary,
-                inactiveselectbackground=inactive_select_bg,
-            )
-            scrollbar_y.configure(command=text_widget.yview)
-            scrollbar_x.configure(command=text_widget.xview)
-            self._set_horizontal_scrollbar_visibility(scrollbar_x, visible=False)
-            text_widget.bind("<FocusIn>", self._card_state_handler(key=key, mode="focus"), add="+")
-            text_widget.bind("<FocusOut>", self._card_state_handler(key=key, mode="normal"), add="+")
-            text_widget.configure(state="disabled")
-            text_widget.pack(side="left", fill="both", expand=True)
-            return text_widget
         except (tk.TclError, RuntimeError, ValueError, TypeError, AttributeError) as exc:
             raise RuntimeError(
                 format_error(
@@ -750,27 +620,7 @@ class _DashboardRenderMixin:
         Why this exists
         Softer scrollbars reduce visual clutter while preserving affordance.
         """
-        try:
-            scrollbar.configure(
-                bg=self._color("scrollbar.thumb"),
-                troughcolor=self._color("scrollbar.track"),
-                activebackground=self._color("scrollbar.arrow"),
-                relief="flat",
-                bd=0,
-                highlightthickness=0,
-                width=10,
-            )
-        except (
-            tk.TclError,
-            RuntimeError,
-            ValueError,
-            TypeError,
-            AttributeError,
-            KeyError,
-            IndexError,
-            OSError,
-        ):
-            return
+        render_support.style_scrollbar(scrollbar, color_fn=self._color)
 
     def _set_horizontal_scrollbar_visibility(self, scrollbar: tk.Scrollbar, *, visible: bool) -> None:
         """
@@ -796,24 +646,7 @@ class _DashboardRenderMixin:
         Why this exists
         Always-visible horizontal bars add noise when no horizontal scrolling is possible.
         """
-        try:
-            if visible:
-                scrollbar.pack(side="bottom", fill="x")
-            else:
-                pack_forget = getattr(scrollbar, "pack_forget", None)
-                if callable(pack_forget):
-                    pack_forget()
-        except (
-            tk.TclError,
-            RuntimeError,
-            ValueError,
-            TypeError,
-            AttributeError,
-            KeyError,
-            IndexError,
-            OSError,
-        ):
-            return
+        render_support.set_horizontal_scrollbar_visibility(scrollbar, visible=visible)
 
     def _configure_text_tags(self, widget: tk.Text) -> None:
         """
@@ -839,25 +672,7 @@ class _DashboardRenderMixin:
         Centralizes styling so all sections read consistently and can be tuned via config colors.
         """
         try:
-            header = self._color("table.header")
-            separator = self._color("table.separator")
-            ok = self._color("status.success")
-            warn = self._color("status.warn")
-            bad = self._color("status.error")
-            info = self._color("status.ready")
-            empty = self._color("text.empty")
-            loading = self._color("status.working")
-            unknown = self._color("text.primary")
-            table_bg = self._color("surface.inset")
-            widget.tag_configure("header", foreground=header)
-            widget.tag_configure("separator", foreground=separator)
-            widget.tag_configure("ok", foreground=ok)
-            widget.tag_configure("warn", foreground=warn)
-            widget.tag_configure("bad", foreground=bad)
-            widget.tag_configure("info", foreground=info)
-            widget.tag_configure("empty", foreground=empty, background=table_bg)
-            widget.tag_configure("loading", foreground=loading)
-            widget.tag_configure("unknown", foreground=unknown)
+            render_support.configure_text_tags(widget, color_fn=self._color)
         except (tk.TclError, RuntimeError, ValueError, TypeError) as exc:
             raise RuntimeError(
                 format_error(
@@ -889,21 +704,52 @@ class _DashboardRenderMixin:
         Keeps status mapping centralized so sections can emit simple status strings without UI concerns.
         """
         try:
-            normalized = (status or "").strip().lower()
-            if normalized in {"ok", "good", "pass"}:
-                return "ok"
-            if normalized in {"warn", "warning"}:
-                return "warn"
-            if normalized in {"bad", "fail", "error"}:
-                return "bad"
-            if normalized in {"working", "loading"}:
-                return "loading"
-            if normalized in {"ready", "info", "note"}:
-                return "info"
-            return "unknown"
+            return render_support.status_to_tag(status, default="unknown")
         except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
             raise RuntimeError(
                 format_error(MODULE_PATH, "DashboardApp._status_to_tag", "Failed to map status tag", exc)
+            ) from exc
+
+    def _apply_text_render_plan(self, *, key: str, widget: tk.Text, plan: render_support.RenderPlan) -> None:
+        """
+        Summary
+        Apply one prepared text render plan to a section detail widget.
+
+        Inputs
+        key: Section key for feedback updates.
+        widget: Target text widget.
+        plan: Prepared render plan containing inserts and feedback metadata.
+
+        Outputs
+        None.
+
+        Side effects
+        Replaces widget text content and updates section feedback.
+
+        Error handling
+        Raises `RuntimeError` with module and method context when widget updates fail.
+
+        Ties to other methods
+        Used by `render_metrics_table` and `render_table`.
+
+        Why this exists
+        The two text renderers share the same mutation sequence; centralizing it keeps the mixin readable without moving coordinator logic out of the file.
+        """
+        try:
+            widget.configure(state="normal")
+            widget.delete("1.0", tk.END)
+            for insert in plan.inserts:
+                widget.insert(tk.END, insert.text, insert.tags)
+            self._set_section_feedback(key, plan.feedback_message, level=plan.feedback_level)
+            widget.configure(state="disabled")
+        except (tk.TclError, RuntimeError, ValueError, TypeError, AttributeError) as exc:
+            raise RuntimeError(
+                format_error(
+                    MODULE_PATH,
+                    "DashboardApp._apply_text_render_plan",
+                    "Failed to apply text render plan",
+                    exc,
+                )
             ) from exc
 
     def _clear_text_widget(self, widget: tk.Text, *, message: str, level: str = "info") -> None:
@@ -932,19 +778,7 @@ class _DashboardRenderMixin:
         Prevents stale rows from lingering after section failures.
         """
         try:
-            widget.configure(state="normal")
-            widget.delete("1.0", tk.END)
-            if message.strip():
-                normalized = (level or "").strip().lower()
-                tag = (
-                    "bad"
-                    if normalized == "error"
-                    else "loading"
-                    if normalized in {"loading", "working"}
-                    else "empty"
-                )
-                widget.insert(tk.END, message.strip() + "\n", (tag,))
-            widget.configure(state="disabled")
+            render_support.clear_text_widget(widget, message=message, level=level)
         except (tk.TclError, RuntimeError, ValueError, TypeError, AttributeError) as exc:
             raise RuntimeError(
                 format_error(

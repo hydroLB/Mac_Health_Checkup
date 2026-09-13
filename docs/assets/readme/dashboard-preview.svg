@@ -1,0 +1,170 @@
+<svg width="1200" height="675" viewBox="0 0 1200 675" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Mac Health Checkup product illustration</title>
+  <desc id="desc">Illustrated dashboard concept using fictional sample values; this is not a live application capture.</desc>
+  <style>
+    :root {
+      --bg: #12181f;
+      --card: #1a212a;
+      --border: #313d4b;
+      --fg: #f3f7fb;
+      --field: #e3eaf4;
+      --label: #a8b3c4;
+      --section: #58a6ff;
+      --ok: #2fbf71;
+      --warn: #d8a13a;
+      --bad: #e05d5d;
+    }
+    text { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif; }
+    .mono { font-family: "SF Mono", Menlo, Consolas, monospace; }
+    .card { fill: var(--card); stroke: var(--border); stroke-width: 1.2; }
+    .title { fill: var(--section); font-size: 17px; font-weight: 700; }
+    .subtitle { fill: var(--label); font-size: 12px; }
+    .field { fill: var(--field); font-size: 13px; }
+    .small { fill: var(--label); font-size: 11px; }
+    .badgeText { fill: #071018; font-size: 10px; font-weight: 800; letter-spacing: .4px; }
+    .pulse { animation: pulse 2.8s ease-in-out infinite; transform-origin: center; }
+    .pulse2 { animation-delay: .5s; }
+    .pulse3 { animation-delay: 1s; }
+    .scan { animation: scan 4.8s ease-in-out infinite; }
+    .spark { stroke-dasharray: 210; stroke-dashoffset: 210; animation: draw 3.2s ease-in-out infinite; }
+    .fade { animation: fade 4.8s ease-in-out infinite; }
+    .slide { animation: slide 5.5s ease-in-out infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: .62; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.06); }
+    }
+    @keyframes scan {
+      0% { transform: translateY(-72px); opacity: 0; }
+      12% { opacity: .95; }
+      65% { opacity: .85; }
+      100% { transform: translateY(520px); opacity: 0; }
+    }
+    @keyframes draw {
+      0% { stroke-dashoffset: 210; opacity: .45; }
+      45%, 70% { stroke-dashoffset: 0; opacity: 1; }
+      100% { stroke-dashoffset: -210; opacity: .45; }
+    }
+    @keyframes fade {
+      0%, 100% { opacity: .42; }
+      45%, 70% { opacity: 1; }
+    }
+    @keyframes slide {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(72px); }
+    }
+  </style>
+
+  <rect width="1200" height="675" rx="0" fill="var(--bg)"/>
+  <rect x="36" y="36" width="1128" height="603" rx="28" fill="#0f141a" stroke="#263341" stroke-width="1.4"/>
+  <rect x="36" y="36" width="1128" height="62" rx="28" fill="#151d26"/>
+  <circle cx="72" cy="67" r="7" fill="var(--bad)"/>
+  <circle cx="96" cy="67" r="7" fill="var(--warn)"/>
+  <circle cx="120" cy="67" r="7" fill="var(--ok)"/>
+  <text x="156" y="73" fill="var(--fg)" font-size="18" font-weight="800">Mac Health Checkup</text>
+  <text x="986" y="72" class="small mono">auto refresh 10s</text>
+
+  <rect x="68" y="126" width="248" height="474" rx="18" fill="#121922" stroke="var(--border)"/>
+  <text x="92" y="161" fill="var(--fg)" font-size="15" font-weight="800">Sections</text>
+  <rect x="92" y="180" width="194" height="30" rx="15" fill="#0f141a" stroke="#293746"/>
+  <text x="111" y="200" class="small">Search diagnostics</text>
+
+  <g transform="translate(92 232)">
+    <text y="0" class="field">Overview</text>
+    <rect x="166" y="-12" width="34" height="17" rx="8.5" fill="var(--ok)" class="pulse"/>
+    <text x="174" y="0" class="badgeText">OK</text>
+  </g>
+  <g transform="translate(92 270)">
+    <text y="0" class="field">Performance</text>
+    <rect x="166" y="-12" width="34" height="17" rx="8.5" fill="var(--warn)" class="pulse pulse2"/>
+    <text x="170" y="0" class="badgeText">WARN</text>
+  </g>
+  <g transform="translate(92 308)">
+    <text y="0" class="field">Security</text>
+    <rect x="166" y="-12" width="34" height="17" rx="8.5" fill="var(--warn)" class="pulse pulse3"/>
+    <text x="170" y="0" class="badgeText">WARN</text>
+  </g>
+  <g transform="translate(92 346)">
+    <text y="0" class="field">System</text>
+    <rect x="166" y="-12" width="34" height="17" rx="8.5" fill="var(--ok)" class="pulse"/>
+    <text x="174" y="0" class="badgeText">OK</text>
+  </g>
+  <g transform="translate(92 384)">
+    <text y="0" class="field">Processes</text>
+    <rect x="166" y="-12" width="34" height="17" rx="8.5" fill="var(--ok)" class="pulse pulse2"/>
+    <text x="174" y="0" class="badgeText">OK</text>
+  </g>
+  <g transform="translate(92 422)">
+    <text y="0" class="field">Network</text>
+    <rect x="166" y="-12" width="34" height="17" rx="8.5" fill="var(--ok)" class="pulse pulse3"/>
+    <text x="174" y="0" class="badgeText">OK</text>
+  </g>
+  <g transform="translate(92 460)">
+    <text y="0" class="field">Ports</text>
+    <rect x="166" y="-12" width="34" height="17" rx="8.5" fill="var(--ok)" class="pulse"/>
+    <text x="174" y="0" class="badgeText">OK</text>
+  </g>
+
+  <g transform="translate(344 126)">
+    <text x="0" y="0" fill="var(--fg)" font-size="28" font-weight="850">Overview</text>
+    <text x="0" y="29" fill="var(--label)" font-size="14">Read-only system signals rendered from the shared snapshot backend.</text>
+    <rect x="0" y="54" width="760" height="2" fill="var(--border)"/>
+  </g>
+
+  <g transform="translate(344 218)">
+    <rect class="card" width="360" height="118" rx="12"/>
+    <text x="22" y="33" class="title">Security</text>
+    <text x="22" y="53" class="subtitle">FileVault / SIP</text>
+    <text x="22" y="85" class="field">FileVault: Off | SIP: Enabled</text>
+    <rect x="294" y="26" width="44" height="20" rx="10" fill="var(--warn)" class="pulse"/>
+    <text x="302" y="40" class="badgeText">WARN</text>
+  </g>
+
+  <g transform="translate(728 218)">
+    <rect class="card" width="360" height="118" rx="12"/>
+    <text x="22" y="33" class="title">System</text>
+    <text x="22" y="53" class="subtitle">Storage / Memory</text>
+    <text x="22" y="85" class="field">Disk free: 85% | Memory free: 76%</text>
+    <rect x="304" y="26" width="34" height="20" rx="10" fill="var(--ok)" class="pulse pulse2"/>
+    <text x="313" y="40" class="badgeText">OK</text>
+  </g>
+
+  <g transform="translate(344 360)">
+    <rect class="card" width="360" height="150" rx="12"/>
+    <text x="22" y="33" class="title">Processes</text>
+    <text x="22" y="53" class="subtitle">Top CPU / MEM</text>
+    <text x="22" y="82" class="small mono">Type   PID     CPU%   MEM%</text>
+    <rect x="22" y="96" width="282" height="8" rx="4" fill="#293746"/>
+    <rect x="22" y="114" width="240" height="8" rx="4" fill="#293746"/>
+    <rect x="22" y="132" width="315" height="8" rx="4" fill="#293746"/>
+    <path class="spark" d="M222 51 L242 40 L262 47 L282 31 L302 37 L322 25" stroke="var(--section)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g transform="translate(728 360)">
+    <rect class="card" width="360" height="150" rx="12"/>
+    <text x="22" y="33" class="title">Network</text>
+    <text x="22" y="53" class="subtitle">Quality</text>
+    <text x="22" y="84" class="field">Interface: en0</text>
+    <text x="22" y="111" class="field">IPv4: 192.168.x.x</text>
+    <rect x="294" y="26" width="44" height="20" rx="10" fill="var(--ok)" class="pulse pulse3"/>
+    <text x="303" y="40" class="badgeText">OK</text>
+  </g>
+
+  <g transform="translate(344 534)">
+    <rect class="card" width="744" height="66" rx="12"/>
+    <text x="22" y="29" class="small mono">python -m mac_health_checkup --snapshot-json --fail-on warn</text>
+    <text x="22" y="49" class="small">schema v2 | section catalog | metrics | tables | diagnostics | theme</text>
+    <rect x="560" y="27" width="128" height="8" rx="4" fill="#293746"/>
+    <rect x="560" y="27" width="52" height="8" rx="4" fill="var(--section)" class="slide"/>
+  </g>
+
+  <rect x="344" y="185" width="744" height="2" fill="var(--section)" opacity=".22" class="scan"/>
+  <rect x="344" y="185" width="744" height="64" fill="url(#scanGradient)" opacity=".35" class="scan"/>
+
+  <defs>
+    <linearGradient id="scanGradient" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#58a6ff" stop-opacity="0"/>
+      <stop offset=".45" stop-color="#58a6ff" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#58a6ff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+</svg>

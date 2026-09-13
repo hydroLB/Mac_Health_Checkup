@@ -40,9 +40,15 @@ def _parse_args() -> argparse.Namespace:
     """
     try:
         parser = argparse.ArgumentParser(description="Launch the native macOS SwiftUI UI (one-click).")
-        parser.add_argument("--config", dest="config_path", help="Override config/config.json for the SwiftUI app.")
-        parser.add_argument("--repo-root", dest="repo_root", help="Override the repository root for the SwiftUI app.")
-        parser.add_argument("--python", dest="python_path", help="Override the Python executable for the backend.")
+        parser.add_argument(
+            "--config", dest="config_path", help="Override config/config.json for the SwiftUI app."
+        )
+        parser.add_argument(
+            "--repo-root", dest="repo_root", help="Override the repository root for the SwiftUI app."
+        )
+        parser.add_argument(
+            "--python", dest="python_path", help="Override the Python executable for the backend."
+        )
         # Preserve existing behavior of ignoring unknown flags while still supporting `--help`.
         return parser.parse_known_args()[0]
     except (RuntimeError, ValueError, TypeError) as exc:

@@ -121,6 +121,8 @@ def _render(host: SectionHost, data: JsonDict, interface: Optional[str]) -> None
             rows.append(("Downlink capacity", f"{cap_down} Mbps", "info"))
         if isinstance(cap_up, (int, float)):
             rows.append(("Uplink capacity", f"{cap_up} Mbps", "info"))
+        if data.get("capacity_test_enabled") is False:
+            rows.append(("Capacity test", "Disabled (opt in)", "info"))
         host.render_metrics_table("network", rows, columns=2)
     except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
         raise RuntimeError(

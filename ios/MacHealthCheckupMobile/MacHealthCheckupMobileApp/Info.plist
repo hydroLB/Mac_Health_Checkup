@@ -5,22 +5,17 @@
   <key>CFBundleDisplayName</key>
   <string>Mac Health Checkup</string>
   <key>CFBundleIdentifier</key>
-  <string>com.example.mac-health-checkup</string>
+  <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
   <key>CFBundleName</key>
   <string>MacHealthCheckupMobile</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.2.0</string>
+  <string>$(MARKETING_VERSION)</string>
   <key>CFBundleVersion</key>
-  <string>1</string>
+  <string>$(CURRENT_PROJECT_VERSION)</string>
   <key>UILaunchScreen</key>
   <dict/>
   <key>UIApplicationSceneManifest</key>
   <dict/>
-  <key>NSAppTransportSecurity</key>
-  <dict>
-    <key>NSAllowsArbitraryLoadsInLocalNetworking</key>
-    <true/>
-  </dict>
   <key>NSLocalNetworkUsageDescription</key>
   <string>Connect to your Mac on the local network to fetch health snapshots.</string>
   <key>NSCameraUsageDescription</key>

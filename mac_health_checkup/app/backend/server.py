@@ -137,6 +137,7 @@ class SnapshotApiServer:
         Why this exists
         Keeps the main thread available for signal handling.
         """
+        httpd: ThreadingHTTPServer | None = None
         try:
             if self._httpd is not None:
                 return
@@ -147,7 +148,6 @@ class SnapshotApiServer:
             max_attempts = 20 if preferred_port != 0 else 1
             last_exc: OSError | None = None
 
-            httpd: ThreadingHTTPServer | None = None
             for attempt in range(max_attempts):
                 port = preferred_port if preferred_port == 0 else preferred_port + attempt
                 if port > 65535:
@@ -177,13 +177,27 @@ class SnapshotApiServer:
                 key_path = Path(self._api.tls_key_path).expanduser()
                 context = build_tls_server_context(cert_path, key_path)
                 httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
-            self._httpd = httpd
             bound_host, bound_port = httpd.server_address[:2]
-            self._bound_host = str(bound_host)
-            self._bound_port = int(bound_port)
-            self._thread = threading.Thread(target=httpd.serve_forever, name="snapshot-api", daemon=True)
-            self._thread.start()
+            resolved_host = str(bound_host)
+            resolved_port = int(bound_port)
+            thread = threading.Thread(target=httpd.serve_forever, name="snapshot-api", daemon=True)
+            thread.start()
+
+            self._httpd = httpd
+            self._thread = thread
+            self._bound_host = resolved_host
+            self._bound_port = resolved_port
+            httpd = None
         except (OSError, RuntimeError, ValueError, TypeError) as exc:
+            if httpd is not None:
+                try:
+                    httpd.server_close()
+                except (OSError, RuntimeError, ValueError, TypeError):
+                    pass
+            self._httpd = None
+            self._thread = None
+            self._bound_host = None
+            self._bound_port = None
             raise RuntimeError(
                 format_error(MODULE_PATH, "SnapshotApiServer.start", "Failed to start server", exc)
             ) from exc

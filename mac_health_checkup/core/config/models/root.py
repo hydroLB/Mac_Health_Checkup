@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from mac_health_checkup.core.config.models.backend import ApiConfig, FansConfig
+from mac_health_checkup.core.config.models.backend import ApiConfig, FansConfig, NetworkConfig
 from mac_health_checkup.core.config.models.gui import DisplayTransportConfig, GuiConfig, ThresholdsConfig
 from mac_health_checkup.core.config.models.observability import LoggingConfig
 from mac_health_checkup.core.config.models.runtime import (
@@ -55,6 +55,7 @@ class Config:
     timeouts: TimeoutConfig
     api: ApiConfig
     fans: FansConfig
+    network: NetworkConfig
     thresholds: ThresholdsConfig
     gui: GuiConfig
     display_transport: DisplayTransportConfig

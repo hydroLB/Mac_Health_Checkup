@@ -245,7 +245,9 @@ def load_layer_rules(path: Path) -> LayerRules:
             raise ValueError("allowed_imports must be an object")
         allowed_imports: dict[str, tuple[str, ...]] = {}
         for layer in layers:
-            allowed = _require_str_list(raw_allowed.get(layer.name), field_name=f"allowed_imports.{layer.name}")
+            allowed = _require_str_list(
+                raw_allowed.get(layer.name), field_name=f"allowed_imports.{layer.name}"
+            )
             unknown_targets = [name for name in allowed if name not in layer_names]
             if unknown_targets:
                 raise ValueError(
@@ -536,7 +538,9 @@ def find_layer_violations(repo_root: Path, rules: LayerRules) -> tuple[LayerViol
                         line=line,
                     )
                 )
-        return tuple(sorted(violations, key=lambda item: (item.importer_path, item.line, item.imported_module)))
+        return tuple(
+            sorted(violations, key=lambda item: (item.importer_path, item.line, item.imported_module))
+        )
     except (RuntimeError, ValueError, TypeError, OSError) as exc:
         raise RuntimeError(f"{MODULE_PATH}:find_layer_violations failed: {exc}") from exc
 

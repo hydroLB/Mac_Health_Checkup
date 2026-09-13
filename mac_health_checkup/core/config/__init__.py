@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from mac_health_checkup.core.config.models.backend import ApiConfig, FansConfig
+from mac_health_checkup.core.config.models.backend import ApiConfig, FansConfig, NetworkConfig
 from mac_health_checkup.core.config.models.gui import DisplayTransportConfig, GuiConfig, ThresholdsConfig
 from mac_health_checkup.core.config.models.observability import LoggingConfig
 from mac_health_checkup.core.config.models.root import Config
@@ -39,6 +39,7 @@ __all__ = [
     "GuiConfig",
     "IoConfig",
     "LoggingConfig",
+    "NetworkConfig",
     "parse_config",
     "StartupConfigValidationReport",
     "build_startup_config_validation_report",

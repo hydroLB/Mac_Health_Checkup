@@ -1,25 +1,26 @@
 from __future__ import annotations
 
 import platform
-import subprocess
+import subprocess  # nosec B404
 import tkinter as tk
 from typing import Callable, Literal, cast
 
+from mac_health_checkup.app.gui.dashboard.layout_support import (
+    bind_card_affordances,
+    build_section_widgets,
+    compute_field_wraplength,
+    effective_table_height_for_width,
+    resolve_card_border_style,
+)
 from mac_health_checkup.app.gui.dashboard.ui_helpers import (
     _blend_hex,
     _SectionWidgets,
     _UiPalette,
     _UiTokens,
 )
-from mac_health_checkup.app.gui.widgets.controls import (
-    ButtonTheme,
-    InlineStatusBadge,
-    InteractiveButton,
-    StatusTheme,
-)
+from mac_health_checkup.app.gui.widgets.controls import ButtonTheme, InteractiveButton
 from mac_health_checkup.app.gui.widgets.scroll_container import ScrollContainer
 from mac_health_checkup.app.gui.widgets.tooltip import TooltipManager
-from mac_health_checkup.app.help_text import section as section_help_text
 from mac_health_checkup.core.config import Config
 from mac_health_checkup.core.utils import format_error
 
@@ -71,8 +72,8 @@ class _DashboardLayoutMixin:
         try:
             if platform.system() != "Darwin":
                 return None
-            completed = subprocess.run(
-                ["defaults", "read", "-g", "AppleInterfaceStyle"],
+            completed = subprocess.run(  # nosec B603
+                ["/usr/bin/defaults", "read", "-g", "AppleInterfaceStyle"],
                 check=False,
                 capture_output=True,
                 text=True,
@@ -1157,88 +1158,16 @@ class _DashboardLayoutMixin:
         Encapsulates repeated card construction so visual consistency is automatic across sections.
         """
         try:
-            card = tk.Frame(
-                parent,
-                bg=self._color("surface.card"),
-                highlightbackground=self._color("border.card"),
-                highlightthickness=1,
-                takefocus=0,
-            )
-            card.pack(fill="x", padx=self._ui_tokens.outer_pad_x, pady=self._cfg.gui.section_pady)
-
-            title_label = self._new_label(
-                parent=card,
-                text=title,
-                bg=self._color("surface.card"),
-                fg=self._color("text.section_header"),
-                font_size=self._cfg.fonts.size_section,
-                font_weight=self._cfg.fonts.weight_bold,
-            )
-            title_label.pack(
-                anchor="w", padx=self._ui_tokens.card_inner_pad_x, pady=(self._ui_tokens.card_inner_pad_y, 0)
-            )
-            self._tooltips.set_static(title_label, section_help_text(key))
-
-            subtitle_label = self._new_label(
-                parent=card,
-                text=subtitle,
-                bg=self._color("surface.card"),
-                fg=self._color("text.form_label"),
-                font_size=self._cfg.fonts.size_field,
-                font_weight=self._cfg.fonts.weight_normal,
-            )
-            subtitle_label.pack(
-                anchor="w",
-                padx=self._ui_tokens.card_inner_pad_x,
-                pady=(2, self._ui_tokens.section_feedback_pad_bottom),
-            )
-            self._tooltips.set_static(subtitle_label, section_help_text(key))
-
-            feedback_label = InlineStatusBadge(
-                card,
-                bg=self._color("surface.card"),
-                theme=StatusTheme(
-                    info_fg=self._color("status.ready"),
-                    loading_fg=self._color("status.working"),
-                    success_fg=self._color("status.success"),
-                    warn_fg=self._color("status.warn"),
-                    error_fg=self._color("status.error"),
-                ),
-                font_family=self._cfg.fonts.family_default,
-                font_size=self._cfg.fonts.size_tooltip,
-                font_weight=self._cfg.fonts.weight_normal,
-            )
-            feedback_label.pack(
-                anchor="w",
-                padx=self._ui_tokens.card_inner_pad_x,
-                pady=(self._ui_tokens.section_feedback_pad_top, 0),
-            )
-
-            field_label = self._new_label(
-                parent=card,
-                text="Waiting for section data...",
-                bg=self._color("surface.card"),
-                fg=self._color("text.empty"),
-                font_size=self._cfg.fonts.size_field,
-                font_weight=self._cfg.fonts.weight_normal,
-                wraplength=self._cfg.gui.content_wrap,
-            )
-            field_label.configure(anchor="w", takefocus=1)
-            field_label.pack(
-                anchor="w",
-                fill="x",
-                padx=self._ui_tokens.card_inner_pad_x,
-                pady=(self._ui_tokens.section_feedback_pad_bottom, self._ui_tokens.card_inner_pad_y),
-            )
-            self._tooltips.set_static(field_label, section_help_text(key))
-
-            section_widgets = _SectionWidgets(
-                frame=card,
-                title=title_label,
-                subtitle=subtitle_label,
-                field=field_label,
-                feedback=feedback_label,
-                card=card,
+            section_widgets = build_section_widgets(
+                parent=parent,
+                key=key,
+                title=title,
+                subtitle=subtitle,
+                cfg=self._cfg,
+                ui_tokens=self._ui_tokens,
+                color_fn=self._color,
+                new_label_fn=self._new_label,
+                set_tooltip_fn=self._tooltips.set_static,
             )
             self._sections[key] = section_widgets
             self._set_section_feedback(key, self._ui_tokens.section_feedback_default, level="info")
@@ -1275,25 +1204,14 @@ class _DashboardLayoutMixin:
         Subtle interaction cues improve discoverability and readability for dense dashboards.
         """
         try:
-            card = section.card
-            if card is None:
-                return
-            bind_targets: list[tk.Widget] = [
-                card,
-                section.frame,
-                section.title,
-                section.subtitle,
-                section.field,
-            ]
-            if section.feedback is not None:
-                bind_targets.append(section.feedback)
-            deduped_targets: list[tk.Widget] = list(dict.fromkeys(bind_targets))
-            for target in deduped_targets:
-                target.bind("<Enter>", self._card_state_handler(key=key, mode="hover"), add="+")
-                target.bind("<Leave>", self._card_state_handler(key=key, mode="normal"), add="+")
-                target.bind("<FocusIn>", self._card_state_handler(key=key, mode="focus"), add="+")
-                target.bind("<FocusOut>", self._card_state_handler(key=key, mode="normal"), add="+")
-            self._set_card_border(key, "normal")
+            bind_card_affordances(
+                key=key,
+                section=section,
+                card_state_handler_fn=lambda section_key, mode: self._card_state_handler(
+                    key=section_key, mode=mode
+                ),
+                set_card_border_fn=self._set_card_border,
+            )
         except (tk.TclError, RuntimeError, ValueError, TypeError, AttributeError) as exc:
             raise RuntimeError(
                 format_error(
@@ -1332,19 +1250,12 @@ class _DashboardLayoutMixin:
             section = self._sections.get(key)
             if section is None or section.card is None:
                 return
-            default_border = self._color("border.card")
-            hover_border = self._color("border.card.hover")
-            focus_border = self._color("border.card.focus")
-            normalized = (mode or "").strip().lower()
-            if normalized == "focus":
-                border = focus_border
-                thickness = 2
-            elif normalized == "hover":
-                border = hover_border
-                thickness = 1
-            else:
-                border = default_border
-                thickness = 1
+            border, thickness = resolve_card_border_style(
+                mode=mode,
+                default_border=self._color("border.card"),
+                hover_border=self._color("border.card.hover"),
+                focus_border=self._color("border.card.focus"),
+            )
             section.card.configure(
                 highlightbackground=border,
                 highlightcolor=border,
@@ -1436,20 +1347,15 @@ class _DashboardLayoutMixin:
         """
         try:
             _ = key
-            resolved_base = max(1, int(base_height))
             window_obj = cast(tk.Misc, self)
             width_getter = getattr(window_obj, "winfo_width", None)
             if not callable(width_getter):
-                return resolved_base
-            width = int(width_getter())
-            breakpoint = int(getattr(self._cfg.gui, "layout_breakpoint_width", 760))
-            if width <= 0:
-                return resolved_base
-            if width <= breakpoint - 120:
-                return max(2, resolved_base - 2)
-            if width <= breakpoint:
-                return max(2, resolved_base - 1)
-            return resolved_base
+                return max(1, int(base_height))
+            return effective_table_height_for_width(
+                base_height=base_height,
+                width=int(width_getter()),
+                breakpoint=int(getattr(self._cfg.gui, "layout_breakpoint_width", 760)),
+            )
         except (
             tk.TclError,
             RuntimeError,
@@ -1487,10 +1393,11 @@ class _DashboardLayoutMixin:
         """
         try:
             width = int(cast(tk.Misc, self).winfo_width())
-            outer_pad = self._ui_tokens.outer_pad_x
-            wrap = max(
-                self._ui_tokens.field_wrap_min_px,
-                min(self._cfg.gui.content_wrap, width - (outer_pad * 2) - 72),
+            wrap = compute_field_wraplength(
+                width=width,
+                outer_pad=self._ui_tokens.outer_pad_x,
+                min_wrap=self._ui_tokens.field_wrap_min_px,
+                max_wrap=self._cfg.gui.content_wrap,
             )
             if self._wraplength_px == wrap:
                 wrap_changed = False

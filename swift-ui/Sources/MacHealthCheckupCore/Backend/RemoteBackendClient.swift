@@ -6,10 +6,10 @@ public struct RemoteBackendConfig: Sendable {
      Configure remote snapshot fetching from a Mac agent API.
 
      Inputs
-     baseURL: Base URL such as `http://192.168.1.10:7878`.
+     baseURL: HTTPS agent URL, or an HTTP URL when the host is loopback.
      authToken: Bearer token for `/v1/snapshot`.
      timeoutSeconds: Request timeout.
-     pinnedCertificateSHA256: Optional SHA-256 fingerprint for leaf certificate pinning.
+     pinnedCertificateSHA256: SHA-256 leaf certificate fingerprint; required for non-loopback HTTPS.
 
      Outputs
      Immutable configuration for `RemoteBackendClient`.
@@ -43,10 +43,10 @@ public struct RemoteBackendConfig: Sendable {
          Initialize remote backend configuration.
 
          Inputs
-         baseURL: Base URL such as `http://192.168.1.10:7878`.
+         baseURL: HTTPS agent URL, or an HTTP URL when the host is loopback.
          authToken: Bearer token for `/v1/snapshot`.
          timeoutSeconds: Request timeout.
-         pinnedCertificateSHA256: Optional SHA-256 leaf certificate fingerprint for pinning.
+         pinnedCertificateSHA256: SHA-256 leaf certificate fingerprint; required for non-loopback HTTPS.
 
          Outputs
          None.
@@ -98,6 +98,23 @@ public struct RemoteBackendConfig: Sendable {
         if timeoutSeconds <= 0 || timeoutSeconds > 120 {
             throw AppError.context(#fileID, #function, "timeoutSeconds out of range: \(timeoutSeconds)")
         }
+        guard let scheme = baseURL.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+            throw AppError.context(#fileID, #function, "Remote base URL must use http or https")
+        }
+        guard let host = baseURL.host, !host.isEmpty else {
+            throw AppError.context(#fileID, #function, "Remote base URL must include a host")
+        }
+        let isLoopback = Self._isLoopbackHost(host)
+        if scheme == "http" && !isLoopback {
+            throw AppError.context(#fileID, #function, "Remote HTTP is allowed only for loopback hosts")
+        }
+        if scheme == "https" && !isLoopback && pinnedCertificateSHA256 == nil {
+            throw AppError.context(
+                #fileID,
+                #function,
+                "Remote HTTPS requires a pinned certificate fingerprint for non-loopback hosts"
+            )
+        }
         if let pin = pinnedCertificateSHA256 {
             let normalized = try CertificatePinning.normalizedSHA256Fingerprint(pin)
             return RemoteBackendConfig(
@@ -109,12 +126,50 @@ public struct RemoteBackendConfig: Sendable {
         }
         return self
     }
+
+    private static func _isLoopbackHost(_ host: String) -> Bool {
+        /**
+         Summary
+         Determine whether a URL host is an explicit loopback name or address.
+
+         Inputs
+         host: Host value produced by `URL` parsing.
+
+         Outputs
+         True for localhost, IPv6 loopback, or an IPv4 address in 127.0.0.0/8.
+
+         Side effects
+         None.
+
+         Error handling
+         Returns false for malformed or non-loopback hosts.
+
+         Ties to other methods
+         Used by `validated()` before allowing bearer-token transport over plain HTTP.
+
+         Why this exists
+         Bearer tokens may use HTTP for local development, but must not cross a network in plaintext.
+         */
+        let normalized = host.lowercased()
+        if normalized == "localhost" || normalized == "localhost." || normalized == "::1" {
+            return true
+        }
+
+        let components = normalized.split(separator: ".", omittingEmptySubsequences: false)
+        guard components.count == 4 else {
+            return false
+        }
+        guard let first = UInt8(components[0]), first == 127 else {
+            return false
+        }
+        return components.dropFirst().allSatisfy { UInt8($0) != nil }
+    }
 }
 
 public final class RemoteBackendClient: SnapshotBackend, Sendable {
     /**
      Summary
-     Fetch dashboard snapshots from a Mac agent API over HTTP.
+     Fetch dashboard snapshots from a Mac agent API over HTTP or HTTPS.
 
      Inputs
      config: Remote backend configuration.
@@ -262,9 +317,9 @@ public final class RemoteBackendClient: SnapshotBackend, Sendable {
             }
             let backendExit = http?.value(forHTTPHeaderField: "X-Snapshot-Exit-Code")
             let parsedExit = backendExit.flatMap { Int32($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
-            let effectiveExit = parsedExit ?? status
             let snapshot = try JSONDecoder().decode(Snapshot.self, from: data)
             let checked = try snapshot.validated()
+            let effectiveExit = parsedExit ?? (checked.ok ? 0 : 1)
             return BackendSnapshotResponse(
                 snapshot: checked,
                 exitCode: effectiveExit,
@@ -324,9 +379,9 @@ public final class RemoteBackendClient: SnapshotBackend, Sendable {
             }
             let backendExit = http?.value(forHTTPHeaderField: "X-Snapshot-Exit-Code")
             let parsedExit = backendExit.flatMap { Int32($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
-            let effectiveExit = parsedExit ?? status
             let snapshot = try JSONDecoder().decode(Snapshot.self, from: data)
             let checked = try snapshot.validated()
+            let effectiveExit = parsedExit ?? (checked.ok ? 0 : 1)
             return BackendSnapshotResponse(
                 snapshot: checked,
                 exitCode: effectiveExit,

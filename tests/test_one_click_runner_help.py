@@ -137,6 +137,29 @@ class OneClickRunnerHelpTests(unittest.TestCase):
             captured_env: dict[str, str] = {}
 
             def _fake_run_make(*, repo_root: Path, env: dict[str, str]) -> int:
+                """
+                Summary
+                Capture the Swift launcher environment instead of invoking `make`.
+
+                Inputs
+                repo_root: Repository root supplied by the launcher.
+                env: Environment passed to the Swift run command.
+
+                Outputs
+                Exit code `0`.
+
+                Side effects
+                Updates `captured_env` and asserts the launcher repo root.
+
+                Error handling
+                Fails the test through unittest assertions.
+
+                Ties to other methods
+                Replaces `run_mac_health_checkup_ui._run_make_swift_run_with_retry`.
+
+                Why this exists
+                The test needs to inspect forwarded arguments without starting a Swift build.
+                """
                 captured_env.update(env)
                 self.assertEqual(repo_root, Path(run_mac_health_checkup_ui.__file__).resolve().parent)
                 return 0
@@ -151,7 +174,9 @@ class OneClickRunnerHelpTests(unittest.TestCase):
                     clear=False,
                 ),
                 patch.object(run_mac_health_checkup_ui, "which", return_value="/usr/bin/true"),
-                patch.object(run_mac_health_checkup_ui, "_run_make_swift_run_with_retry", side_effect=_fake_run_make),
+                patch.object(
+                    run_mac_health_checkup_ui, "_run_make_swift_run_with_retry", side_effect=_fake_run_make
+                ),
             ):
                 exit_code = run_mac_health_checkup_ui.main()
 
@@ -195,6 +220,29 @@ class OneClickRunnerHelpTests(unittest.TestCase):
             captured_env: dict[str, str] = {}
 
             def _fake_run_make(*, repo_root: Path, env: dict[str, str]) -> int:
+                """
+                Summary
+                Capture the Swift launcher environment instead of invoking `make`.
+
+                Inputs
+                repo_root: Repository root supplied by the launcher.
+                env: Environment passed to the Swift run command.
+
+                Outputs
+                Exit code `0`.
+
+                Side effects
+                Updates `captured_env` and asserts the launcher repo root.
+
+                Error handling
+                Fails the test through unittest assertions.
+
+                Ties to other methods
+                Replaces `run_mac_health_checkup_ui._run_make_swift_run_with_retry`.
+
+                Why this exists
+                The test needs to inspect forwarded arguments without starting a Swift build.
+                """
                 captured_env.update(env)
                 self.assertEqual(repo_root, Path(run_mac_health_checkup_ui.__file__).resolve().parent)
                 return 0
@@ -214,7 +262,9 @@ class OneClickRunnerHelpTests(unittest.TestCase):
                     ],
                 ),
                 patch.object(run_mac_health_checkup_ui, "which", return_value="/usr/bin/true"),
-                patch.object(run_mac_health_checkup_ui, "_run_make_swift_run_with_retry", side_effect=_fake_run_make),
+                patch.object(
+                    run_mac_health_checkup_ui, "_run_make_swift_run_with_retry", side_effect=_fake_run_make
+                ),
             ):
                 exit_code = run_mac_health_checkup_ui.main()
 

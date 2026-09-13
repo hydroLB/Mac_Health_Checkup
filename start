@@ -15,16 +15,21 @@ PYTHON="$VENV_DIR/bin/python"
 REQ_FILE="$SCRIPT_DIR/requirements-dev.txt"
 PYTHON_VERSION_FILE="$SCRIPT_DIR/.python-version"
 REQUIRED_PYTHON_VERSION=""
+REQUIRED_PYTHON_SERIES=""
 PYTHON_BOOTSTRAP=""
+
+detect_python_version() {
+  "$1" -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}")' 2>/dev/null
+}
 
 if [ -f "$PYTHON_VERSION_FILE" ]; then
   REQUIRED_PYTHON_VERSION="$(tr -d ' \r\n' <"$PYTHON_VERSION_FILE")"
 fi
 
 if [ -n "$REQUIRED_PYTHON_VERSION" ]; then
-  REQUIRED_PYTHON_MM="$(printf '%s' "$REQUIRED_PYTHON_VERSION" | awk -F. '{print $1 "." $2}')"
-  if command -v "python$REQUIRED_PYTHON_MM" >/dev/null 2>&1; then
-    PYTHON_BOOTSTRAP="python$REQUIRED_PYTHON_MM"
+  REQUIRED_PYTHON_SERIES="$(printf '%s' "$REQUIRED_PYTHON_VERSION" | awk -F. '{print $1 "." $2}')"
+  if command -v "python$REQUIRED_PYTHON_SERIES" >/dev/null 2>&1; then
+    PYTHON_BOOTSTRAP="python$REQUIRED_PYTHON_SERIES"
   fi
 fi
 
@@ -38,11 +43,12 @@ if [ -z "$PYTHON_BOOTSTRAP" ]; then
 fi
 
 if [ -n "$REQUIRED_PYTHON_VERSION" ]; then
-  ACTUAL_PYTHON_VERSION="$("$PYTHON_BOOTSTRAP" -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}")')"
-  if [ "$ACTUAL_PYTHON_VERSION" != "$REQUIRED_PYTHON_VERSION" ]; then
-    echo "Required Python version: $REQUIRED_PYTHON_VERSION (from .python-version)" >&2
+  ACTUAL_PYTHON_VERSION="$(detect_python_version "$PYTHON_BOOTSTRAP")"
+  ACTUAL_PYTHON_SERIES="$(printf '%s' "$ACTUAL_PYTHON_VERSION" | awk -F. '{print $1 "." $2}')"
+  if [ "$ACTUAL_PYTHON_SERIES" != "$REQUIRED_PYTHON_SERIES" ]; then
+    echo "Required Python series: $REQUIRED_PYTHON_SERIES.x (preferred pin $REQUIRED_PYTHON_VERSION from .python-version)" >&2
     echo "Found via $PYTHON_BOOTSTRAP: $ACTUAL_PYTHON_VERSION" >&2
-    echo "Install the pinned runtime and retry." >&2
+    echo "Install a compatible interpreter and retry." >&2
     exit 2
   fi
 fi
@@ -52,8 +58,28 @@ if [ ! -f "$REQ_FILE" ]; then
   exit 2
 fi
 
-if [ ! -x "$PYTHON" ]; then
-  echo "[start] Creating virtual environment at $VENV_DIR"
+VENV_PYTHON_VERSION=""
+if [ -x "$PYTHON" ]; then
+  VENV_PYTHON_VERSION="$(detect_python_version "$PYTHON" || true)"
+fi
+
+VENV_NEEDS_REBUILD=0
+if [ -z "$VENV_PYTHON_VERSION" ]; then
+  VENV_NEEDS_REBUILD=1
+elif [ -n "$REQUIRED_PYTHON_SERIES" ]; then
+  VENV_PYTHON_SERIES="$(printf '%s' "$VENV_PYTHON_VERSION" | awk -F. '{print $1 "." $2}')"
+  if [ "$VENV_PYTHON_SERIES" != "$REQUIRED_PYTHON_SERIES" ]; then
+    VENV_NEEDS_REBUILD=1
+  fi
+fi
+
+if [ "$VENV_NEEDS_REBUILD" -eq 1 ]; then
+  if [ -d "$VENV_DIR" ]; then
+    echo "[start] Rebuilding virtual environment at $VENV_DIR"
+    rm -rf "$VENV_DIR"
+  else
+    echo "[start] Creating virtual environment at $VENV_DIR"
+  fi
   "$PYTHON_BOOTSTRAP" -m venv "$VENV_DIR"
 fi
 

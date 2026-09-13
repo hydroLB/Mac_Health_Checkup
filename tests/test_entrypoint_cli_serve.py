@@ -44,7 +44,9 @@ def test_module_execution_prints_help_text() -> None:
         repo_root = Path(__file__).resolve().parents[1]
         env = os.environ.copy()
         existing_pythonpath = env.get("PYTHONPATH", "")
-        env["PYTHONPATH"] = str(repo_root) if not existing_pythonpath else f"{repo_root}:{existing_pythonpath}"
+        env["PYTHONPATH"] = (
+            str(repo_root) if not existing_pythonpath else f"{repo_root}:{existing_pythonpath}"
+        )
 
         completed = subprocess.run(
             [sys.executable, "-m", "mac_health_checkup.app.entrypoint", "--help"],

@@ -1,12 +1,20 @@
 -r requirements.in
 
 bandit==1.7.10
+build==1.4.0
+click>=8.3.3
 detect-secrets==1.5.0
+idna>=3.15
+msgpack>=1.2.1
 mypy==1.13.0
 pip-audit==2.7.3
-pip-tools==7.5.2
-pip==25.3
+pip==26.2.1
+pip-tools==7.6.1
 pre-commit==4.0.1
-pytest==8.3.4
+pygments>=2.20.0
+pytest==9.0.3
 pytest-cov==6.0.0
+requests>=2.33.0
 ruff==0.12.9
+setuptools>=83.0.0
+urllib3>=2.7.0

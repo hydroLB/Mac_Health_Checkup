@@ -1,428 +1,305 @@
 # Mac Health Checkup
 
-Mac Health Checkup is a macOS diagnostics dashboard that collects read only system signals and renders a resilient UI with clear fallbacks. The focus is on predictable parsing, strict typing, and operational guardrails so the project stays maintainable as it grows.
+Local-first macOS diagnostics with a native SwiftUI dashboard, a lightweight Tk interface, a browser-only Demo Mode,
+automation-friendly snapshots, and an optional paired iOS companion.
 
-## Architecture overview
+**[Explore the complete interactive Demo Mode](https://mac-health-checkup.young-hen-7947.chatgpt.site)** — fictional
+data only; the website cannot inspect or change the visitor's Mac.
 
-- `mac_health_checkup/core/config/` is the single source of truth for configuration, validation, and size limits.
-- `mac_health_checkup/core/utils/shell.py` wraps every command with timeouts, retries, and clear failure messages.
-- `mac_health_checkup/core/utils/loggers.py` emits structured logs with correlation ids and redaction.
-- `mac_health_checkup/diagnostics/` contains IO heavy collectors with caching and strict typing.
-- `mac_health_checkup/app/gui/sections/` contains small section renderers with minimal public surface area.
-- `mac_health_checkup/app/gui/app.py` provides the Tk host and refresh loop for the dashboard.
-- `mac_health_checkup/app/backend/snapshot.py` emits a stable JSON snapshot for native frontends.
-- `swift-ui/` contains a SwiftUI macOS app that renders the same sections using the JSON snapshot backend.
-- `benchmarks/` contains deterministic hot path benchmarks and profiling scripts.
+[![CI](https://github.com/hydroLB/Mac_Health_Checkup/actions/workflows/ci.yml/badge.svg)](https://github.com/hydroLB/Mac_Health_Checkup/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11-58a6ff)
+![Swift](https://img.shields.io/badge/swift-SwiftUI-d8a13a)
+![License](https://img.shields.io/badge/license-MIT-2fbf71)
+![Privacy](https://img.shields.io/badge/privacy-local--first-313d4b)
 
-## Repository layout
+![Mac Health Checkup product illustration](docs/assets/readme/dashboard-preview.svg)
 
-Top-level structure is normalized to a canonical model with a documented partial migration path.
-See `docs/repository-layout.md` for the full mapping to `apps/`, `libs/`, `docs/`, `tests/`, `scripts/`, and `infra/`.
+> Product illustration with fictional sample values—not a runtime screenshot. The application always shows signals
+> collected from the Mac on which it is running.
 
-Script ownership and entrypoints are explicitly tracked in `docs/repository-layout.md` so there are no orphan scripts.
-Public import surfaces and internal/private module boundaries are defined in `docs/public-api-boundaries.md`.
+## Why This Project Matters
 
-## Design details worth scanning
+macOS exposes useful health signals across command-line tools, System Settings, IOKit, and privileged utilities.
+Mac Health Checkup turns those fragmented, failure-prone sources into one explainable result for personal checks,
+support workflows, regression comparisons, and native clients. Unavailable data remains visible as unknown or warning
+state instead of being guessed healthy.
 
-- `mac_health_checkup/core/config/public.py` shows typed config parsing with validators and a safe override path.
-- `mac_health_checkup/core/utils/shell.py` is the IO boundary with backoff, jitter, and bounded timeouts.
-- `mac_health_checkup/core/utils/error_boundary.py` defines typed error codes and centralized boundary mapping for CLI, API, and UI failures.
-- `mac_health_checkup/app/gui/sections/display/parsing.py` normalizes noisy display output into stable rows.
-- `mac_health_checkup/diagnostics/power.py` isolates power and thermal parsing with clear failure paths.
-- `benchmarks/run.py` and `benchmarks/baseline.json` keep performance regressions visible.
+## Highlights
 
-## Setup
+- One diagnostics layer feeds the CLI and Tk dashboard directly, then a versioned snapshot boundary serves SwiftUI,
+  reports, automation, the local agent API, the iOS companion, and a deliberately fictional web snapshot.
+- Collectors are best-effort and bounded: one restricted command degrades one signal instead of crashing the checkup.
+- Privacy defaults are enforceable: no telemetry, API off by default, outbound capacity testing opt-in, TLS required
+  for one-click LAN access, and an explicit safe-share redaction mode.
+- The repository is governed by strict typing, layer checks, generated config documentation, hash-locked dependencies,
+  branch coverage, security scans, and macOS/iOS build gates.
+- Snapshot caching, section-level refresh, rate limiting, auth throttling, structured redacted logs, and deterministic
+  failure handling provide concrete production-engineering discussion points.
+- The Tk fallback collects diagnostics on a single background worker and replays buffered render operations on the
+  UI thread, keeping slow macOS commands from freezing navigation or shutdown.
 
-Requirements:
+## Tech Stack
 
-- macOS
-- Python 3.11.14 with Tkinter available (`.python-version`)
-- Xcode (full app) with iOS SDKs installed
-- Xcode command line tools selected (`xcode-select`)
-- Swift toolchain available via Xcode (`swift`)
+| Layer | Technology |
+| --- | --- |
+| Diagnostics and automation | Python 3.11+ standard library with a pinned local development runtime |
+| Desktop interfaces | Native SwiftUI macOS app plus a dependency-free Tkinter fallback |
+| Browser showcase | React Demo Mode with fictional in-browser data and no diagnostic, export, or telemetry access |
+| Mobile companion | SwiftUI iOS client, URLSession transport, Keychain token storage, and certificate pinning |
+| Contracts and delivery | JSON snapshot schema v2, authenticated HTTP agent, setuptools wheel/sdist, Swift Package Manager |
+| Quality engineering | pytest/coverage, Ruff, strict mypy, Bandit, pip-audit, detect-secrets, pip-tools, and GitHub Actions |
 
-Verify Apple toolchain prerequisites:
+## Quick Start
 
-```sh
-xcodebuild -version
-xcode-select -p
-swift --version
-```
-
-Run preflight checks explicitly (also enforced automatically by `make check`):
-
-```sh
-make preflight-swift
-make preflight-ios
-```
-
-Build once:
+Requirements: macOS, Git, Make, and Python 3.11.x with Tkinter.
 
 ```sh
-make build
-```
-
-Manual setup if preferred:
-
-```sh
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install --require-hashes -r requirements-dev.txt
-```
-
-Dependency reproducibility:
-
-- Python runtime is pinned in `.python-version` and used by CI.
-- `make setup` and `make deps-lock` fail fast if the active `python3` does not match `.python-version`.
-- `requirements.in` and `requirements-dev.in` are the editable inputs.
-- `requirements.txt` and `requirements-dev.txt` are hash-locked outputs generated by `pip-tools`.
-- Regenerate lockfiles with `make deps-lock`.
-- Verify lockfiles are up to date with `make deps-check`.
-- Lock generation runs inside `.venv-lock` with pinned `pip` and `pip-tools` versions from `Makefile`.
-- `make setup` and `./start` install repository-managed Git hooks via `core.hooksPath=.githooks`.
-
-Standard project commands:
-
-```sh
-# Run all required quality gates locally (same command CI uses)
-make check
-
-# Run the app locally end to end
-make dev
-```
-
-Environment template:
-
-- `.env.example` documents all supported environment overrides and valid value formats.
-- Set live secrets such as the agent token with `MAC_HEALTH_CHECKUP_API_AUTH_TOKEN` instead of editing committed config.
-- Empty override values are treated as invalid and fail startup immediately with actionable errors.
-- `make repo-hygiene` rejects tracked local state, secret-like artifacts, and missing recovery-critical files before push.
-
-Deterministic new-contributor flow:
-
-1. `make setup`
-2. `make dev` (or `./start`)
-3. `make check`
-
-## Run
-
-Bootstrap dependencies and launch (recommended one-command path):
-
-```sh
-make dev
-```
-
-Equivalent direct launcher (also one-command):
-
-```sh
-./start
-```
-
-Single-file, press-run entrypoint (recommended):
-
-```sh
-python3 run.py
-```
-
-Headless agent API (no UI window, used for iOS pairing):
-
-```sh
-python3 run.py --agent
-```
-
-```sh
+git clone https://github.com/hydroLB/Mac_Health_Checkup.git
+cd Mac_Health_Checkup
+make setup
 make run
 ```
 
-Or directly:
+`make run` launches the Tk dashboard and is the lowest-friction UI path. To launch the native SwiftUI dashboard:
 
 ```sh
-python -m mac_health_checkup
+make dev
 ```
 
-One-click Mac agent (recommended for iOS pairing):
+The SwiftUI build needs a Swift toolchain. Full Xcode is required for Swift package tests and the iOS build.
+
+The native and browser Overview shows only warnings and critical health alerts, with critical alerts first. Healthy and unknown readings remain available from the sidebar; card previews contain only alert metrics.
+
+## Interfaces
+
+| Interface | Command | Purpose |
+| --- | --- | --- |
+| Web Demo Mode | [Open the public showcase](https://mac-health-checkup.young-hen-7947.chatgpt.site) | Complete interactive product tour using fictional data; it cannot inspect the visitor's Mac or download reports. |
+| SwiftUI dashboard | `make dev` or `.venv/bin/python run.py` | Native macOS sidebar, section health, settings, refresh history, and cached startup state. |
+| Tk dashboard | `make run` | In-process desktop UI with cards, tables, keyboard focus, tooltips, and bounded background refresh. |
+| CLI | `.venv/bin/python -m mac_health_checkup --cli --advice` | Human-readable terminal summary with status-aware next steps. |
+| Snapshot JSON | `.venv/bin/python -m mac_health_checkup --snapshot-json` | Versioned machine contract for native frontends and automation. |
+| Agent API | `.venv/bin/python run.py --agent` | One-click headless server with generated auth and fail-closed LAN/TLS behavior. |
+| iOS companion | Open `ios/MacHealthCheckupMobile/MacHealthCheckupMobile.xcodeproj` | Experimental, source-only paired client; requires a developer team and a reachable HTTPS Mac agent. |
+
+The repository is currently source-first: Demo Mode is hosted publicly, but there is no signed/notarized macOS app
+bundle, App Store build, or tagged binary release. The website's download control remains unavailable until the full
+application meets that release bar.
+
+## What It Checks
+
+| Area | Signals |
+| --- | --- |
+| Performance | IOHID temperature sensors and component power when macOS permits access |
+| System | model, chip, OS, disk free, memory free, and top CPU/memory processes |
+| Security | FileVault, System Integrity Protection, Gatekeeper, and firewall posture |
+| Maintenance | Time Machine recency, software updates, and startup items |
+| Hardware | adapter/battery data, fans, SSD health, displays, USB/Thunderbolt tree, and input devices |
+| Network | active interface, local IP, Wi-Fi signal/link rate, and live interface byte rates |
+
+Collector availability varies by Mac model, macOS release, permissions, virtualization, and installed helper tools.
+The UI reports those limitations; it does not fabricate missing values.
+
+### Optional Capabilities
+
+| Tool or access | Adds | Behavior when absent |
+| --- | --- | --- |
+| `smartctl` from smartmontools | Detailed SSD SMART/NVMe health | SSD health is reported unavailable. |
+| `istats` | Additional fan-speed fallback | Built-in sources are tried; fan speed may remain unavailable. |
+| Privileged `powermetrics` access | CPU/GPU/ANE power | Performance retains any accessible thermal data and warns on missing power. |
+| `qrencode` | Terminal pairing QR | The JSON pairing payload is still printed. |
+| `openssl` | One-click self-signed TLS material | Agent falls back to loopback-only HTTP; iOS LAN pairing stays disabled. |
+| Full Xcode | XCTest and unsigned iOS build validation | Python checks and `swift build` remain available with supported command-line tools. |
+
+## Architecture
+
+```mermaid
+flowchart LR
+  CFG["Typed config"] --> COL["macOS collectors"]
+  COL --> HANDLERS["Section handlers"]
+  HANDLERS --> TK["Tk dashboard"]
+  HANDLERS --> CLI["CLI + advice"]
+  HANDLERS --> SNAP["SnapshotBuilder · schema v2"]
+  SNAP --> SWIFT["SwiftUI dashboard"]
+  SNAP --> REPORTS["JSON / Markdown / HTML"]
+  SNAP --> API["Authenticated local agent API"]
+  API --> IOS["Experimental iOS companion"]
+  FIXTURE["Fictional bundled snapshot"] --> WEB["Browser Demo Mode"]
+```
+
+The important boundary is the section handler/snapshot contract—not a second collector implementation in every UI.
+Python owns macOS command execution and normalization. Swift owns native presentation, refresh lifecycle, cache
+policy, and remote transport.
+
+## Engineering Decisions
+
+| Decision | Rationale |
+| --- | --- |
+| Local-first execution | Device health data stays on the Mac unless the user explicitly starts a paired agent or shares an export. |
+| Fail-soft collectors | Restricted or missing commands should produce partial, actionable results rather than a blank application. |
+| Snapshot boundary | Native clients consume one validated schema instead of duplicating macOS parsing and health policy. |
+| Typed, generated configuration docs | Runtime policy remains reviewable while parser/model drift is caught in CI. |
+| Hash-locked tooling | Local and CI checks evaluate the same dependency graph; lock verification is non-mutating. |
+| Last-known-good native cache | Failed or partial refreshes remain visible without replacing a valid full snapshot. |
+| Buffered Tk refresh | Collectors run away from Tk while typed render operations replay on the UI thread in order. |
+
+## Privacy And Security
+
+- There is no analytics or telemetry pipeline.
+- Routine collection stays local and the configured API is disabled by default.
+- `network.capacity_test_enabled` defaults to `false`. Enabling it runs macOS `networkQuality`, which sends test
+  traffic to external measurement endpoints; capacity results are cached for at least the configured interval.
+- The one-click agent exposes LAN access only when TLS material is ready. TLS failure binds to loopback instead of
+  enabling insecure HTTP on the network.
+- Auth tokens are generated or supplied through environment variables, weak defaults are rejected, requests are
+  throttled, remote clients reject cleartext non-loopback transport, and generated tokens, exports, and caches use
+  owner-only permissions.
+
+Snapshots can contain a hardware serial, local IP, Wi-Fi SSID, process IDs, command paths, and raw diagnostics. Use
+`--redact-sensitive` before sharing and still review the output for context-specific identifiers.
+
+See [`SECURITY.md`](SECURITY.md) for the threat model and reporting path.
+
+## Reports And Automation
 
 ```sh
-python3 run_mac_health_checkup.py
+# Human-readable reports
+.venv/bin/python -m mac_health_checkup --export markdown
+.venv/bin/python -m mac_health_checkup --export html --redact-sensitive
+
+# Save and compare snapshots
+.venv/bin/python -m mac_health_checkup --snapshot-json-out /tmp/before.json
+.venv/bin/python -m mac_health_checkup --snapshot-json-out /tmp/after.json
+.venv/bin/python -m mac_health_checkup --diff-snapshots /tmp/before.json /tmp/after.json
+
+# Produce a safer file for support or portfolio review
+.venv/bin/python -m mac_health_checkup --snapshot-json-out /tmp/share.json --redact-sensitive
+
+# Fail automation on warn or bad sections
+.venv/bin/python -m mac_health_checkup --snapshot-json --fail-on warn >/tmp/snapshot.json
+.venv/bin/python -m mac_health_checkup --cli --fail-on bad
 ```
 
-This starts the Mac agent API (headless, no window). To view the UI, either run the iOS app from Xcode or run the
-native macOS SwiftUI UI (below).
+Redaction is opt-in so local diagnostic fidelity and backwards compatibility remain unchanged.
+It is schema-aware rather than a general PII detector: executable basenames remain visible, raw diagnostic blobs are
+replaced wholesale, and sensitive-only changes intentionally disappear from redacted diffs.
 
-CLI only mode:
+## Agent Pairing
+
+iOS cannot run macOS collectors. Start the explicit one-click agent, then paste its JSON pairing payload into the
+source-built iOS client:
 
 ```sh
-python -m mac_health_checkup --cli
+.venv/bin/python run.py --agent
 ```
 
-Automation: fail on warn/bad:
-
-```sh
-# Exit non-zero if any section reports warn or bad status
-python -m mac_health_checkup --snapshot-json --fail-on warn >/tmp/snapshot.json
-python -m mac_health_checkup --cli --fail-on bad
-```
-
-CLI actionability (diagnosis + next steps):
-
-```sh
-python -m mac_health_checkup --cli --advice
-```
-
-Report export (Markdown / HTML):
-
-```sh
-# Export a fresh snapshot report (writes under .local/reports/ by default)
-python -m mac_health_checkup --export markdown
-python -m mac_health_checkup --export html
-
-# Export to an explicit path
-python -m mac_health_checkup --export markdown --export-path /tmp/mac-health-checkup.md
-
-# Save a snapshot JSON for later sharing / diffing
-python -m mac_health_checkup --snapshot-json-out /tmp/snapshot.json
-
-# Diff two saved snapshots (prints Markdown to stdout)
-python -m mac_health_checkup --diff-snapshots /tmp/before.json /tmp/after.json
-
-# Export a diff between two saved snapshots
-python -m mac_health_checkup --diff-snapshots /tmp/before.json /tmp/after.json --export html --export-path /tmp/diff.html
-```
-
-SwiftUI native UI (macOS):
-
-```sh
-python3 run_mac_health_checkup_ui.py
-```
-
-or:
-
-```sh
-make swift-run
-```
-
-The SwiftUI app calls the Python backend in snapshot mode (`python -m mac_health_checkup --snapshot-json`) and
-renders the result using the same theme and section order from `config/config.json`.
-
-## Mac agent API (for iOS)
-
-iOS cannot run macOS collectors locally. Run the Mac agent API and connect from the iOS app.
-
-1) Edit `config/config.json`:
-
-- Set `api.enabled` to `true`
-- Set `api.allow_lan` to `true` to allow iPhone access over your LAN
-- By default, LAN mode requires TLS. If you insist on HTTP, set `api.allow_insecure_http_lan` to `true` (not recommended)
-- Set `api.bind_host` to `0.0.0.0` to listen on all interfaces (keep `127.0.0.1` if you only want local access)
-- Keep `api.auth_token` as a placeholder in Git and export `MAC_HEALTH_CHECKUP_API_AUTH_TOKEN` with a strong random value before starting the server
-
-2) Start the server:
-
-```sh
-make serve
-```
-
-The agent serves `GET /v1/health` (no auth) and `GET /v1/snapshot` (Bearer token).
-
-### Development: safe ports and localhost defaults
-
-The agent binds to `api.bind_host` and `api.port` from `config/config.json`. By default this is local-only
-(`127.0.0.1`). If the preferred port is already in use, the server automatically tries the next ports until it can
-bind successfully.
-
-Override bind host and port via environment variables (useful in dev and CI):
-
-- `MAC_HEALTH_CHECKUP_API_BIND_HOST` (example: `127.0.0.1`)
-- `MAC_HEALTH_CHECKUP_API_PORT` (range `0-65535`; use `0` for an OS-assigned ephemeral port)
-
-Examples:
-
-```sh
-# Random free port (prints the final URL on startup)
-MAC_HEALTH_CHECKUP_API_PORT=0 make serve
-
-# Fixed port
-MAC_HEALTH_CHECKUP_API_PORT=7878 make serve
-```
-
-### Optional TLS + certificate pinning
-
-If you use LAN access on an untrusted network, HTTPS prevents passive sniffing. The included iOS client supports
-leaf certificate pinning so you can use a self-signed certificate without installing a trusted CA.
-
-1) Generate a self-signed cert (writes to `.local/tls/`, which is git-ignored):
-
-```sh
-make tls-selfsigned
-```
-
-2) Enable TLS in `config/config.json`:
-
-- Set `api.tls_enabled` to `true`
-- Ensure `api.tls_cert_path` and `api.tls_key_path` match the generated files
-
-3) Restart the agent:
-
-```sh
-make serve
-```
-
-On start, `--serve` prints the certificate fingerprint (sha256) and a pairing JSON blob that includes `pin`.
-
-## iOS app (SwiftUI)
-
-The native iOS client lives in `ios/MacHealthCheckupMobile/`.
-
-Open `ios/MacHealthCheckupMobile/MacHealthCheckupMobile.xcodeproj` in Xcode and run on a device or simulator.
-On first launch, pair by entering the agent URL and token (or import via QR / clipboard).
-
-Notes:
-
-- Local network access prompts are expected on first connect.
-- The token is stored in Keychain, not in UserDefaults.
-- For HTTPS with self-signed certs, paste the printed `pin` fingerprint into Settings to enable certificate pinning.
+The runner generates a strong token and attempts self-signed TLS. If TLS setup succeeds, it prints a LAN HTTPS URL;
+otherwise it serves loopback only and explains why iOS pairing is unavailable. Manual API settings are documented in
+[`docs/config_reference.md`](docs/config_reference.md).
 
 ## Configuration
 
-All runtime knobs are centralized in `config/config.json`. Override the path with `MAC_HEALTH_CHECKUP_CONFIG`. The file size limit can be tightened using `MAC_HEALTH_CHECKUP_CONFIG_MAX_BYTES`.
+The checked-in defaults live in `config/config.json`; installed wheels carry the same validated default config.
+Override the source with `MAC_HEALTH_CHECKUP_CONFIG=/absolute/path/config.json`. Secrets belong in environment
+variables such as `MAC_HEALTH_CHECKUP_API_AUTH_TOKEN`, not committed JSON.
 
-Startup performs strict config-contract validation:
+`.env.example` documents supported variables; the application does not silently load dotenv files. Export values in
+the invoking shell or process manager. When checked-in defaults change, run `make config-sync` to update the packaged
+copy and `make config-ref` to regenerate the reference; both are verified by `make check-python`.
 
-- Invalid or empty environment overrides fail fast at startup.
-- Entry points emit a structured `startup_config_validated` log event with active override keys and effective API bind settings.
+The complete generated key/type/default reference is in
+[`docs/config_reference.md`](docs/config_reference.md).
 
-For a generated, searchable list of every knob (types + defaults), see `docs/config_reference.md` (regenerate via `python tools/generate_config_reference.py`).
-
-Key sections:
-
-- `logging` for structured log fields and redaction
-- `timeouts` for command and cache TTLs
-- `retries` for backoff and jitter behavior
-- `rate_limits` for UI refresh backpressure
-- `benchmarks` for iteration counts and regression thresholds
-- `gui` for layout, headers, and rendering limits
-
-## Performance and profiling
-
-Benchmarks run deterministic hot paths and compare against `benchmarks/baseline.json`:
+## Development Workflow
 
 ```sh
-make bench
+make setup          # Python 3.11 venv, hash-locked tools, managed Git hooks
+make check-python   # dependencies, hygiene, lint, format, mypy, docs, tests, security
+make check          # Python gate + benchmarks + Swift tests + unsigned iOS build
+make showcase-check # install locked web dependencies, lint, and build Demo Mode
 ```
 
-Update the baseline after a deliberate performance change:
-
-```sh
-PYTHONPATH=. .venv/bin/python benchmarks/run.py --update
-```
-
-Profiling uses the same inputs and writes `benchmarks/profile.pstats`:
-
-```sh
-make profile
-```
-
-## Testing
-
-Test categories include unit, integration, and an end to end smoke test for the refresh workflow.
-
-```sh
-make check
-```
-
-Coverage gate details:
-
-- Coverage enforcement target is `70%`.
-- The enforced coverage scope is backend and config boundaries (`mac_health_checkup.app.backend` and `mac_health_checkup.core.config`).
-
-Individual checks can still be run directly when iterating:
+Focused commands:
 
 ```sh
 make test
-make typecheck
 make lint
-make verify-push
+make format-check
+make typecheck
+make security
+make bench
+make build
+make swift-test
+make ios-build
 ```
 
-`make verify-push` is the local push gate enforced by `.githooks/pre-push`. It blocks pushes when dependency locks drift,
-quality checks fail, secrets are detected, or repo-hygiene rules are violated.
+`make check` is the CI contract. Apple-platform targets fail early with actionable preflight messages when full Xcode
+or an iOS SDK is unavailable.
 
-## Visual regression baseline
+### Testing Strategy
 
-Deterministic GUI visual regression uses `tools/gui_visual_regression.py` and does not require a live Tk window.
-
-Capture or refresh the baseline set:
+- Python unit/integration tests cover parsing, config concurrency, CLI modes, report export, API auth/throttling,
+  disconnect behavior, GUI helpers, shell boundaries, and repository tooling.
+- Branch coverage is enforced for the backend and typed config boundary with a checked-in minimum threshold.
+- Swift package tests cover config decoding, backend transport, launch args, view-model helpers, health mapping, and
+  snapshot encode/decode symmetry.
+- A dependency-free PPM layout-model tool exercises resize, focus, scroll, overflow, refresh-error, and recovery math.
+  It is deterministic model-level regression coverage, not a live Tk/SwiftUI screenshot test.
+- Parser microbenchmarks use representative multiline fixtures and process CPU time so shared-runner scheduling does
+  not masquerade as a product regression.
 
 ```sh
 make visual-capture-baseline
-```
-
-Capture the candidate set from the current working tree:
-
-```sh
 make visual-capture-candidate
-```
-
-Compute before vs after image diffs and fail on drift:
-
-```sh
 make visual-diff
 ```
 
-Key scenes cover:
+## Distribution And Deployment
 
-- small, medium, and large resize layouts
-- keyboard focus traversal states
-- vertical and horizontal scrolling states
-- refresh error injected and recovery states
+Deployment is local by design: run from a source checkout or install the Python surfaces into a private environment.
+No package is published to PyPI, but the repository can build and install a wheel locally:
 
-Artifacts are written under `.local/visual-regression/`:
+```sh
+make build
+python3.11 -m venv /tmp/mac-health-checkup-wheel
+/tmp/mac-health-checkup-wheel/bin/pip install dist/mac_health_checkup-*.whl
+(cd /tmp && /tmp/mac-health-checkup-wheel/bin/mac-health-checkup --help)
+```
 
-- `baseline/*.ppm` and `candidate/*.ppm` for captures
-- `diff/*.ppm` for highlighted pixel diffs
-- `diff/manifest.json` with changed pixel counts and ratios
+`make build` creates both a wheel and source distribution after verifying that the packaged default configuration is
+in sync. This installs the Python CLI/Tk/snapshot surfaces; SwiftUI and iOS remain source-built platform targets.
 
-## Troubleshooting
+## Documentation
 
-- Tkinter errors on launch: confirm the system Python includes Tk or install a framework build of Python.
-- system_profiler failures: adjust `timeouts` and re run with `make run` to see structured logs.
-- smartctl failures: set `fans.use_sudo` to false or run on a system where smartctl is available.
-- CLI fallback: use `python -m mac_health_checkup --cli` if Tk is not available.
+| Document | Scope |
+| --- | --- |
+| [`docs/repository-layout.md`](docs/repository-layout.md) | Current paths, supported entrypoints, and ownership. |
+| [`docs/public-api-boundaries.md`](docs/public-api-boundaries.md) | Supported imports and internal Python modules. |
+| [`docs/config_reference.md`](docs/config_reference.md) | Generated config keys, types, defaults, and overrides. |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Local workflow and contribution standards. |
+| [`SECURITY.md`](SECURITY.md) | Security controls, privacy boundaries, and vulnerability reporting. |
+| [`RELEASE.md`](RELEASE.md) | Honest source/package release readiness and native artifact gaps. |
+| [`CHANGELOG.md`](CHANGELOG.md) | Unreleased work and historical development milestones. |
 
-## Quality gates
+## Roadmap
 
-`make check` is the required quality gate command locally and in CI. It runs dependency lock validation, linting, format check, type checking, docstring checks, layer dependency checks, config reference checks, tests with coverage, visual regression checks, benchmarks, security scans, Swift tests, and the iOS build.
+- Build a signed, notarized macOS app bundle with checksums and a repeatable release artifact workflow.
+- Add an iOS test target, app icons, and a documented pairing demo.
+- Add real runtime UI screenshot regression coverage with reviewed, committed baselines.
+- Expand redaction policy and sampled snapshot fixtures across representative Mac hardware.
+- Replace remaining broad entrypoint wrappers with smaller dependency objects where that improves navigation.
 
-For strict merge enforcement with no bypass, configure branch protection or rulesets on `main` with:
+## Design Tradeoffs Worth Inspecting
 
-- require status checks: `ci / quality`
-- require branches to be up to date before merging
-- require pull requests before merging
-- disable force pushes and branch deletion
-- disable admin bypass for required pull request and status-check rules
-
-## Collaboration standards
-
-- Contribution guide: [`CONTRIBUTING.md`](CONTRIBUTING.md)
-- Code ownership: [`.github/CODEOWNERS`](.github/CODEOWNERS)
-- Pull request template: [`.github/pull_request_template.md`](.github/pull_request_template.md)
-- Issue templates: [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/)
-- Editor and whitespace rules: [`.editorconfig`](.editorconfig)
-- Repository layout mapping: [`docs/repository-layout.md`](docs/repository-layout.md)
-- Public API boundaries: [`docs/public-api-boundaries.md`](docs/public-api-boundaries.md)
-
-## Security and privacy
-
-- No telemetry or analytics.
-- Dependency auditing runs in CI with `pip-audit`.
-- Secret scanning runs in CI and via the repository-managed push gate using `.secrets.baseline`.
-- Logs are structured and redacted based on `logging.redact_keys`.
-
-## Release discipline
-
-Changes are tracked in `CHANGELOG.md`. Versioning and release steps are defined in `RELEASE.md`.
+- How one set of fallible macOS collectors supports in-process and cross-language interfaces without duplicating
+  parsing policy.
+- Why partial data, explicit unknown state, and configurable fail thresholds are better than all-or-nothing health
+  checks.
+- How local-first defaults translate into concrete controls: opt-in traffic, fail-closed LAN exposure, token hygiene,
+  redacted logs, safe-share exports, and certificate pinning.
+- How non-behavior quality gates—layer rules, generated docs, lock idempotence, secret scanning, package smoke tests,
+  and platform preflights—make maintenance claims defensible.
 
 ## License
 
-MIT. See `LICENSE`.
+MIT. See [`LICENSE`](LICENSE).

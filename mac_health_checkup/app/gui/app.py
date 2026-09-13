@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import concurrent.futures
+import threading
 import tkinter as tk
 
 from mac_health_checkup.app.gui.dashboard.layout_mixin import _DashboardLayoutMixin
@@ -107,6 +109,15 @@ class DashboardApp(
             self._queue = SectionQueue()
             self._wraplength_px: int | None = None
             self._refresh_after_id: str | None = None
+            self._refresh_poll_after_id: str | None = None
+            self._shutdown_after_id: str | None = None
+            self._refresh_future = None
+            self._refresh_cycle = None
+            self._refresh_cancel_event = threading.Event()
+            self._refresh_executor = concurrent.futures.ThreadPoolExecutor(
+                max_workers=1,
+                thread_name_prefix="diagnostics",
+            )
             self._status_var = tk.StringVar(value="")
             self._status_label: tk.Label | None = None
             self._next_refresh_var = tk.StringVar(value="")
@@ -167,6 +178,7 @@ class DashboardApp(
         """
         try:
             self._schedule_refresh()
+            self._schedule_shutdown_poll()
             self.mainloop()
         except (tk.TclError, RuntimeError, ValueError, TypeError) as exc:
             raise RuntimeError(

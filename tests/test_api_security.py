@@ -335,7 +335,9 @@ def test_validate_api_config_rejects_disabled_api() -> None:
         IndexError,
         OSError,
     ) as exc:
-        raise AssertionError(f"{MODULE_PATH}:test_validate_api_config_rejects_disabled_api failed: {exc}") from exc
+        raise AssertionError(
+            f"{MODULE_PATH}:test_validate_api_config_rejects_disabled_api failed: {exc}"
+        ) from exc
 
 
 def test_validate_api_config_rejects_blank_bind_host() -> None:
@@ -375,7 +377,9 @@ def test_validate_api_config_rejects_blank_bind_host() -> None:
         IndexError,
         OSError,
     ) as exc:
-        raise AssertionError(f"{MODULE_PATH}:test_validate_api_config_rejects_blank_bind_host failed: {exc}") from exc
+        raise AssertionError(
+            f"{MODULE_PATH}:test_validate_api_config_rejects_blank_bind_host failed: {exc}"
+        ) from exc
 
 
 def test_validate_api_config_rejects_blank_auth_token() -> None:
@@ -415,7 +419,9 @@ def test_validate_api_config_rejects_blank_auth_token() -> None:
         IndexError,
         OSError,
     ) as exc:
-        raise AssertionError(f"{MODULE_PATH}:test_validate_api_config_rejects_blank_auth_token failed: {exc}") from exc
+        raise AssertionError(
+            f"{MODULE_PATH}:test_validate_api_config_rejects_blank_auth_token failed: {exc}"
+        ) from exc
 
 
 def test_validate_api_config_requires_tls_or_explicit_insecure_lan() -> None:
@@ -547,6 +553,28 @@ def test_validate_api_config_tls_enabled_uses_certificate_fingerprint(
         calls: list[str] = []
 
         def _fingerprint(path: object) -> str:
+            """
+            Summary
+            Record the certificate path passed to the fingerprint helper.
+
+            Inputs
+            path: Candidate certificate path object.
+
+            Outputs
+            Deterministic fake fingerprint string.
+
+            Side effects
+            Appends the path string to `calls`.
+
+            Error handling
+            None.
+
+            Ties to other methods
+            Used as a monkeypatched `certificate_sha256_fingerprint_from_pem`.
+
+            Why this exists
+            Keeps TLS validation focused on call wiring without requiring a real certificate parser.
+            """
             calls.append(str(path))
             return "aa:bb"
 
@@ -620,7 +648,9 @@ def test_validate_api_config_rejects_out_of_range_request_timeout(timeout_sec: i
         ) from exc
 
 
-def test_throttler_rate_limit_returns_retry_and_recovers_after_window(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_throttler_rate_limit_returns_retry_and_recovers_after_window(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """
     Summary
     Ensure rate limiting returns retry hints and recovers after the sliding window.

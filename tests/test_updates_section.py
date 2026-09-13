@@ -119,4 +119,6 @@ def test_update_section_falls_back_to_label_list(monkeypatch: pytest.MonkeyPatch
         IndexError,
         OSError,
     ) as exc:
-        raise AssertionError(f"{MODULE_PATH}:test_update_section_falls_back_to_label_list failed: {exc}") from exc
+        raise AssertionError(
+            f"{MODULE_PATH}:test_update_section_falls_back_to_label_list failed: {exc}"
+        ) from exc

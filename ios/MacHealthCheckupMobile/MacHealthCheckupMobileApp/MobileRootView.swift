@@ -41,12 +41,12 @@ struct MobileRootView: View {
                 SettingsView(
                     agentBaseURL: $agentBaseURL,
                     refreshIntervalMs: $refreshIntervalMs,
-                    theme: model.theme,
                     tlsPin: $tlsPin,
+                    theme: model.theme,
                     storedTokenAvailable: state.storedTokenAvailable,
                     isTestingConnection: state.isTestingConnection,
                     healthStatus: state.lastHealthStatus,
-                    errorMessage: state.lastError?.description,
+                    errorMessage: state.lastError?.userFacingMessage,
                     onSaveToken: { token in state.saveToken(token) },
                     onTestConnection: { typedToken in
                         Task {
@@ -83,7 +83,7 @@ struct MobileRootView: View {
                 storedTokenAvailable: state.storedTokenAvailable,
                 isTestingConnection: state.isTestingConnection,
                 healthStatusText: _healthStatusText(state.lastHealthStatus),
-                errorMessage: state.lastError?.description,
+                errorMessage: state.lastError?.userFacingMessage,
                 onTest: { baseURL, token in
                     Task {
                         await state.testConnection(

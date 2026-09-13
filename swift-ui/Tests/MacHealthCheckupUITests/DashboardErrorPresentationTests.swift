@@ -139,6 +139,81 @@ final class DashboardErrorPresentationTests: XCTestCase {
     }
 
     @MainActor
+    func testFailedFanRefreshPreservesLastKnownGoodSection() async throws {
+        /**
+         Summary
+         Ensure a failed partial fan response does not replace the last known successful fan payload.
+
+         Inputs
+         None.
+
+         Outputs
+         None.
+
+         Side effects
+         Runs one full refresh followed by one section refresh.
+
+         Error handling
+         Fails via XCTest assertions when failed partial data is published.
+
+         Ties to other methods
+         Exercises `DashboardViewModel.refreshFanOnce` and partial-response acceptance policy.
+
+         Why this exists
+         High-frequency fan polling should degrade gracefully without erasing useful last-known data.
+         */
+        let healthy = try _decodeSnapshot(
+            _snapshotJSON(
+                ok: true,
+                sectionsJSON: """
+                [
+                  { "key": "fan", "field": "1,250 RPM", "metrics": [["Fan 0", "1,250 RPM", "ok"]], "table": null, "diagnostics": { "ok": true } }
+                ]
+                """
+            )
+        )
+        let failed = try _decodeSnapshot(
+            _snapshotJSON(
+                ok: false,
+                sectionsJSON: """
+                [
+                  { "key": "fan", "field": "Fan unavailable", "metrics": null, "table": null, "diagnostics": { "ok": false, "error": "IOKit unavailable" } }
+                ]
+                """
+            )
+        )
+        let backend = SplitSnapshotBackend(
+            fullResponse: BackendSnapshotResponse(
+                snapshot: healthy,
+                exitCode: 0,
+                stderr: "",
+                rawJSON: nil
+            ),
+            sectionResponse: BackendSnapshotResponse(
+                snapshot: failed,
+                exitCode: 1,
+                stderr: "fan collector failed",
+                rawJSON: nil
+            )
+        )
+        let model = DashboardViewModel(
+            backend: backend,
+            sections: [SectionDescriptor(title: "Fan", subtitle: "Cooling", key: "fan")],
+            refreshIntervalMs: 1_000,
+            fanRefreshIntervalMs: 1_000,
+            scrollableRows: [:],
+            initialTheme: Theme.fallback(appTitle: "Mac Health Checkup"),
+            appTitle: "Mac Health Checkup"
+        )
+
+        await model.refreshOnce()
+        await model.refreshFanOnce()
+
+        XCTAssertEqual(model.sectionPayload(for: "fan")?.field, "1,250 RPM")
+        XCTAssertNotNil(model.lastError)
+    }
+
+    @MainActor
     func testVisibleSectionsHideUnreadableCollectorsUntilSettings() async throws {
         /**
          Summary
@@ -604,5 +679,19 @@ private struct StaticSnapshotBackend: SnapshotBackend {
          */
         _ = sectionKey
         return response
+    }
+}
+
+private struct SplitSnapshotBackend: SnapshotBackend {
+    let fullResponse: BackendSnapshotResponse
+    let sectionResponse: BackendSnapshotResponse
+
+    func fetchSnapshotResponse() async throws -> BackendSnapshotResponse {
+        fullResponse
+    }
+
+    func fetchSectionSnapshotResponse(sectionKey: String) async throws -> BackendSnapshotResponse {
+        _ = sectionKey
+        return sectionResponse
     }
 }

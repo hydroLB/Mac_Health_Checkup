@@ -74,3 +74,33 @@ class FansConfig:
     """
 
     use_sudo: bool
+
+
+@dataclass(frozen=True)
+class NetworkConfig:
+    """
+    Summary
+    Hold network diagnostics privacy controls.
+
+    Inputs
+    capacity_test_enabled: Whether the collector may run macOS `networkQuality`, which sends test traffic.
+    capacity_test_cache_ttl: Minimum seconds between outbound capacity tests.
+
+    Outputs
+    Immutable network diagnostics configuration.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Parsed by `parse_network` and consumed by `NetworkQualityDiagnostics`.
+
+    Why this exists
+    Outbound capacity tests must be an explicit opt-in rather than an automatic dashboard refresh side effect.
+    """
+
+    capacity_test_enabled: bool
+    capacity_test_cache_ttl: int = 3600

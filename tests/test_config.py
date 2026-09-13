@@ -12,11 +12,40 @@ from mac_health_checkup.core.config import (
     reset_config_cache,
 )
 from mac_health_checkup.core.config.io import config_max_bytes, resolve_config_path
-from mac_health_checkup.core.config.parsing.features import parse_api, parse_thresholds
+from mac_health_checkup.core.config.parsing.features import parse_api, parse_network, parse_thresholds
 from mac_health_checkup.core.config.parsing.ui import parse_ui
 from mac_health_checkup.core.types import JsonDict
 
 MODULE_PATH = "tests/test_config.py"
+
+
+def test_network_capacity_test_is_opt_in() -> None:
+    """
+    Summary
+    Verify outbound capacity testing is disabled unless the config explicitly enables it.
+
+    Inputs
+    None.
+
+    Outputs
+    Assertions on parsed network configuration.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `AssertionError` when safe-default or opt-in behavior regresses.
+
+    Ties to other methods
+    Exercises `parse_network` for absent and explicit settings.
+
+    Why this exists
+    Routine dashboard refreshes must not send bandwidth-test traffic by default.
+    """
+    assert parse_network({}).capacity_test_enabled is False
+    parsed = parse_network({"network": {"capacity_test_enabled": True}})
+    assert parsed.capacity_test_enabled is True
+    assert parsed.capacity_test_cache_ttl == 3600
 
 
 def _raw_with_api(**overrides: object) -> JsonDict:
@@ -234,7 +263,7 @@ def test_build_startup_config_validation_report_lists_active_env_overrides(
     Startup observability should prove which env overrides were active when config validation succeeded.
     """
     try:
-        monkeypatch.setenv("MAC_HEALTH_CHECKUP_API_AUTH_TOKEN", "runtime-token-abcdefghijklmnopqrstuvwxyz")
+        monkeypatch.setenv("MAC_HEALTH_CHECKUP_API_AUTH_TOKEN", "runtime-token-for-startup-test")
         monkeypatch.setenv("MAC_HEALTH_CHECKUP_API_PORT", "0")
         monkeypatch.setenv("MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL", "https://example.test:7878")
         reset_config_cache()
@@ -246,7 +275,7 @@ def test_build_startup_config_validation_report_lists_active_env_overrides(
         assert "MAC_HEALTH_CHECKUP_API_AUTH_TOKEN" in env_overrides
         assert "MAC_HEALTH_CHECKUP_API_PORT" in env_overrides
         assert "MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL" in env_overrides
-        assert cfg.api.auth_token == "runtime-token-abcdefghijklmnopqrstuvwxyz"
+        assert cfg.api.auth_token == "runtime-token-for-startup-test"
         assert payload["api_enabled"] == cfg.api.enabled
         assert payload["api_bind_host"] == cfg.api.bind_host
         assert payload["api_port"] == cfg.api.port
@@ -369,7 +398,9 @@ def test_parse_api_bind_host_env_override_applies(monkeypatch: pytest.MonkeyPatc
         IndexError,
         OSError,
     ) as exc:
-        raise AssertionError(f"{MODULE_PATH}:test_parse_api_bind_host_env_override_applies failed: {exc}") from exc
+        raise AssertionError(
+            f"{MODULE_PATH}:test_parse_api_bind_host_env_override_applies failed: {exc}"
+        ) from exc
 
 
 def test_parse_api_auth_token_env_override_applies(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -396,11 +427,11 @@ def test_parse_api_auth_token_env_override_applies(monkeypatch: pytest.MonkeyPat
     Production tokens should come from runtime secret injection rather than committed config files.
     """
     try:
-        monkeypatch.setenv("MAC_HEALTH_CHECKUP_API_AUTH_TOKEN", "runtime-token-abcdefghijklmnopqrstuvwxyz")
+        monkeypatch.setenv("MAC_HEALTH_CHECKUP_API_AUTH_TOKEN", "runtime-token-from-environment")
         monkeypatch.delenv("MAC_HEALTH_CHECKUP_API_BIND_HOST", raising=False)
         monkeypatch.delenv("MAC_HEALTH_CHECKUP_API_PORT", raising=False)
         parsed = parse_api(_raw_with_api(auth_token="change-me"))
-        assert parsed.auth_token == "runtime-token-abcdefghijklmnopqrstuvwxyz"
+        assert parsed.auth_token == "runtime-token-from-environment"
     except (
         AssertionError,
         RuntimeError,
@@ -411,7 +442,9 @@ def test_parse_api_auth_token_env_override_applies(monkeypatch: pytest.MonkeyPat
         IndexError,
         OSError,
     ) as exc:
-        raise AssertionError(f"{MODULE_PATH}:test_parse_api_auth_token_env_override_applies failed: {exc}") from exc
+        raise AssertionError(
+            f"{MODULE_PATH}:test_parse_api_auth_token_env_override_applies failed: {exc}"
+        ) from exc
 
 
 def test_parse_api_invalid_port_env_override_raises_runtime_error(monkeypatch: pytest.MonkeyPatch) -> None:

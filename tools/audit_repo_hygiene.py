@@ -41,10 +41,9 @@ DISALLOWED_TRACKED_PATTERNS: tuple[str, ...] = (
     "**/*.db",
     "**/*.db-*",
 )
-ALLOWED_TRACKED_EXACT_PATHS: tuple[str, ...] = (
-    ".env.example",
-)
+ALLOWED_TRACKED_EXACT_PATHS: tuple[str, ...] = (".env.example",)
 RECOVERY_REQUIRED_PATHS: tuple[str, ...] = (
+    ".mac-health-checkup-source",
     ".env.example",
     ".gitignore",
     ".pre-commit-config.yaml",
@@ -52,6 +51,9 @@ RECOVERY_REQUIRED_PATHS: tuple[str, ...] = (
     "Makefile",
     "README.md",
     "config/config.json",
+    "docs/assets/readme/dashboard-preview.svg",
+    "mac_health_checkup/resources/__init__.py",
+    "mac_health_checkup/resources/default_config.json",
     "pyproject.toml",
     "requirements-dev.txt",
     "requirements.txt",
@@ -68,6 +70,7 @@ class AuditResult:
     Inputs
     tracked_disallowed_paths: Tracked files that should never live in the public repository.
     missing_recovery_paths: Required bootstrap files missing from version control.
+    untracked_shadow_paths: Untracked Finder-style copies that mirror tracked repository files.
 
     Outputs
     Immutable audit result.
@@ -87,6 +90,7 @@ class AuditResult:
 
     tracked_disallowed_paths: tuple[str, ...]
     missing_recovery_paths: tuple[str, ...]
+    untracked_shadow_paths: tuple[str, ...]
 
     @property
     def has_failures(self) -> bool:
@@ -104,7 +108,7 @@ class AuditResult:
         None.
 
         Error handling
-        Returns `False` when both finding groups are empty.
+        Returns `False` when all finding groups are empty.
 
         Ties to other methods
         Used by `main` to decide the process exit code.
@@ -112,7 +116,9 @@ class AuditResult:
         Why this exists
         Gives callers one stable success predicate instead of repeating list checks.
         """
-        return bool(self.tracked_disallowed_paths or self.missing_recovery_paths)
+        return bool(
+            self.tracked_disallowed_paths or self.missing_recovery_paths or self.untracked_shadow_paths
+        )
 
 
 def git_list_tracked_paths(repo_root: Path, *, staged_only: bool) -> tuple[str, ...]:
@@ -158,13 +164,54 @@ def git_list_tracked_paths(repo_root: Path, *, staged_only: bool) -> tuple[str, 
         raise RuntimeError(f"{MODULE_PATH}:git_list_tracked_paths failed: {exc}") from exc
 
 
-def find_disallowed_tracked_paths(paths: tuple[str, ...]) -> tuple[str, ...]:
+def git_list_untracked_paths(repo_root: Path) -> tuple[str, ...]:
+    """
+    Summary
+    Collect untracked, non-ignored repository paths from Git.
+
+    Inputs
+    repo_root: Absolute repository root.
+
+    Outputs
+    Tuple of repository-relative POSIX paths.
+
+    Side effects
+    Executes `git` in the repository.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when Git commands fail or return malformed output.
+
+    Ties to other methods
+    Used by `run_audit` to detect accidental shadow copies that poison local tooling.
+
+    Why this exists
+    Finder-style duplicate files such as `README 2.md` are untracked but still break tests, type checks, and human
+    navigation if they sit beside the real sources.
+    """
+    try:
+        completed = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard"],
+            check=True,
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+        )
+        paths = [line.strip() for line in completed.stdout.splitlines() if line.strip()]
+        return tuple(sorted(set(paths)))
+    except (subprocess.SubprocessError, OSError, UnicodeError) as exc:
+        raise RuntimeError(f"{MODULE_PATH}:git_list_untracked_paths failed: {exc}") from exc
+
+
+def find_disallowed_tracked_paths(
+    paths: tuple[str, ...], *, repository_paths: tuple[str, ...] | None = None
+) -> tuple[str, ...]:
     """
     Summary
     Return tracked paths that violate the repository cleanliness policy.
 
     Inputs
-    paths: Repository-relative tracked paths.
+    paths: Repository-relative tracked paths in the current audit scope.
+    repository_paths: Optional full tracked index used to resolve canonical paths for staged shadow copies.
 
     Outputs
     Tuple of violating paths.
@@ -176,17 +223,20 @@ def find_disallowed_tracked_paths(paths: tuple[str, ...]) -> tuple[str, ...]:
     Raises `RuntimeError` with module and method context when pattern evaluation fails unexpectedly.
 
     Ties to other methods
-    Used by `run_audit` after Git enumeration.
+    Used by `run_audit` after Git enumeration and by focused policy tests.
 
     Why this exists
     Public recovery repositories should contain only source, config, and deterministic build inputs.
     """
     try:
+        tracked = set(repository_paths if repository_paths is not None else paths)
         violations: list[str] = []
         for path in paths:
             if path in ALLOWED_TRACKED_EXACT_PATHS:
                 continue
-            if any(fnmatch.fnmatch(path, pattern) for pattern in DISALLOWED_TRACKED_PATTERNS):
+            if any(
+                fnmatch.fnmatch(path, pattern) for pattern in DISALLOWED_TRACKED_PATTERNS
+            ) or _is_shadow_path(path, tracked):
                 violations.append(path)
         return tuple(sorted(violations))
     except (RuntimeError, ValueError, TypeError) as exc:
@@ -224,6 +274,68 @@ def find_missing_recovery_paths(paths: tuple[str, ...]) -> tuple[str, ...]:
         raise RuntimeError(f"{MODULE_PATH}:find_missing_recovery_paths failed: {exc}") from exc
 
 
+def find_untracked_shadow_paths(
+    tracked_paths: tuple[str, ...], untracked_paths: tuple[str, ...]
+) -> tuple[str, ...]:
+    """
+    Summary
+    Detect accidental untracked shadow copies that mirror tracked files with Finder-style suffixes.
+
+    Inputs
+    tracked_paths: Repository-relative tracked paths.
+    untracked_paths: Repository-relative untracked non-ignored paths.
+
+    Outputs
+    Tuple of suspicious untracked shadow-copy paths.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when path normalization fails unexpectedly.
+
+    Ties to other methods
+    Used by `run_audit`.
+
+    Why this exists
+    Shadow copies with ` 2` suffixes are almost always accidental local clutter and create misleading duplicate trees.
+    """
+    try:
+        tracked = set(tracked_paths)
+        suspicious = [path for path in untracked_paths if _is_shadow_path(path, tracked)]
+        return tuple(sorted(suspicious))
+    except (RuntimeError, ValueError, TypeError) as exc:
+        raise RuntimeError(f"{MODULE_PATH}:find_untracked_shadow_paths failed: {exc}") from exc
+
+
+def _is_shadow_path(path: str, tracked_paths: set[str]) -> bool:
+    """
+    Summary
+    Determine whether a candidate is a Finder-style copy of a tracked canonical path.
+
+    Inputs
+    path: Repository-relative candidate path.
+    tracked_paths: Full tracked-path set used to resolve the canonical path.
+
+    Outputs
+    True when removing Finder-style ` 2` suffix fragments produces a tracked path.
+
+    Side effects
+    None.
+
+    Error handling
+    None. Invalid or unrelated path strings return false.
+
+    Ties to other methods
+    Shared by tracked and untracked shadow-copy policy checks.
+
+    Why this exists
+    A staged copy is no longer present in Git's untracked inventory, so both inventories must use the same canonical
+    matching rule for the pre-commit and full-repository gates to agree.
+    """
+    return " 2" in path and path.replace(" 2", "") in tracked_paths
+
+
 def run_audit(repo_root: Path, *, staged_only: bool) -> AuditResult:
     """
     Summary
@@ -243,16 +355,24 @@ def run_audit(repo_root: Path, *, staged_only: bool) -> AuditResult:
     Raises `RuntimeError` with module and method context when the audit cannot be completed.
 
     Ties to other methods
-    Composes `git_list_tracked_paths`, `find_disallowed_tracked_paths`, and `find_missing_recovery_paths`.
+    Composes the Git inventory helpers with the repository policy checks.
 
     Why this exists
     Centralizes all future push hygiene rules in one deterministic check.
     """
     try:
-        tracked_paths = git_list_tracked_paths(repo_root, staged_only=staged_only)
+        scoped_paths = git_list_tracked_paths(repo_root, staged_only=staged_only)
+        repository_paths = (
+            git_list_tracked_paths(repo_root, staged_only=False) if staged_only else scoped_paths
+        )
+        untracked_paths = git_list_untracked_paths(repo_root)
         return AuditResult(
-            tracked_disallowed_paths=find_disallowed_tracked_paths(tracked_paths),
-            missing_recovery_paths=find_missing_recovery_paths(tracked_paths),
+            tracked_disallowed_paths=find_disallowed_tracked_paths(
+                scoped_paths,
+                repository_paths=repository_paths,
+            ),
+            missing_recovery_paths=find_missing_recovery_paths(repository_paths),
+            untracked_shadow_paths=find_untracked_shadow_paths(repository_paths, untracked_paths),
         )
     except (RuntimeError, ValueError, TypeError, OSError) as exc:
         raise RuntimeError(f"{MODULE_PATH}:run_audit failed: {exc}") from exc
@@ -291,6 +411,11 @@ def build_failure_message(result: AuditResult, *, staged_only: bool) -> str:
         if result.missing_recovery_paths:
             lines.append("Required recovery/bootstrap files missing from version control:")
             lines.extend(f"  - {path}" for path in result.missing_recovery_paths)
+        if result.untracked_shadow_paths:
+            lines.append(
+                "Untracked shadow copies that should be cleaned up before running local quality gates:"
+            )
+            lines.extend(f"  - {path}" for path in result.untracked_shadow_paths)
         lines.append("Fix the paths above before pushing.")
         return "\n".join(lines)
     except (RuntimeError, ValueError, TypeError) as exc:
@@ -321,7 +446,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     Keeps the audit script usable from CI, Make, and pre-commit with one interface.
     """
     try:
-        parser = argparse.ArgumentParser(description="Audit tracked repository content for public-repo hygiene.")
+        parser = argparse.ArgumentParser(
+            description="Audit tracked repository content for public-repo hygiene."
+        )
         parser.add_argument(
             "--repo-root",
             default=".",

@@ -44,7 +44,7 @@ body:
     attributes:
       label: Environment
       description: Include OS, Python version, and commit SHA if known.
-      placeholder: macOS 14.7, Python 3.11.14, commit abc123
+      placeholder: macOS 15.6, Python 3.11.15, commit abc123
     validations:
       required: true
   - type: textarea

@@ -96,19 +96,39 @@ struct SectionDetailView: View {
                         }
                     } else if model.isRefreshing || model.snapshot == nil {
                         Card(theme: theme) {
-                            HStack(spacing: 10) {
-                                ProgressView()
-                                    .controlSize(.small)
-                                Text(model.refreshStatusText ?? "Refreshing…")
-                                    .font(theme.fonts.body)
-                                    .foregroundStyle(theme.colors.field)
+                            VStack(alignment: .leading, spacing: theme.layout.verticalScaled(8)) {
+                                Text("Loading section data")
+                                    .font(theme.fonts.sectionTitle)
+                                    .foregroundStyle(theme.colors.section)
+                                HStack(spacing: 10) {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                    Text(model.refreshStatusText ?? "Gathering the latest data for this section…")
+                                        .font(theme.fonts.body)
+                                        .foregroundStyle(theme.colors.field)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
                             }
                         }
                     } else {
                         Card(theme: theme) {
-                            Text("No data yet")
-                                .font(theme.fonts.body)
-                                .foregroundStyle(theme.colors.field)
+                            VStack(alignment: .leading, spacing: theme.layout.verticalScaled(8)) {
+                                Text("No section data available")
+                                    .font(theme.fonts.sectionTitle)
+                                    .foregroundStyle(theme.colors.section)
+                                Text("This section did not return any data. Refresh to try collecting it again.")
+                                    .font(theme.fonts.body)
+                                    .foregroundStyle(theme.colors.field)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Button("Try Again") {
+                                    Task {
+                                        await model.refreshOnce()
+                                    }
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(theme.colors.section)
+                                .disabled(model.isRefreshing)
+                            }
                         }
                     }
 
@@ -159,6 +179,11 @@ struct SectionDetailView: View {
             }
             .padding(theme.layout.pagePadding)
         }
-                        .background(theme.colors.background)
+        #if os(iOS)
+        .refreshable {
+            await model.refreshOnce()
+        }
+        #endif
+        .background(theme.colors.background)
     }
 }

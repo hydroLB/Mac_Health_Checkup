@@ -66,6 +66,7 @@ Validated by `mac_health_checkup.core.config.parsing.ui.parse_ui`.
 
 | Key | Type | Default | Notes |
 |---|---|---:|---|
+| `ui.color_mode` | `str` | `"auto"` |  |
 | `ui.window_size` | `str` | `"820x1180"` |  |
 | `ui.window_title` | `str` | `"Mac Health Checkup"` |  |
 
@@ -143,9 +144,9 @@ Validated by `mac_health_checkup.core.config.parsing.runtime.parse_benchmarks`.
 
 | Key | Type | Default | Notes |
 |---|---|---:|---|
-| `benchmarks.iterations` | `int` | `200` |  |
-| `benchmarks.max_regression` | `float` | `0.3` |  |
-| `benchmarks.repeats` | `int` | `5` |  |
+| `benchmarks.iterations` | `int` | `1000` |  |
+| `benchmarks.max_regression` | `float` | `0.4` |  |
+| `benchmarks.repeats` | `int` | `7` |  |
 
 ### `timeouts`
 
@@ -206,6 +207,17 @@ Validated by `mac_health_checkup.core.config.parsing.features.parse_fans`.
 |---|---|---:|---|
 | `fans.use_sudo` | `bool` | `false` |  |
 
+### `network`
+
+Hold network diagnostics privacy controls.
+
+Validated by `mac_health_checkup.core.config.parsing.features.parse_network`.
+
+| Key | Type | Default | Notes |
+|---|---|---:|---|
+| `network.capacity_test_cache_ttl` | `int` | `3600` | Minimum interval between opt-in outbound capacity tests. |
+| `network.capacity_test_enabled` | `bool` | `false` | Opt-in; runs macOS networkQuality and sends test traffic to external measurement endpoints. |
+
 ### `thresholds`
 
 Hold health threshold values for classifying metrics.
@@ -218,10 +230,15 @@ Validated by `mac_health_checkup.core.config.parsing.features.parse_thresholds`.
 | `thresholds.backup_warn_days` | `int` | `7` |  |
 | `thresholds.disk_free_bad_percent` | `float` | `5.0` |  |
 | `thresholds.disk_free_warn_percent` | `float` | `15.0` |  |
+| `thresholds.health_excellent_min_percent` | `float` | `90.0` |  |
+| `thresholds.health_fair_min_percent` | `float` | `65.0` |  |
+| `thresholds.health_good_min_percent` | `float` | `80.0` |  |
 | `thresholds.memory_free_bad_percent` | `float` | `10.0` |  |
 | `thresholds.memory_free_warn_percent` | `float` | `20.0` |  |
 | `thresholds.rssi_bad_dbm` | `int` | `-80` |  |
 | `thresholds.rssi_warn_dbm` | `int` | `-70` |  |
+| `thresholds.ssd_media_errors_bad_count` | `int` | `1` |  |
+| `thresholds.ssd_unsafe_shutdowns_warn_count` | `int` | `1` |  |
 | `thresholds.temp_bad_c` | `float` | `90.0` |  |
 | `thresholds.temp_warn_c` | `float` | `75.0` |  |
 

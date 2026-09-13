@@ -31,7 +31,8 @@ struct OverviewExpandedContent: View {
          Users want to see more details at a glance without losing their place in the overview list.
          */
         VStack(alignment: .leading, spacing: theme.layout.verticalScaled(10)) {
-            if let field = payload?.field {
+            let alerts = OverviewContentPolicy.alertMetrics(payload: payload)
+            if alerts.isEmpty, let field = payload?.field {
                 let trimmed = field.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
                     Text(trimmed)
@@ -43,10 +44,10 @@ struct OverviewExpandedContent: View {
                         .help(HelpText.section(key: sectionKey))
                 }
             }
-            if let metrics = payload?.metrics, !metrics.isEmpty {
-                MetricsGridView(theme: theme, sectionKey: nil, model: model, rows: Array(metrics.prefix(6)))
+            if !alerts.isEmpty {
+                MetricsGridView(theme: theme, sectionKey: nil, model: model, rows: Array(alerts.prefix(6)))
             }
-            if let table = payload?.table, !table.rows.isEmpty {
+            if alerts.isEmpty, let table = payload?.table, !table.rows.isEmpty {
                 OverviewTablePreview(theme: theme, headers: table.headers, rows: table.rows)
             }
         }

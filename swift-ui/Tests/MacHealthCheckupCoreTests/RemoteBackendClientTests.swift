@@ -26,7 +26,7 @@ final class RemoteBackendClientTests: XCTestCase {
          Why this exists
          Pairing flows should validate reachability without leaking token details into unauthenticated endpoints.
          */
-        let baseURL = try XCTUnwrap(URL(string: "http://example.test:7878"))
+        let baseURL = try XCTUnwrap(URL(string: "http://127.0.0.1:7878"))
         let config = RemoteBackendConfig(baseURL: baseURL, authToken: "secret", timeoutSeconds: 5)
 
         let recorder = RequestRecorder()
@@ -75,7 +75,7 @@ final class RemoteBackendClientTests: XCTestCase {
          Why this exists
          The iOS client must authenticate snapshot calls and remain resilient to schema drift.
          */
-        let baseURL = try XCTUnwrap(URL(string: "http://example.test:7878"))
+        let baseURL = try XCTUnwrap(URL(string: "http://127.0.0.1:7878"))
         let config = RemoteBackendConfig(baseURL: baseURL, authToken: "secret-token", timeoutSeconds: 5)
 
         let snapshotJSON = """
@@ -142,6 +142,52 @@ final class RemoteBackendClientTests: XCTestCase {
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret-token")
     }
 
+    func testFetchSnapshotDefaultsMissingExitHeaderFromSnapshotStatus() async throws {
+        /**
+         Summary
+         Ensure a missing transport header falls back to the decoded snapshot status instead of HTTP 200.
+
+         Inputs
+         None.
+
+         Outputs
+         None.
+
+         Side effects
+         Uses a URLProtocol stub for two deterministic snapshot responses.
+
+         Error handling
+         Fails through XCTest assertions or propagated client errors.
+
+         Ties to other methods
+         Exercises `RemoteBackendClient.fetchSnapshotResponse` fallback exit-code behavior.
+
+         Why this exists
+         Proxies may strip custom headers; a successful HTTP status is not a backend process exit code.
+         */
+        let baseURL = try XCTUnwrap(URL(string: "http://127.0.0.1:7878"))
+        let config = RemoteBackendConfig(baseURL: baseURL, authToken: "secret-token", timeoutSeconds: 5)
+
+        for expectedOK in [true, false] {
+            let snapshotData = Data(_snapshotJSON(ok: expectedOK).utf8)
+            URLProtocolStub.handler = { request in
+                let response = HTTPURLResponse(
+                    url: try XCTUnwrap(request.url),
+                    statusCode: 200,
+                    httpVersion: "HTTP/1.1",
+                    headerFields: ["Content-Type": "application/json"]
+                )!
+                return (response, snapshotData)
+            }
+
+            let session = URLSession(configuration: _sessionConfiguration())
+            let client = RemoteBackendClient(config: config, session: session)
+            let response = try await client.fetchSnapshotResponse()
+
+            XCTAssertEqual(response.exitCode, expectedOK ? 0 : 1)
+        }
+    }
+
     private func _sessionConfiguration() -> URLSessionConfiguration {
         /**
          Summary
@@ -168,6 +214,48 @@ final class RemoteBackendClientTests: XCTestCase {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [URLProtocolStub.self]
         return configuration
+    }
+
+    private func _snapshotJSON(ok: Bool) -> String {
+        """
+        {
+          "schema_version": 2,
+          "generated_at_unix_ms": 1700000000000,
+          "theme": {
+            "ui": { "window_title": "Mac Health Checkup" },
+            "colors": {
+              "bg": "#23272e",
+              "fg": "#ffffff",
+              "ok": "#2ecc40",
+              "warn": "#ffdc00",
+              "bad": "#ff4136",
+              "section": "#339af0",
+              "label": "#f1c40f",
+              "field": "#daf6ff"
+            },
+            "fonts": {
+              "family_default": "Helvetica",
+              "family_mono": "Menlo",
+              "size_section": 16,
+              "size_banner": 18,
+              "size_field": 13,
+              "size_tooltip": 10
+            },
+            "gui": {
+              "card_bg": "#1b2027",
+              "card_border": "#2a313c",
+              "section_padx": 4,
+              "section_pady": 3,
+              "auto_refresh_ms": 1000,
+              "scrollable_rows": {}
+            }
+          },
+          "section_catalog": [],
+          "sections": [],
+          "ok": \(ok ? "true" : "false"),
+          "error": \(ok ? "null" : "\"snapshot failed\"")
+        }
+        """
     }
 
     func testConfigValidationRejectsInvalidPinnedFingerprint() throws {
@@ -201,6 +289,115 @@ final class RemoteBackendClientTests: XCTestCase {
             pinnedCertificateSHA256: "not-a-fingerprint"
         )
         XCTAssertThrowsError(try config.validated())
+    }
+
+    func testConfigValidationAllowsHTTPForExplicitLoopbackHosts() throws {
+        /**
+         Summary
+         Ensure plain HTTP remains available for local macOS agent and development connections.
+
+         Inputs
+         None.
+
+         Outputs
+         None.
+
+         Side effects
+         None.
+
+         Error handling
+         Fails when a supported loopback URL does not validate.
+
+         Ties to other methods
+         Exercises `RemoteBackendConfig.validated` loopback classification.
+
+         Why this exists
+         Transport hardening must preserve IPv4, IPv6, and localhost-based local workflows.
+         */
+        let urls = [
+            "http://127.0.0.1:7878",
+            "http://127.42.0.9:7878",
+            "http://[::1]:7878",
+            "http://localhost:7878",
+            "http://LOCALHOST.:7878",
+        ]
+
+        for value in urls {
+            let baseURL = try XCTUnwrap(URL(string: value))
+            let config = RemoteBackendConfig(baseURL: baseURL, authToken: "secret", timeoutSeconds: 5)
+            XCTAssertNoThrow(try config.validated(), "Expected loopback HTTP URL to validate: \(value)")
+        }
+    }
+
+    func testConfigValidationRejectsHTTPForNonLoopbackHost() throws {
+        /**
+         Summary
+         Ensure bearer credentials cannot be sent over cleartext HTTP to a LAN endpoint.
+
+         Inputs
+         None.
+
+         Outputs
+         None.
+
+         Side effects
+         None.
+
+         Error handling
+         Expects `RemoteBackendConfig.validated` to reject the insecure URL.
+
+         Ties to other methods
+         Exercises the remote transport boundary in `RemoteBackendConfig.validated`.
+
+         Why this exists
+         Local-network HTTP exposes both the bearer token and sensitive health snapshots to interception.
+         */
+        let baseURL = try XCTUnwrap(URL(string: "http://192.168.1.10:7878"))
+        let config = RemoteBackendConfig(baseURL: baseURL, authToken: "secret", timeoutSeconds: 5)
+
+        XCTAssertThrowsError(try config.validated()) { error in
+            XCTAssertTrue(String(describing: error).contains("HTTP is allowed only for loopback"))
+        }
+    }
+
+    func testConfigValidationRequiresPinForNonLoopbackHTTPS() throws {
+        /**
+         Summary
+         Ensure non-loopback HTTPS uses the certificate pin supplied by the self-signed pairing payload.
+
+         Inputs
+         None.
+
+         Outputs
+         None.
+
+         Side effects
+         None.
+
+         Error handling
+         Expects missing pins to fail and a valid pin to normalize successfully.
+
+         Ties to other methods
+         Exercises `RemoteBackendConfig.validated` and fingerprint normalization together.
+
+         Why this exists
+         Encryption without authenticating the paired self-signed server does not protect the bearer token from a LAN intermediary.
+         */
+        let baseURL = try XCTUnwrap(URL(string: "https://192.168.1.10:7878"))
+        let missingPin = RemoteBackendConfig(baseURL: baseURL, authToken: "secret", timeoutSeconds: 5)
+        XCTAssertThrowsError(try missingPin.validated()) { error in
+            XCTAssertTrue(String(describing: error).contains("requires a pinned certificate"))
+        }
+
+        let colonDelimitedPin = Array(repeating: "AA", count: 32).joined(separator: ":")
+        let pinned = RemoteBackendConfig(
+            baseURL: baseURL,
+            authToken: "secret",
+            timeoutSeconds: 5,
+            pinnedCertificateSHA256: colonDelimitedPin
+        )
+        let validated = try pinned.validated()
+        XCTAssertEqual(validated.pinnedCertificateSHA256, String(repeating: "aa", count: 32))
     }
 }
 

@@ -25,7 +25,7 @@ struct PythonVersion: Comparable, Sendable {
      Used by `PythonInterpreterResolver` when deciding whether an interpreter is supported.
 
      Why this exists
-     The backend requires Python 3.10+; this keeps version checks explicit and testable.
+     The backend requires Python 3.11+; this keeps version checks explicit and testable.
      */
 
     let major: Int
@@ -173,7 +173,7 @@ enum PythonInterpreterResolver {
                 """
                 Invalid Python override. mac-health-checkup requires Python >= \(requiredMinimum.major).\(requiredMinimum.minor). \
                 Details: \(details) \
-                Set `--python /opt/homebrew/bin/python3` or export `MAC_HEALTH_CHECKUP_PYTHON` to a Python 3.10+ executable.
+                Set `--python /opt/homebrew/bin/python3` or export `MAC_HEALTH_CHECKUP_PYTHON` to a Python 3.11+ executable.
                 """
             )
         }
@@ -196,7 +196,7 @@ enum PythonInterpreterResolver {
             """
             No supported Python interpreter found. mac-health-checkup requires Python >= \(requiredMinimum.major).\(requiredMinimum.minor). \
             Details: \(fallbackDetails) \
-            Install Python 3.10+ (Homebrew recommended) and set `MAC_HEALTH_CHECKUP_PYTHON=/opt/homebrew/bin/python3`, \
+            Install Python 3.11+ (Homebrew recommended) and set `MAC_HEALTH_CHECKUP_PYTHON=/opt/homebrew/bin/python3`, \
             or pass `--python /path/to/python3`.
             """
         )

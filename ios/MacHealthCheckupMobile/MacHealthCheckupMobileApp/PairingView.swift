@@ -43,6 +43,7 @@ struct PairingView: View {
     @State private var showScanner: Bool = false
     @State private var showImportError: Bool = false
     @State private var importErrorMessage: String = ""
+    @State private var showForgetTokenConfirmation: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -82,6 +83,19 @@ struct PairingView: View {
             } message: {
                 Text(importErrorMessage)
             }
+            .confirmationDialog(
+                "Forget stored token?",
+                isPresented: $showForgetTokenConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Forget Token", role: .destructive) {
+                    onForgetStoredToken()
+                    _haptic(.warning)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("You will need the pairing payload or token from your Mac to reconnect.")
+            }
         }
     }
 
@@ -118,10 +132,10 @@ struct PairingView: View {
                     .foregroundStyle(.white)
             }
             Text("Mac Health Checkup")
-                .font(.system(size: 28, weight: .semibold))
+                .font(.title.bold())
                 .foregroundStyle(.white)
             Text("Connect to your Mac agent to view diagnostics.")
-                .font(.system(size: 14))
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -153,7 +167,7 @@ struct PairingView: View {
          */
         VStack(spacing: 12) {
             VStack(spacing: 10) {
-                TextField("Agent URL (example: http://192.168.1.10:7878)", text: $urlText)
+                TextField("Agent URL (example: https://192.168.1.10:7878)", text: $urlText)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.URL)
@@ -167,7 +181,7 @@ struct PairingView: View {
 
                     if storedTokenAvailable && tokenText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Text("Using stored token")
-                            .font(.system(size: 12))
+                            .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -192,14 +206,14 @@ struct PairingView: View {
 
             if let healthStatusText, !healthStatusText.isEmpty {
                 Text(healthStatusText)
-                    .font(.system(size: 12))
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             if let errorMessage, !errorMessage.isEmpty {
                 Text(errorMessage)
-                    .font(.system(size: 12))
+                    .font(.footnote)
                     .foregroundStyle(.red)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -233,10 +247,9 @@ struct PairingView: View {
 
             if storedTokenAvailable {
                 Button("Forget stored token", role: .destructive) {
-                    onForgetStoredToken()
-                    _haptic(.warning)
+                    showForgetTokenConfirmation = true
                 }
-                .font(.system(size: 12))
+                .font(.footnote)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -270,10 +283,10 @@ struct PairingView: View {
          */
         VStack(alignment: .leading, spacing: 8) {
             Text("On your Mac")
-                .font(.system(size: 14, weight: .semibold))
+                .font(.headline)
                 .foregroundStyle(.white)
-            Text("1) Set `api.enabled` to true in `config/config.json`.\n2) Set `api.allow_lan` to true for iPhone access.\n3) Enable TLS (`api.tls_enabled`), generate a cert, and use the printed pin.\n4) Set `api.bind_host` to `0.0.0.0` for LAN access.\n5) Set a strong `api.auth_token` (32+ chars).\n6) Run `python -m mac_health_checkup --serve`.\n7) Enter the printed URL here (and add the printed TLS pin in Settings).")
-                .font(.system(size: 12))
+            Text("1) In the project directory, run `.venv/bin/python run.py --agent`.\n2) Paste the printed pairing payload here, or scan its QR code.\n3) Keep the Mac agent running while using the companion app.")
+                .font(.footnote)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

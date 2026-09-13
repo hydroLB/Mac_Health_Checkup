@@ -177,7 +177,11 @@ def _parse_update_labels(text: str) -> list[str]:
     Why this exists
     Update output is unstructured and contains extra guidance lines; labels are the most useful shareable summary.
     """
-    return [str(item.get("label", "")).strip() for item in _parse_update_items(text) if str(item.get("label", "")).strip()]
+    return [
+        str(item.get("label", "")).strip()
+        for item in _parse_update_items(text)
+        if str(item.get("label", "")).strip()
+    ]
 
 
 def _parse_update_items(text: str) -> list[JsonDict]:

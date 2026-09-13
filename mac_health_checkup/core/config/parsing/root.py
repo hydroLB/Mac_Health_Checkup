@@ -6,6 +6,7 @@ from mac_health_checkup.core.config.parsing.features import (
     parse_display_transport,
     parse_fans,
     parse_gui,
+    parse_network,
     parse_thresholds,
 )
 from mac_health_checkup.core.config.parsing.observability import parse_logging
@@ -60,6 +61,7 @@ def parse_config(raw: JsonDict) -> Config:
         timeouts = parse_timeouts(raw)
         api = parse_api(raw)
         fans = parse_fans(raw)
+        network = parse_network(raw)
         thresholds = parse_thresholds(raw)
         gui = parse_gui(raw)
         display_transport = parse_display_transport(raw)
@@ -76,6 +78,7 @@ def parse_config(raw: JsonDict) -> Config:
             timeouts=timeouts,
             api=api,
             fans=fans,
+            network=network,
             thresholds=thresholds,
             gui=gui,
             display_transport=display_transport,

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import threading
+import time
 import unittest
 from dataclasses import replace
+from types import SimpleNamespace
 from typing import Callable
 from unittest.mock import patch
 
@@ -297,6 +300,71 @@ class ShutdownManagerTests(unittest.TestCase):
             raise AssertionError(
                 f"{MODULE_PATH}:ShutdownManagerTests.test_cleanup_is_time_bounded failed: {exc}"
             ) from exc
+
+    def test_blocking_cleanup_callback_cannot_exceed_deadline(self) -> None:
+        """
+        Summary
+        Ensure a callback that never completes cannot block shutdown past the configured deadline.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Starts one daemon cleanup thread that is released before the test exits.
+
+        Error handling
+        Raises `AssertionError` when shutdown waits materially beyond the configured bound.
+
+        Ties to other methods
+        Exercises the real blocking-callback path in `ShutdownManager._run_cleanup`.
+
+        Why this exists
+        A timer flag checked only between callbacks does not bound a callback that hangs internally.
+        """
+        release = threading.Event()
+        manager = ShutdownManager()
+
+        def _blocking_cleanup() -> None:
+            """
+            Summary
+            Wait until the test releases the injected cleanup callback.
+
+            Inputs
+            None.
+
+            Outputs
+            None.
+
+            Side effects
+            Blocks the daemon cleanup thread on an event.
+
+            Error handling
+            None.
+
+            Ties to other methods
+            Registered with `ShutdownManager` in this test.
+
+            Why this exists
+            `threading.Event.wait` returns a boolean and does not directly satisfy the cleanup callback contract.
+            """
+            release.wait()
+
+        manager.register_cleanup(_blocking_cleanup)
+        started_at = time.monotonic()
+        try:
+            with patch(
+                "mac_health_checkup.app.gui.dashboard.lifecycle.get_config",
+                return_value=SimpleNamespace(
+                    shutdown=SimpleNamespace(graceful_timeout_sec=0.05),
+                ),
+            ):
+                manager.trigger_shutdown()
+            self.assertLess(time.monotonic() - started_at, 0.5)
+        finally:
+            release.set()
 
 
 if __name__ == "__main__":

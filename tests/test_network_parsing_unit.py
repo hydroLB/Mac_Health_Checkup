@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import replace
 from unittest.mock import patch
 
+from mac_health_checkup.core.config import NetworkConfig, get_config
 from mac_health_checkup.diagnostics import network as net
+from mac_health_checkup.diagnostics.base import Cache
 
 MODULE_PATH = "tests/test_network_parsing_unit.py"
 
@@ -57,6 +60,7 @@ class NetworkParsingUnitTests(unittest.TestCase):
         """
         try:
             net.NetworkQualityDiagnostics._last_bytes = None
+            net.NetworkQualityDiagnostics._capacity_cache = Cache(3600)
         except (
             AssertionError,
             RuntimeError,
@@ -185,6 +189,7 @@ class NetworkParsingUnitTests(unittest.TestCase):
         This is the core network collector logic used by the UI and snapshot backend.
         """
         try:
+            network_quality_commands: list[list[object]] = []
 
             def _fake_safe_run(
                 cmd: object, context: str, *, allow_sudo: bool, timeout: int | None
@@ -233,15 +238,30 @@ class NetworkParsingUnitTests(unittest.TestCase):
                         "en0 1500 link#4 xx 0 0 0 0 0 1000 2000\n"
                     ), None
                 if cmd_list[:2] == ["networkQuality", "-s"]:
+                    network_quality_commands.append(cmd_list)
                     return (
                         "Downlink capacity: 100.0 Mbps\nUplink capacity: 20.0 Mbps\nInterface: en0\n"
                     ), None
                 return None, "unexpected"
 
-            with patch(
-                "mac_health_checkup.diagnostics.network.safe_run", autospec=True, side_effect=_fake_safe_run
+            enabled_config = replace(
+                get_config(),
+                network=NetworkConfig(capacity_test_enabled=True),
+            )
+            with (
+                patch(
+                    "mac_health_checkup.diagnostics.network.safe_run",
+                    autospec=True,
+                    side_effect=_fake_safe_run,
+                ),
+                patch(
+                    "mac_health_checkup.diagnostics.network.get_config",
+                    autospec=True,
+                    return_value=enabled_config,
+                ),
             ):
                 data = net.NetworkQualityDiagnostics._fetch_uncached()
+                cached_data = net.NetworkQualityDiagnostics._fetch_uncached()
                 self.assertEqual(data.get("interface"), "en0")
                 self.assertEqual(data.get("ipv4"), "192.168.1.10")
                 self.assertEqual(data.get("ssid"), "MyWifi")
@@ -249,7 +269,10 @@ class NetworkParsingUnitTests(unittest.TestCase):
                 self.assertEqual(data.get("tx_rate_mbps"), 867)
                 self.assertEqual(data.get("down_mbps"), 100.0)
                 self.assertEqual(data.get("up_mbps"), 20.0)
+                self.assertTrue(data.get("capacity_test_enabled"))
                 self.assertTrue(data.get("ok"))
+                self.assertEqual(cached_data.get("down_mbps"), 100.0)
+                self.assertEqual(len(network_quality_commands), 1)
         except (
             AssertionError,
             RuntimeError,
@@ -262,6 +285,62 @@ class NetworkParsingUnitTests(unittest.TestCase):
         ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:NetworkParsingUnitTests.test_fetch_uncached_parses_command_outputs failed: {exc}"
+            ) from exc
+
+    def test_fetch_uncached_skips_capacity_test_by_default(self) -> None:
+        """
+        Summary
+        Verify routine collection never sends outbound capacity-test traffic without explicit opt-in.
+
+        Inputs
+        None.
+
+        Outputs
+        Assertions on returned privacy state and subprocess calls.
+
+        Side effects
+        Patches local network helpers and the subprocess boundary.
+
+        Error handling
+        Raises AssertionError with context on failures.
+
+        Ties to other methods
+        Exercises the default branch of `NetworkQualityDiagnostics._fetch_uncached`.
+
+        Why this exists
+        Dashboard auto-refresh must not turn into an implicit recurring bandwidth test.
+        """
+        try:
+            with (
+                patch.object(
+                    net,
+                    "_primary_interface_and_ipv4",
+                    autospec=True,
+                    return_value=("en0", "192.168.1.10"),
+                ),
+                patch.object(net, "_airport_info", autospec=True, return_value={}),
+                patch.object(net, "_interface_bytes", autospec=True, return_value=(1000, 2000)),
+                patch.object(net, "_rate_mbps_from_bytes", autospec=True, return_value=(None, None)),
+                patch("mac_health_checkup.diagnostics.network.safe_run", autospec=True) as safe_run_mock,
+            ):
+                data = net.NetworkQualityDiagnostics._fetch_uncached()
+
+            safe_run_mock.assert_not_called()
+            self.assertFalse(data.get("capacity_test_enabled"))
+            self.assertIsNone(data.get("down_mbps"))
+            self.assertIsNone(data.get("up_mbps"))
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
+            raise AssertionError(
+                f"{MODULE_PATH}:NetworkParsingUnitTests.test_fetch_uncached_skips_capacity_test_by_default failed: {exc}"
             ) from exc
 
 

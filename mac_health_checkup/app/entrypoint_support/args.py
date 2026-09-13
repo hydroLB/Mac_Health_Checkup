@@ -73,6 +73,14 @@ def _build_parser() -> argparse.ArgumentParser:
             action="store_true",
             help="Print per-section diagnosis and recommended next steps in CLI mode.",
         )
+        parser.add_argument(
+            "--redact-sensitive",
+            action="store_true",
+            help=(
+                "Redact serial numbers, SSIDs/IP addresses, process IDs, and full process paths "
+                "from snapshot, report, and diff output."
+            ),
+        )
         _add_snapshot_args(parser)
         _add_server_args(parser)
         _add_export_args(parser)

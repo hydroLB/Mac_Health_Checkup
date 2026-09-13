@@ -1,20 +1,20 @@
 {
   "benchmarks": {
     "display_parse": {
-      "ops_per_sec": 35683.22230342167
+      "ops_per_sec": 40184.850311432514
     },
     "hz_parse": {
-      "ops_per_sec": 858523.8466558793
+      "ops_per_sec": 915750.9157509309
     },
     "usb_tree_parse": {
-      "ops_per_sec": 1573762.5930821707
+      "ops_per_sec": 75958.9821496393
     }
   },
   "metadata": {
-    "iterations": 200,
+    "iterations": 1000,
     "machine": "arm64",
-    "platform": "macOS-15.7.3-arm64-arm-64bit",
-    "python": "3.11.0",
-    "repeats": 5
+    "platform": "macOS-15.6.1-arm64-arm-64bit",
+    "python": "3.11.15",
+    "repeats": 7
   }
 }

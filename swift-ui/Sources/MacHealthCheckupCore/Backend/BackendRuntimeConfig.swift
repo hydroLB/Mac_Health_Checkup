@@ -62,7 +62,7 @@ public struct BackendRuntimeConfig: Sendable {
         let env = ProcessInfo.processInfo.environment
 
         #if os(macOS)
-        let minimum = PythonVersion(major: 3, minor: 10, patch: 0)
+        let minimum = PythonVersion(major: 3, minor: 11, patch: 0)
         let resolved = try PythonInterpreterResolver.resolve(
             pythonOverride: pythonOverride,
             environment: env,

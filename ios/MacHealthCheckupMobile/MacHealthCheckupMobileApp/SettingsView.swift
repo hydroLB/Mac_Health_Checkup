@@ -53,6 +53,7 @@ struct SettingsView: View {
     let onForgetPairing: () -> Void
 
     @State private var tokenText: String = ""
+    @State private var showForgetPairingConfirmation: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -126,8 +127,10 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Button("Disconnect", role: .destructive) { onDisconnect() }
-                    Button("Forget Pairing", role: .destructive) { onForgetPairing() }
+                    Button("Disconnect") { onDisconnect() }
+                    Button("Forget Pairing", role: .destructive) {
+                        showForgetPairingConfirmation = true
+                    }
                 } footer: {
                     Text("Forget Pairing clears the URL and removes the stored token from Keychain.")
                 }
@@ -136,6 +139,16 @@ struct SettingsView: View {
             .tint(theme.colors.section)
             .scrollContentBackground(.hidden)
             .background(theme.colors.background.ignoresSafeArea())
+        }
+        .confirmationDialog(
+            "Forget this Mac?",
+            isPresented: $showForgetPairingConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Forget Pairing", role: .destructive) { onForgetPairing() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes the agent URL, certificate pin, and stored token from this iPhone.")
         }
     }
 }

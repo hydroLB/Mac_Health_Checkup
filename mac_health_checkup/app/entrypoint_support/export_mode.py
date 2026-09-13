@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import os
+import tempfile
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -119,6 +121,57 @@ class SnapshotRenderer(Protocol):
         ...
 
 
+class SnapshotRedactor(Protocol):
+    """
+    Summary
+    Describe the safe-share snapshot redactor used by export helpers.
+
+    Inputs
+    None.
+
+    Outputs
+    Structural protocol used only for type checking.
+
+    Side effects
+    None.
+
+    Error handling
+    None.
+
+    Ties to other methods
+    Used by snapshot and diff export flows when `--redact-sensitive` is enabled.
+
+    Why this exists
+    A typed callback keeps export orchestration independent from the redaction implementation.
+    """
+
+    def __call__(self, snapshot: Snapshot) -> Snapshot:
+        """
+        Summary
+        Return a safe-share copy of a snapshot.
+
+        Inputs
+        snapshot: Source snapshot.
+
+        Outputs
+        Redacted snapshot copy.
+
+        Side effects
+        None.
+
+        Error handling
+        Implementations may raise contextual redaction errors.
+
+        Ties to other methods
+        Used before rendering snapshot and diff artifacts.
+
+        Why this exists
+        Report exporters need one consistent redaction boundary for live and saved snapshots.
+        """
+
+        ...
+
+
 class ShouldFailOnSnapshotFn(Protocol):
     """
     Summary
@@ -231,6 +284,7 @@ class ExportModeSettings:
     Inputs
     format_name: Export format string.
     include_diagnostics: Whether raw diagnostics should be embedded in exports.
+    redact_sensitive: Whether to create a safe-share artifact.
     fail_on: Optional fail threshold.
     path: Final output path.
 
@@ -252,6 +306,7 @@ class ExportModeSettings:
 
     format_name: str
     include_diagnostics: bool
+    redact_sensitive: bool
     fail_on: str
     path: Path
 
@@ -283,12 +338,16 @@ def run_diff_mode(args: argparse.Namespace) -> int:
         from mac_health_checkup.app.reports import (
             diff_snapshots,
             load_snapshot_from_path,
+            redact_snapshot_sensitive,
             render_diff_markdown,
         )
 
         before_path, after_path = _resolve_diff_paths(args.diff_snapshots)
         before = load_snapshot_from_path(before_path)
         after = load_snapshot_from_path(after_path)
+        if bool(getattr(args, "redact_sensitive", False)):
+            before = redact_snapshot_sensitive(before)
+            after = redact_snapshot_sensitive(after)
         diff = diff_snapshots(before, after)
         print(render_diff_markdown(diff), end="")
         return 0
@@ -334,6 +393,7 @@ def run_export_mode(
         from mac_health_checkup.app.reports import (
             diff_snapshots,
             load_snapshot_from_path,
+            redact_snapshot_sensitive,
             render_diff_html,
             render_diff_markdown,
             render_snapshot_html,
@@ -349,6 +409,7 @@ def run_export_mode(
                 diff_snapshots=diff_snapshots,
                 render_diff_markdown=render_diff_markdown,
                 render_diff_html=render_diff_html,
+                redact_snapshot_fn=redact_snapshot_sensitive,
                 write_text_file_fn=write_text_file_fn,
             )
         if args.diff_against:
@@ -360,6 +421,7 @@ def run_export_mode(
                 diff_snapshots=diff_snapshots,
                 render_diff_markdown=render_diff_markdown,
                 render_diff_html=render_diff_html,
+                redact_snapshot_fn=redact_snapshot_sensitive,
                 write_text_file_fn=write_text_file_fn,
             )
         if args.export_from_snapshot:
@@ -369,6 +431,7 @@ def run_export_mode(
                 load_snapshot_from_path=load_snapshot_from_path,
                 render_snapshot_markdown=render_snapshot_markdown,
                 render_snapshot_html=render_snapshot_html,
+                redact_snapshot_fn=redact_snapshot_sensitive,
                 write_text_file_fn=write_text_file_fn,
                 should_fail_on_snapshot_fn=should_fail_on_snapshot_fn,
             )
@@ -377,6 +440,7 @@ def run_export_mode(
             build_snapshot=build_snapshot,
             render_snapshot_markdown=render_snapshot_markdown,
             render_snapshot_html=render_snapshot_html,
+            redact_snapshot_fn=redact_snapshot_sensitive,
             write_text_file_fn=write_text_file_fn,
             should_fail_on_snapshot_fn=should_fail_on_snapshot_fn,
         )
@@ -411,7 +475,27 @@ def write_text_file(path: Path, content: str) -> None:
     try:
         out_path = path.expanduser()
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(content, encoding="utf-8")
+        temporary_paths: list[Path] = []
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=out_path.parent,
+                prefix=f".{out_path.name}.",
+                delete=False,
+            ) as temp_file:
+                temp_path = Path(temp_file.name)
+                temporary_paths.append(temp_path)
+                os.chmod(temp_path, 0o600)
+                temp_file.write(content)
+                temp_file.flush()
+                os.fsync(temp_file.fileno())
+            os.replace(temp_path, out_path)
+            os.chmod(out_path, 0o600)
+            temporary_paths.clear()
+        finally:
+            for temporary_path in temporary_paths:
+                temporary_path.unlink(missing_ok=True)
     except (OSError, RuntimeError, ValueError, TypeError) as exc:
         raise RuntimeError(
             format_error(MODULE_PATH, "_write_text_file", f"Write failed: {path}", exc)
@@ -487,6 +571,7 @@ def build_export_settings(
         return ExportModeSettings(
             format_name=format_name,
             include_diagnostics=bool(args.export_include_diagnostics),
+            redact_sensitive=bool(getattr(args, "redact_sensitive", False)),
             fail_on=str(args.fail_on) if getattr(args, "fail_on", None) else "",
             path=resolve_export_path_fn(
                 format_name,
@@ -542,6 +627,7 @@ def _export_existing_snapshot_diff(
     diff_snapshots: Callable[[Snapshot, Snapshot], _DiffT],
     render_diff_markdown: DiffRenderer[_DiffT],
     render_diff_html: DiffRenderer[_DiffT],
+    redact_snapshot_fn: SnapshotRedactor,
     write_text_file_fn: Callable[[Path, str], None],
 ) -> int:
     """
@@ -555,6 +641,7 @@ def _export_existing_snapshot_diff(
     diff_snapshots: Diff builder callback.
     render_diff_markdown: Markdown diff renderer.
     render_diff_html: HTML diff renderer.
+    redact_snapshot_fn: Safe-share snapshot redactor.
     write_text_file_fn: File writer callback.
 
     Outputs
@@ -575,7 +662,10 @@ def _export_existing_snapshot_diff(
     before_path, after_path = _resolve_diff_paths(args.diff_snapshots)
     before = load_snapshot_from_path(before_path)
     after = load_snapshot_from_path(after_path)
-    diff = diff_snapshots(before, after)
+    diff = diff_snapshots(
+        _snapshot_for_export(before, settings=settings, redact_snapshot_fn=redact_snapshot_fn),
+        _snapshot_for_export(after, settings=settings, redact_snapshot_fn=redact_snapshot_fn),
+    )
     content = _render_diff_content(
         diff=diff,
         format_name=settings.format_name,
@@ -595,6 +685,7 @@ def _export_live_snapshot_diff(
     diff_snapshots: Callable[[Snapshot, Snapshot], _DiffT],
     render_diff_markdown: DiffRenderer[_DiffT],
     render_diff_html: DiffRenderer[_DiffT],
+    redact_snapshot_fn: SnapshotRedactor,
     write_text_file_fn: Callable[[Path, str], None],
 ) -> int:
     """
@@ -609,6 +700,7 @@ def _export_live_snapshot_diff(
     diff_snapshots: Diff builder callback.
     render_diff_markdown: Markdown diff renderer.
     render_diff_html: HTML diff renderer.
+    redact_snapshot_fn: Safe-share snapshot redactor.
     write_text_file_fn: File writer callback.
 
     Outputs
@@ -628,7 +720,10 @@ def _export_live_snapshot_diff(
     """
     baseline = load_snapshot_from_path(Path(str(args.diff_against)))
     current = build_snapshot()
-    diff = diff_snapshots(baseline, current)
+    diff = diff_snapshots(
+        _snapshot_for_export(baseline, settings=settings, redact_snapshot_fn=redact_snapshot_fn),
+        _snapshot_for_export(current, settings=settings, redact_snapshot_fn=redact_snapshot_fn),
+    )
     content = _render_diff_content(
         diff=diff,
         format_name=settings.format_name,
@@ -646,6 +741,7 @@ def _export_existing_snapshot_report(
     load_snapshot_from_path: Callable[[Path], Snapshot],
     render_snapshot_markdown: SnapshotRenderer,
     render_snapshot_html: SnapshotRenderer,
+    redact_snapshot_fn: SnapshotRedactor,
     write_text_file_fn: Callable[[Path, str], None],
     should_fail_on_snapshot_fn: ShouldFailOnSnapshotFn,
 ) -> int:
@@ -659,6 +755,7 @@ def _export_existing_snapshot_report(
     load_snapshot_from_path: Snapshot loading callback.
     render_snapshot_markdown: Markdown snapshot renderer.
     render_snapshot_html: HTML snapshot renderer.
+    redact_snapshot_fn: Safe-share snapshot redactor.
     write_text_file_fn: File writer callback.
     should_fail_on_snapshot_fn: Fail policy callback.
 
@@ -683,6 +780,7 @@ def _export_existing_snapshot_report(
         settings=settings,
         render_snapshot_markdown=render_snapshot_markdown,
         render_snapshot_html=render_snapshot_html,
+        redact_snapshot_fn=redact_snapshot_fn,
     )
     _write_export(settings.path, content, write_text_file_fn=write_text_file_fn)
     return _resolve_snapshot_exit_code(
@@ -696,6 +794,7 @@ def _export_live_snapshot_report(
     build_snapshot: Callable[[], Snapshot],
     render_snapshot_markdown: SnapshotRenderer,
     render_snapshot_html: SnapshotRenderer,
+    redact_snapshot_fn: SnapshotRedactor,
     write_text_file_fn: Callable[[Path, str], None],
     should_fail_on_snapshot_fn: ShouldFailOnSnapshotFn,
 ) -> int:
@@ -708,6 +807,7 @@ def _export_live_snapshot_report(
     build_snapshot: Callback that builds the current live snapshot.
     render_snapshot_markdown: Markdown snapshot renderer.
     render_snapshot_html: HTML snapshot renderer.
+    redact_snapshot_fn: Safe-share snapshot redactor.
     write_text_file_fn: File writer callback.
     should_fail_on_snapshot_fn: Fail policy callback.
 
@@ -732,6 +832,7 @@ def _export_live_snapshot_report(
         settings=settings,
         render_snapshot_markdown=render_snapshot_markdown,
         render_snapshot_html=render_snapshot_html,
+        redact_snapshot_fn=redact_snapshot_fn,
     )
     _write_export(settings.path, content, write_text_file_fn=write_text_file_fn)
     return _resolve_snapshot_exit_code(
@@ -780,6 +881,7 @@ def _render_snapshot_content(
     settings: ExportModeSettings,
     render_snapshot_markdown: SnapshotRenderer,
     render_snapshot_html: SnapshotRenderer,
+    redact_snapshot_fn: SnapshotRedactor,
 ) -> str:
     """
     Summary
@@ -790,6 +892,7 @@ def _render_snapshot_content(
     settings: Normalized export settings.
     render_snapshot_markdown: Markdown snapshot renderer.
     render_snapshot_html: HTML snapshot renderer.
+    redact_snapshot_fn: Safe-share snapshot redactor.
 
     Outputs
     Rendered snapshot report content.
@@ -806,9 +909,49 @@ def _render_snapshot_content(
     Why this exists
     Snapshot rendering format selection should stay consistent across saved and live snapshot exports.
     """
+    output_snapshot = _snapshot_for_export(
+        snapshot,
+        settings=settings,
+        redact_snapshot_fn=redact_snapshot_fn,
+    )
     if settings.format_name == "markdown":
-        return render_snapshot_markdown(snapshot, include_diagnostics=settings.include_diagnostics)
-    return render_snapshot_html(snapshot, include_diagnostics=settings.include_diagnostics)
+        return render_snapshot_markdown(output_snapshot, include_diagnostics=settings.include_diagnostics)
+    return render_snapshot_html(output_snapshot, include_diagnostics=settings.include_diagnostics)
+
+
+def _snapshot_for_export(
+    snapshot: Snapshot,
+    *,
+    settings: ExportModeSettings,
+    redact_snapshot_fn: SnapshotRedactor,
+) -> Snapshot:
+    """
+    Summary
+    Select the original or safe-share snapshot for report rendering and diffing.
+
+    Inputs
+    snapshot: Source snapshot.
+    settings: Normalized export settings.
+    redact_snapshot_fn: Safe-share snapshot redactor.
+
+    Outputs
+    Original snapshot when redaction is disabled, otherwise an independent redacted copy.
+
+    Side effects
+    None.
+
+    Error handling
+    Propagates redaction failures to the export boundary.
+
+    Ties to other methods
+    Used by snapshot report and diff export branches.
+
+    Why this exists
+    Health and fail-on decisions must keep using the original snapshot while only shareable output is transformed.
+    """
+    if not settings.redact_sensitive:
+        return snapshot
+    return redact_snapshot_fn(snapshot)
 
 
 def _resolve_snapshot_exit_code(

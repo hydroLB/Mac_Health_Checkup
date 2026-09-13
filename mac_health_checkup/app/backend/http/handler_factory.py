@@ -347,7 +347,9 @@ def build_handler_factory(
                     self._respond_json(status, payload, headers=headers)
                 except (OSError, RuntimeError, ValueError, TypeError, AttributeError) as exc:
                     raise RuntimeError(
-                        format_error(MODULE_PATH, "_Handler._respond_api_error", "Failed to write API error", exc)
+                        format_error(
+                            MODULE_PATH, "_Handler._respond_api_error", "Failed to write API error", exc
+                        )
                     ) from exc
 
         return _Handler

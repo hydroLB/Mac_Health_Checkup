@@ -397,6 +397,233 @@ def test_server_start_stop_uses_bind_retry_and_thread(monkeypatch: pytest.Monkey
         ) from exc
 
 
+@pytest.mark.parametrize("failure_stage", ["tls", "thread"])
+def test_server_start_failure_closes_socket_and_resets_state(
+    monkeypatch: pytest.MonkeyPatch, failure_stage: str
+) -> None:
+    """
+    Summary
+    Ensure failures after binding close the HTTP server and leave lifecycle state uncommitted.
+
+    Inputs
+    monkeypatch: Pytest monkeypatch fixture.
+    failure_stage: Startup stage that raises after the server binds.
+
+    Outputs
+    None.
+
+    Side effects
+    Patches HTTP server, TLS context, and thread creation to avoid real sockets and threads.
+
+    Error handling
+    Raises AssertionError with module and method context on failures.
+
+    Ties to other methods
+    Exercises transactional cleanup in `SnapshotApiServer.start`.
+
+    Why this exists
+    TLS wrapping or thread startup can fail after a port is bound; those failures must not leak the socket or publish
+    partially initialized lifecycle state.
+    """
+    try:
+        api = _build_api_config(tls_enabled=failure_stage == "tls")
+        server = srv.SnapshotApiServer({}, api)
+        created_servers: list[_StubFailureHTTPD] = []
+
+        class _StubFailureHTTPD:
+            def __init__(self, addr: tuple[str, int], _handler_factory: object) -> None:
+                """
+                Summary
+                Record a bound stub server for cleanup assertions.
+
+                Inputs
+                addr: Requested bind address. `_handler_factory`: Unused handler factory.
+
+                Outputs
+                None.
+
+                Side effects
+                Appends this instance to the test's server registry.
+
+                Error handling
+                None.
+
+                Ties to other methods
+                Replaces `_ReusableThreadingHTTPServer` in this test.
+
+                Why this exists
+                Startup cleanup needs observable socket ownership without opening a real port.
+                """
+                self.server_address = addr
+                self.daemon_threads = False
+                self.socket: object = object()
+                self.closed = False
+                created_servers.append(self)
+
+            def serve_forever(self) -> None:
+                """
+                Summary
+                Provide the server loop callback expected by the production thread.
+
+                Inputs
+                None.
+
+                Outputs
+                None.
+
+                Side effects
+                None.
+
+                Error handling
+                None.
+
+                Ties to other methods
+                Passed to the stub thread during server startup.
+
+                Why this exists
+                The lifecycle test needs the server interface without serving requests.
+                """
+                return
+
+            def server_close(self) -> None:
+                """
+                Summary
+                Record that startup cleanup closed the bound server.
+
+                Inputs
+                None.
+
+                Outputs
+                None.
+
+                Side effects
+                Sets the observable closed flag.
+
+                Error handling
+                None.
+
+                Ties to other methods
+                Called by transactional startup cleanup.
+
+                Why this exists
+                The regression assertion must prove the socket ownership was released.
+                """
+                self.closed = True
+
+        class _FailingTLSContext:
+            def wrap_socket(self, _socket: object, *, server_side: bool) -> object:
+                """
+                Summary
+                Inject a deterministic TLS wrapping failure.
+
+                Inputs
+                `_socket`: Bound socket placeholder. server_side: TLS role flag.
+
+                Outputs
+                Never returns.
+
+                Side effects
+                None.
+
+                Error handling
+                Always raises `OSError`.
+
+                Ties to other methods
+                Exercises the post-bind TLS failure path in `SnapshotApiServer.start`.
+
+                Why this exists
+                TLS setup can fail after a real socket has already been acquired.
+                """
+                _ = server_side
+                raise OSError("TLS wrapping failed")
+
+        @dataclass
+        class _StubFailureThread:
+            target: Callable[[], None]
+            name: str
+            daemon: bool
+
+            def start(self) -> None:
+                """
+                Summary
+                Inject a deterministic worker-thread start failure.
+
+                Inputs
+                None.
+
+                Outputs
+                Never returns.
+
+                Side effects
+                None.
+
+                Error handling
+                Always raises `RuntimeError`.
+
+                Ties to other methods
+                Exercises the final post-bind failure stage in `SnapshotApiServer.start`.
+
+                Why this exists
+                Thread creation can fail after TLS and socket setup have succeeded.
+                """
+                raise RuntimeError("thread start failed")
+
+        def _thread_factory(*, target: Callable[[], None], name: str, daemon: bool) -> _StubFailureThread:
+            """
+            Summary
+            Build the failing thread stub with the production constructor shape.
+
+            Inputs
+            target: Server loop callback. name: Thread name. daemon: Daemon flag.
+
+            Outputs
+            Configured `_StubFailureThread`.
+
+            Side effects
+            None.
+
+            Error handling
+            None.
+
+            Ties to other methods
+            Replaces `threading.Thread` in the thread-failure case.
+
+            Why this exists
+            The test must intercept thread startup without changing server construction code.
+            """
+            return _StubFailureThread(target=target, name=name, daemon=daemon)
+
+        monkeypatch.setattr(srv, "_ReusableThreadingHTTPServer", _StubFailureHTTPD)
+        monkeypatch.setattr(srv, "validate_api_config_for_server", lambda _api: None)
+        monkeypatch.setattr(srv, "build_handler_factory", lambda _handlers, _api: object())
+        monkeypatch.setattr(srv, "build_tls_server_context", lambda _cert, _key: _FailingTLSContext())
+        monkeypatch.setattr("mac_health_checkup.app.backend.server.threading.Thread", _thread_factory)
+
+        with pytest.raises(RuntimeError, match="Failed to start server"):
+            server.start()
+
+        assert len(created_servers) == 1
+        assert created_servers[0].closed is True
+        assert server._httpd is None
+        assert server._thread is None
+        assert server._bound_host is None
+        assert server._bound_port is None
+        assert server.url().endswith(f":{api.port}")
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
+        raise AssertionError(
+            f"{MODULE_PATH}:test_server_start_failure_closes_socket_and_resets_state failed: {exc}"
+        ) from exc
+
+
 def test_wait_until_ready_uses_bounded_retry(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Summary

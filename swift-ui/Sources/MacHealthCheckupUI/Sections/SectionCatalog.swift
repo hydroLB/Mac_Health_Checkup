@@ -6,6 +6,36 @@ public struct SectionDescriptor: Sendable, Identifiable {
     public let title: String
     public let subtitle: String
     public let key: String
+
+    public init(title: String, subtitle: String, key: String) {
+        /**
+         Summary
+         Initialize a section descriptor from backend-provided catalog metadata.
+
+         Inputs
+         title: User-facing section title.
+         subtitle: User-facing section subtitle.
+         key: Stable section identifier.
+
+         Outputs
+         A section descriptor suitable for dashboard navigation.
+
+         Side effects
+         None.
+
+         Error handling
+         None.
+
+         Ties to other methods
+         Used by `SectionCatalog.fromConfig` and the iOS client when mapping a remote snapshot catalog.
+
+         Why this exists
+         The iOS app consumes `MacHealthCheckupUI` as a separate module and cannot access a synthesized internal initializer.
+         */
+        self.title = title
+        self.subtitle = subtitle
+        self.key = key
+    }
 }
 
 public enum SectionCatalog {
@@ -65,4 +95,3 @@ public enum SectionCatalog {
         return out
     }
 }
-

@@ -1,12 +1,12 @@
 # Default ownership for all files in this repository.
-* @liamsamson
+* @hydroLB
 
 # CI and automation workflows.
-.github/workflows/* @liamsamson
+.github/workflows/* @hydroLB
 
 # Core runtime and diagnostics modules.
-mac_health_checkup/** @liamsamson
+mac_health_checkup/** @hydroLB
 
 # Native client surfaces.
-ios/** @liamsamson
-swift-ui/** @liamsamson
+ios/** @hydroLB
+swift-ui/** @hydroLB

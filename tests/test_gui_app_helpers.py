@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import concurrent.futures
+import threading
 import tkinter as tk
 import unittest
 from types import SimpleNamespace
@@ -16,6 +18,7 @@ from mac_health_checkup.app.gui.app import (
 )
 from mac_health_checkup.app.gui.dashboard.lifecycle import ShutdownManager
 from mac_health_checkup.app.gui.dashboard.queueing import SectionQueue
+from mac_health_checkup.app.gui.sections.types import SectionHost
 from mac_health_checkup.app.gui.widgets.scroll_container import ScrollContainer
 from mac_health_checkup.core.config import Config
 
@@ -1068,7 +1071,12 @@ class GuiAppHelpersTests(unittest.TestCase):
         try:
             app = object.__new__(DashboardApp)
             app._queue = cast(SectionQueue, _StubSectionQueue())
-            app._shutdown = cast(ShutdownManager, _StubShutdown(requested=True))
+            app._shutdown = cast(ShutdownManager, _StubShutdown(requested=False))
+            app._refresh_after_id = None
+            app._refresh_poll_after_id = None
+            app._refresh_future = None
+            app._refresh_cycle = None
+            app._machine_hint = "mac"
             app._cfg = cast(
                 Config,
                 SimpleNamespace(
@@ -1081,6 +1089,7 @@ class GuiAppHelpersTests(unittest.TestCase):
             clear_calls: list[tuple[str, str]] = []
             field_calls: list[tuple[str, str, str | None, str | None]] = []
             schedule_calls: list[int] = []
+            feedback_calls: list[tuple[str, str, str]] = []
 
             setattr(
                 app,
@@ -1093,6 +1102,13 @@ class GuiAppHelpersTests(unittest.TestCase):
                 lambda key, message="": clear_calls.append((str(key), str(message))),
             )
             setattr(app, "update_idletasks", lambda: None)
+            setattr(app, "after", lambda _delay, _callback: "refresh-poll")
+            setattr(app, "_set_refresh_controls_busy", lambda _busy: None)
+            setattr(
+                app,
+                "_set_section_feedback",
+                lambda key, message, level: feedback_calls.append((str(key), str(message), str(level))),
+            )
             setattr(app, "_schedule_next_refresh", lambda delay_ms: schedule_calls.append(int(delay_ms)))
             setattr(
                 app,
@@ -1105,6 +1121,12 @@ class GuiAppHelpersTests(unittest.TestCase):
             with patch("mac_health_checkup.app.gui.app.SECTION_HANDLERS", {"network": object()}):
                 with patch("mac_health_checkup.app.gui.app.run_section", side_effect=RuntimeError("boom")):
                     app._refresh()
+                    future = cast(
+                        concurrent.futures.Future[object],
+                        app.__dict__.get("_refresh_future"),
+                    )
+                    future.result(timeout=2.0)
+                    app._poll_refresh_result()
 
             self.assertTrue(status_calls)
             self.assertEqual(status_calls[0][1], "loading")
@@ -1115,7 +1137,8 @@ class GuiAppHelpersTests(unittest.TestCase):
             self.assertEqual(len(field_calls), 1)
             self.assertEqual(field_calls[0][0], "network")
             self.assertIn("Unable to refresh (RuntimeError)", field_calls[0][1])
-            self.assertEqual(schedule_calls, [])
+            self.assertEqual(schedule_calls, [10000])
+            app._refresh_executor.shutdown(wait=True)
         except (
             AssertionError,
             RuntimeError,
@@ -1128,6 +1151,166 @@ class GuiAppHelpersTests(unittest.TestCase):
         ) as exc:
             raise AssertionError(
                 f"{MODULE_PATH}:GuiAppHelpersTests.test_refresh_clears_stale_section_views_on_section_failure failed: {exc}"
+            ) from exc
+
+    def test_refresh_collects_off_thread_and_replays_on_tk_thread(self) -> None:
+        """
+        Summary
+        Ensure refresh returns while collection blocks and replays host calls only on the Tk thread.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Starts one bounded background refresh worker.
+
+        Error handling
+        Raises AssertionError with context on failures.
+
+        Ties to other methods
+        Exercises `_refresh`, buffered collection, and `_poll_refresh_result`.
+
+        Why this exists
+        Tk must remain responsive and worker threads must never mutate UI state.
+        """
+        try:
+            app = object.__new__(DashboardApp)
+            app._shutdown = cast(ShutdownManager, _StubShutdown(requested=False))
+            app._cfg = cast(Config, SimpleNamespace(gui=SimpleNamespace(auto_refresh_ms=10000)))
+            app._refresh_after_id = None
+            app._refresh_poll_after_id = None
+            app._refresh_future = None
+            app._refresh_cycle = None
+            app._machine_hint = "mac"
+
+            entered = threading.Event()
+            release = threading.Event()
+            main_thread = threading.get_ident()
+            ui_threads: list[int] = []
+            status_levels: list[str] = []
+            busy_states: list[bool] = []
+
+            setattr(app, "after", lambda _delay, _callback: "refresh-poll")
+            setattr(app, "_set_next_refresh_hint", lambda delay_ms: None)
+            setattr(app, "_schedule_next_refresh", lambda _delay_ms: None)
+            setattr(app, "_set_refresh_controls_busy", lambda busy: busy_states.append(bool(busy)))
+            setattr(app, "_set_status", lambda _text, level="info": status_levels.append(str(level)))
+            setattr(app, "_set_section_feedback", lambda _key, _message, level: None)
+            setattr(
+                app,
+                "set_field",
+                lambda _key, _text, _fg=None, _tooltip=None: ui_threads.append(threading.get_ident()),
+            )
+
+            def _blocking_section(host: SectionHost, key: str) -> object:
+                """
+                Summary
+                Block worker collection until the test permits completion.
+
+                Inputs
+                host: Recording section host. key: Section key.
+
+                Outputs
+                Empty diagnostics mapping.
+
+                Side effects
+                Coordinates test events and records a field operation.
+
+                Error handling
+                Raises AssertionError when the host is the live app.
+
+                Ties to other methods
+                Injected into `_refresh` as the section runner.
+
+                Why this exists
+                Proves refresh submission is non-blocking and Tk-isolated.
+                """
+                _ = key
+                self.assertIsNot(host, app)
+                entered.set()
+                release.wait(timeout=2.0)
+                host.set_field("network", "Healthy")
+                return {}
+
+            with patch("mac_health_checkup.app.gui.app.SECTION_HANDLERS", {"network": object()}):
+                with patch("mac_health_checkup.app.gui.app.run_section", side_effect=_blocking_section):
+                    app._refresh()
+                    self.assertTrue(entered.wait(timeout=1.0))
+                    future = cast(
+                        concurrent.futures.Future[object],
+                        app.__dict__.get("_refresh_future"),
+                    )
+                    self.assertFalse(future.done())
+                    self.assertEqual(ui_threads, [])
+                    release.set()
+                    future.result(timeout=2.0)
+                    app._poll_refresh_result()
+
+            self.assertEqual(ui_threads, [main_thread])
+            self.assertEqual(busy_states, [True, False])
+            self.assertIn("info", status_levels)
+            app._refresh_executor.shutdown(wait=True)
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
+            raise AssertionError(
+                f"{MODULE_PATH}:GuiAppHelpersTests.test_refresh_collects_off_thread_and_replays_on_tk_thread failed: {exc}"
+            ) from exc
+
+    def test_shutdown_poll_closes_window_after_signal_request(self) -> None:
+        """
+        Summary
+        Ensure shutdown polling closes Tk promptly when lifecycle shutdown is already requested.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Invokes a stubbed window-close callback.
+
+        Error handling
+        Raises AssertionError with context on failures.
+
+        Ties to other methods
+        Exercises `_schedule_shutdown_poll`.
+
+        Why this exists
+        SIGINT and SIGTERM update lifecycle state outside Tk's normal window-close path.
+        """
+        try:
+            app = object.__new__(DashboardApp)
+            app._shutdown = cast(ShutdownManager, _StubShutdown(requested=True))
+            close_calls: list[str] = []
+            setattr(app, "_on_close", lambda: close_calls.append("closed"))
+
+            app._schedule_shutdown_poll()
+
+            self.assertEqual(close_calls, ["closed"])
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
+            raise AssertionError(
+                f"{MODULE_PATH}:GuiAppHelpersTests.test_shutdown_poll_closes_window_after_signal_request failed: {exc}"
             ) from exc
 
     def test_render_table_empty_state_for_all_table_sections(self) -> None:

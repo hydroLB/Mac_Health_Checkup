@@ -6,6 +6,7 @@ import secrets
 import socket
 import subprocess  # nosec B404
 import sys
+import tempfile
 from pathlib import Path
 from typing import Mapping
 
@@ -13,6 +14,8 @@ from mac_health_checkup.core.types import JsonDict, JsonValue
 from mac_health_checkup.core.utils import format_error
 
 MODULE_PATH = "mac_health_checkup/app/backend/one_click.py"
+PRIVATE_DIRECTORY_MODE = 0o700
+PRIVATE_FILE_MODE = 0o600
 
 
 def run_one_click_agent(*, repo_root: Path) -> int:
@@ -36,7 +39,8 @@ def run_one_click_agent(*, repo_root: Path) -> int:
     Used by the repository root one-click script to make running the project effortless.
 
     Why this exists
-    Enables press-run developer ergonomics without weakening security defaults.
+    Enables press-run developer ergonomics without weakening security defaults. LAN exposure is enabled only when
+    TLS material is ready; otherwise the agent falls back to loopback-only HTTP.
     """
     try:
         root = repo_root.resolve()
@@ -45,19 +49,21 @@ def run_one_click_agent(*, repo_root: Path) -> int:
             raise ValueError(f"Missing base config file: {base_config_path}")
 
         base = _read_json_dict(base_config_path)
-        tls_dir = root / ".local" / "tls"
-        tls_dir.mkdir(parents=True, exist_ok=True)
+        local_dir = root / ".local"
+        _ensure_private_directory(local_dir)
+        tls_dir = local_dir / "tls"
+        _ensure_private_directory(tls_dir)
         cert_path = tls_dir / "agent-cert.pem"
         key_path = tls_dir / "agent-key.pem"
 
         lan_ip = _best_effort_lan_ip()
-        allow_lan = lan_ip is not None
         token = secrets.token_urlsafe(32)
-        bind_host_for_port = lan_ip if allow_lan and lan_ip is not None else "127.0.0.1"
-        port = _pick_free_port(bind_host_for_port)
 
         tls_ready, tls_error = _ensure_self_signed_cert(cert_path=cert_path, key_path=key_path)
-        tls_enabled = bool(tls_ready and allow_lan)
+        allow_lan = bool(tls_ready and lan_ip is not None)
+        bind_host_for_port = lan_ip if allow_lan and lan_ip is not None else "127.0.0.1"
+        port = _pick_free_port(bind_host_for_port)
+        tls_enabled = allow_lan
 
         api_overrides: JsonDict = {
             "enabled": True,
@@ -78,18 +84,19 @@ def run_one_click_agent(*, repo_root: Path) -> int:
             "pairing_qr_enabled": True,
         }
 
-        if allow_lan and not tls_enabled:
-            api_overrides["allow_insecure_http_lan"] = True
-
         derived = _build_config_with_api_overrides(base, api_overrides)
-        derived_path = root / ".local" / "one-click-config.json"
-        derived_path.parent.mkdir(parents=True, exist_ok=True)
-        derived_path.write_text(json.dumps(derived, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        derived_path = local_dir / "one-click-config.json"
+        _write_private_text(
+            derived_path,
+            json.dumps(derived, indent=2, sort_keys=True) + "\n",
+        )
 
         os.environ["MAC_HEALTH_CHECKUP_CONFIG"] = str(derived_path)
         if allow_lan and lan_ip is not None:
             scheme = "https" if tls_enabled else "http"
             os.environ["MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL"] = f"{scheme}://{lan_ip}:{port}"
+        else:
+            os.environ.pop("MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL", None)
 
         print("One-click agent configuration written to:")
         print(str(derived_path))
@@ -100,6 +107,8 @@ def run_one_click_agent(*, repo_root: Path) -> int:
                 print(f"TLS warning: {tls_error}")
         else:
             print(f"Local URL: http://127.0.0.1:{port}")
+            if lan_ip is not None and not tls_ready:
+                print("LAN access disabled because TLS material is unavailable; serving on loopback only.")
             if tls_error:
                 print(f"TLS note: {tls_error}")
 
@@ -108,7 +117,10 @@ def run_one_click_agent(*, repo_root: Path) -> int:
             "This one-click runner starts the agent API server only (headless). No UI window opens on this Mac."
         )
         print("Next steps:")
-        print("- iOS UI: open the iOS app and paste the pairing payload JSON (QR code is optional).")
+        if allow_lan:
+            print("- iOS UI: open the iOS app and paste the pairing payload JSON (QR code is optional).")
+        else:
+            print("- iOS UI: pairing requires a LAN-reachable HTTPS URL; this loopback server is Mac-only.")
         print(
             "- macOS UI: run `make swift-run` (or `python3 run_mac_health_checkup_ui.py`) to launch the SwiftUI dashboard."
         )
@@ -125,6 +137,104 @@ def run_one_click_agent(*, repo_root: Path) -> int:
     except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as exc:
         raise RuntimeError(
             format_error(MODULE_PATH, "run_one_click_agent", "Failed to run one-click agent", exc)
+        ) from exc
+
+
+def _ensure_private_directory(path: Path) -> None:
+    """
+    Summary
+    Create a directory when needed and enforce owner-only access.
+
+    Inputs
+    path: Directory that will contain generated credentials or credential-bearing configuration.
+
+    Outputs
+    None.
+
+    Side effects
+    Creates the directory and changes its POSIX mode to 0700, including when it already exists.
+
+    Error handling
+    Raises `RuntimeError` with module and method context when directory creation or permission changes fail.
+
+    Ties to other methods
+    Used by the one-click runner and private-file writer before storing generated secrets.
+
+    Why this exists
+    Ambient process umasks are not a sufficient access-control boundary for generated authentication material.
+    """
+    try:
+        path.mkdir(parents=True, mode=PRIVATE_DIRECTORY_MODE, exist_ok=True)
+        path.chmod(PRIVATE_DIRECTORY_MODE)
+    except (OSError, RuntimeError, ValueError, TypeError, AttributeError) as exc:
+        raise RuntimeError(
+            format_error(
+                MODULE_PATH,
+                "_ensure_private_directory",
+                "Failed ensuring private directory",
+                exc,
+            )
+        ) from exc
+
+
+def _write_private_text(path: Path, value: str) -> None:
+    """
+    Summary
+    Atomically write text to an owner-only file.
+
+    Inputs
+    path: Destination file path.
+    value: Text to encode as UTF-8.
+
+    Outputs
+    None.
+
+    Side effects
+    Creates a temporary file beside the destination, writes and syncs it, then atomically replaces the destination.
+
+    Error handling
+    Removes an unfinished temporary file and raises `RuntimeError` with module and method context on failure.
+
+    Ties to other methods
+    Used by the one-click runner to store its generated token-bearing configuration.
+
+    Why this exists
+    The generated auth token must never depend on the caller's umask or be left in a partially written file.
+    """
+    descriptor: int | None = None
+    temporary_path: Path | None = None
+    try:
+        _ensure_private_directory(path.parent)
+        if path.exists():
+            path.chmod(PRIVATE_FILE_MODE)
+        descriptor, temporary_name = tempfile.mkstemp(
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+        )
+        temporary_path = Path(temporary_name)
+        os.fchmod(descriptor, PRIVATE_FILE_MODE)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            descriptor = None
+            handle.write(value)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_path, path)
+        temporary_path = None
+        path.chmod(PRIVATE_FILE_MODE)
+    except (OSError, RuntimeError, ValueError, TypeError, AttributeError) as exc:
+        if descriptor is not None:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise RuntimeError(
+            format_error(MODULE_PATH, "_write_private_text", "Failed writing private file", exc)
         ) from exc
 
 
@@ -306,7 +416,7 @@ def _ensure_self_signed_cert(*, cert_path: Path, key_path: Path) -> tuple[bool, 
         if openssl is None:
             return False, "openssl not found, cannot auto-generate TLS certs"
 
-        cert_path.parent.mkdir(parents=True, exist_ok=True)
+        _ensure_private_directory(cert_path.parent)
         cmd = [
             openssl,
             "req",

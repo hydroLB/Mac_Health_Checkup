@@ -10,6 +10,7 @@ from typing import Sequence
 from mac_health_checkup.core.utils import format_error
 
 MODULE_PATH = "tools/gui_visual_regression.py"
+_DIMMED_PIXEL_TABLE = bytes(int(channel * 0.45) for channel in range(256))
 
 
 @dataclass(frozen=True)
@@ -227,23 +228,22 @@ class PpmImage:
         try:
             if w <= 0 or h <= 0:
                 return
-            x0 = max(0, int(x))
-            y0 = max(0, int(y))
-            x1 = min(self.width, x0 + int(w))
-            y1 = min(self.height, y0 + int(h))
+            raw_x = int(x)
+            raw_y = int(y)
+            x0 = max(0, raw_x)
+            y0 = max(0, raw_y)
+            x1 = min(self.width, raw_x + int(w))
+            y1 = min(self.height, raw_y + int(h))
             if x0 >= x1 or y0 >= y1:
                 return
             r = max(0, min(255, int(color.red)))
             g = max(0, min(255, int(color.green)))
             b = max(0, min(255, int(color.blue)))
+            row = bytes((r, g, b)) * (x1 - x0)
             row_bytes = self.width * 3
             for yy in range(y0, y1):
-                base = yy * row_bytes
-                for xx in range(x0, x1):
-                    idx = base + (xx * 3)
-                    self._data[idx] = r
-                    self._data[idx + 1] = g
-                    self._data[idx + 2] = b
+                start = (yy * row_bytes) + (x0 * 3)
+                self._data[start : start + len(row)] = row
         except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
             raise RuntimeError(
                 format_error(MODULE_PATH, "PpmImage.fill_rect", "Failed to draw rectangle", exc)
@@ -747,106 +747,6 @@ def _iter_common_scene_names(before_dir: Path, after_dir: Path) -> list[str]:
         ) from exc
 
 
-def _dim(color: RgbColor, factor: float) -> RgbColor:
-    """
-    Summary
-    Dim an RGB color by a multiplier.
-
-    Inputs
-    color: Source color.
-    factor: Multiplier in [0.0, 1.0].
-
-    Outputs
-    Dimmed color.
-
-    Side effects
-    None.
-
-    Error handling
-    Raises `RuntimeError` with module and method context when conversion fails.
-
-    Ties to other methods
-    Used while rendering unchanged pixels in diff output.
-
-    Why this exists
-    Dimmed unchanged pixels make changed pixels visually obvious.
-    """
-    try:
-        f = max(0.0, min(1.0, float(factor)))
-        return RgbColor(int(color.red * f), int(color.green * f), int(color.blue * f))
-    except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
-        raise RuntimeError(format_error(MODULE_PATH, "_dim", "Failed to dim color", exc)) from exc
-
-
-def _pixel_at(data: bytearray, width: int, x: int, y: int) -> RgbColor:
-    """
-    Summary
-    Read one RGB pixel from raw image buffer.
-
-    Inputs
-    data: Raw bytearray.
-    width: Image width.
-    x: X coordinate.
-    y: Y coordinate.
-
-    Outputs
-    `RgbColor` pixel value.
-
-    Side effects
-    None.
-
-    Error handling
-    Raises `RuntimeError` with module and method context when bounds math fails.
-
-    Ties to other methods
-    Used by diff computation.
-
-    Why this exists
-    Keeps low-level buffer index logic centralized and testable.
-    """
-    try:
-        idx = ((int(y) * int(width)) + int(x)) * 3
-        return RgbColor(int(data[idx]), int(data[idx + 1]), int(data[idx + 2]))
-    except (RuntimeError, ValueError, TypeError, IndexError) as exc:
-        raise RuntimeError(format_error(MODULE_PATH, "_pixel_at", "Failed to read pixel", exc)) from exc
-
-
-def _set_pixel(data: bytearray, width: int, x: int, y: int, color: RgbColor) -> None:
-    """
-    Summary
-    Write one RGB pixel to raw image buffer.
-
-    Inputs
-    data: Raw bytearray.
-    width: Image width.
-    x: X coordinate.
-    y: Y coordinate.
-    color: Pixel color.
-
-    Outputs
-    None.
-
-    Side effects
-    Mutates the destination buffer.
-
-    Error handling
-    Raises `RuntimeError` with module and method context when bounds math fails.
-
-    Ties to other methods
-    Used by diff computation.
-
-    Why this exists
-    Keeps low-level buffer index logic centralized and testable.
-    """
-    try:
-        idx = ((int(y) * int(width)) + int(x)) * 3
-        data[idx] = int(color.red)
-        data[idx + 1] = int(color.green)
-        data[idx + 2] = int(color.blue)
-    except (RuntimeError, ValueError, TypeError, IndexError, AttributeError) as exc:
-        raise RuntimeError(format_error(MODULE_PATH, "_set_pixel", "Failed to write pixel", exc)) from exc
-
-
 def _diff_pair(before_path: Path, after_path: Path, out_path: Path) -> dict[str, float | int | str]:
     """
     Summary
@@ -881,19 +781,22 @@ def _diff_pair(before_path: Path, after_path: Path, out_path: Path) -> dict[str,
             )
 
         diff = PpmImage(before.width, before.height, RgbColor(0, 0, 0))
+        diff._data[:] = after._data.translate(_DIMMED_PIXEL_TABLE)
         changed = 0
         total = before.width * before.height
-        changed_color = RgbColor(255, 0, 180)
+        changed_pixel = b"\xff\x00\xb4"
 
-        for y in range(before.height):
-            for x in range(before.width):
-                old_pixel = _pixel_at(before._data, before.width, x, y)
-                new_pixel = _pixel_at(after._data, after.width, x, y)
-                if old_pixel != new_pixel:
-                    changed += 1
-                    _set_pixel(diff._data, diff.width, x, y, changed_color)
-                else:
-                    _set_pixel(diff._data, diff.width, x, y, _dim(new_pixel, 0.45))
+        before_data = before._data
+        after_data = after._data
+        diff_data = diff._data
+        for index in range(0, len(before_data), 3):
+            if (
+                before_data[index] != after_data[index]
+                or before_data[index + 1] != after_data[index + 1]
+                or before_data[index + 2] != after_data[index + 2]
+            ):
+                changed += 1
+                diff_data[index : index + 3] = changed_pixel
 
         diff.write(out_path)
         ratio = (changed / total) if total else 0.0

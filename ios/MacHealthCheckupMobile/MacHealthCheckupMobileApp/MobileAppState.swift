@@ -40,7 +40,7 @@ final class MobileAppState: ObservableObject {
 
     init(
         tokenStore: any SecureTokenStore = KeychainSecureTokenStore(
-            service: Bundle.main.bundleIdentifier ?? "com.example.mac-health-checkup",
+            service: Bundle.main.bundleIdentifier ?? "io.github.hydroLB.MacHealthCheckupMobile",
             account: "agent-auth-token"
         ),
         snapshotCache: SnapshotCache? = try? SnapshotCache.default()
@@ -235,6 +235,7 @@ final class MobileAppState: ObservableObject {
                 backend: backend,
                 sections: initialSections,
                 refreshIntervalMs: max(1000, refreshIntervalMs),
+                fanRefreshIntervalMs: 5_000,
                 scrollableRows: [:],
                 initialTheme: initialTheme,
                 appTitle: initialTitle
@@ -479,7 +480,7 @@ private struct CachingSnapshotBackend: SnapshotBackend {
          Keeps caching concerns out of the UI model and avoids blocking refresh on disk IO issues.
          */
         let response = try await backend.fetchSnapshotResponse()
-        if let snapshotCache {
+        if response.exitCode == 0, response.snapshot.ok, let snapshotCache {
             do {
                 try snapshotCache.save(response.snapshot)
             } catch {
@@ -487,5 +488,31 @@ private struct CachingSnapshotBackend: SnapshotBackend {
             }
         }
         return response
+    }
+
+    func fetchSectionSnapshotResponse(sectionKey: String) async throws -> BackendSnapshotResponse {
+        /**
+         Summary
+         Fetch a section snapshot without replacing the cached full snapshot.
+
+         Inputs
+         sectionKey: Section key requested by the dashboard.
+
+         Outputs
+         Backend response containing the requested section payload.
+
+         Side effects
+         Delegates network IO to the wrapped backend.
+
+         Error handling
+         Propagates backend errors to the dashboard refresh layer.
+
+         Ties to other methods
+         Satisfies `SnapshotBackend` and supports the dashboard's higher-frequency fan refresh.
+
+         Why this exists
+         A partial section payload must not overwrite the full-snapshot startup cache.
+         */
+        try await backend.fetchSectionSnapshotResponse(sectionKey: sectionKey)
     }
 }

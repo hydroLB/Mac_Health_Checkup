@@ -24,13 +24,14 @@ class NetworkQualityDiagnostics:
     Collect network diagnostics with fast local metrics and optional networkQuality capacity.
 
     Inputs
-    None. Executes local networking commands and may run networkQuality.
+    None. Executes local networking commands and may run `networkQuality` when explicitly enabled.
 
     Outputs
     Dict with interface, IP, Wi‑Fi stats, and optional capacity numbers.
 
     Side effects
-    Executes subprocess commands.
+    Executes local subprocess commands. An outbound capacity test runs only when `network.capacity_test_enabled` is
+    true.
 
     Error handling
     Returns partial signals when some commands are unavailable; raises `RuntimeError` with module and method context
@@ -44,6 +45,7 @@ class NetworkQualityDiagnostics:
     """
 
     _cache = Cache(get_config().timeouts.network_cache_ttl)
+    _capacity_cache = Cache(get_config().network.capacity_test_cache_ttl)
     _last_bytes: tuple[float, int, int] | None = None
 
     @staticmethod
@@ -59,7 +61,7 @@ class NetworkQualityDiagnostics:
         Dict with network metrics.
 
         Side effects
-        Executes networkQuality when the cache is stale.
+        Executes local network commands when the cache is stale; capacity testing remains opt-in.
 
         Error handling
         Raises `RuntimeError` with module and method context when caching fails unexpectedly.
@@ -68,7 +70,7 @@ class NetworkQualityDiagnostics:
         Used by Network section handler.
 
         Why this exists
-        Avoids running networkQuality too frequently.
+        Avoids repeating local collection too frequently and never enables outbound testing implicitly.
         """
         try:
             return cached_fetch(
@@ -92,7 +94,7 @@ class NetworkQualityDiagnostics:
         Dict with network diagnostics and optional networkQuality capacity.
 
         Side effects
-        Executes subprocess commands.
+        Executes local subprocess commands and, only when opted in, an outbound `networkQuality` capacity test.
 
         Error handling
         Raises `RuntimeError` with module and method context when parsing fails unexpectedly.
@@ -120,21 +122,37 @@ class NetworkQualityDiagnostics:
             capacity_down = None
             capacity_up = None
             capacity_iface = None
-            timeout = get_config().timeouts.network_quality_timeout
-            out, err = safe_run(
-                ["networkQuality", "-s"], context="networkQuality", allow_sudo=False, timeout=timeout
-            )
-            if out:
-                capacity_down = _extract_float(_DOWN_RE, out)
-                capacity_up = _extract_float(_UP_RE, out)
-                capacity_iface = _extract_str(_INTERFACE_RE, out)
-            else:
-                logger.info(
-                    "networkQuality unavailable",
-                    event="network_quality_unavailable",
-                    context=context,
-                    payload={"error": err or ""},
-                )
+            config = get_config()
+            capacity_test_enabled = config.network.capacity_test_enabled
+            if capacity_test_enabled:
+                cached_capacity = NetworkQualityDiagnostics._capacity_cache.get("capacity")
+                if cached_capacity is None:
+                    timeout = config.timeouts.network_quality_timeout
+                    out, err = safe_run(
+                        ["networkQuality", "-s"],
+                        context="networkQuality",
+                        allow_sudo=False,
+                        timeout=timeout,
+                    )
+                    if not out:
+                        logger.info(
+                            "networkQuality unavailable",
+                            event="network_quality_unavailable",
+                            context=context,
+                            payload={"error": err or ""},
+                        )
+                    cached_capacity = {
+                        "down_mbps": _extract_float(_DOWN_RE, out) if out else None,
+                        "up_mbps": _extract_float(_UP_RE, out) if out else None,
+                        "interface": _extract_str(_INTERFACE_RE, out) if out else None,
+                    }
+                    NetworkQualityDiagnostics._capacity_cache.set("capacity", cached_capacity)
+                cached_down = cached_capacity.get("down_mbps")
+                cached_up = cached_capacity.get("up_mbps")
+                cached_iface = cached_capacity.get("interface")
+                capacity_down = float(cached_down) if isinstance(cached_down, (int, float)) else None
+                capacity_up = float(cached_up) if isinstance(cached_up, (int, float)) else None
+                capacity_iface = cached_iface if isinstance(cached_iface, str) else None
 
             return {
                 "interface": iface or capacity_iface,
@@ -146,6 +164,7 @@ class NetworkQualityDiagnostics:
                 "tx_mbps": tx_mbps,
                 "down_mbps": capacity_down,
                 "up_mbps": capacity_up,
+                "capacity_test_enabled": capacity_test_enabled,
                 "ok": True,
             }
         except (RuntimeError, ValueError, TypeError, OSError) as exc:

@@ -132,6 +132,337 @@ class OneClickUnitTests(unittest.TestCase):
                 f"{MODULE_PATH}:OneClickUnitTests.test_read_json_dict_requires_object_root failed: {exc}"
             ) from exc
 
+    def test_run_one_click_agent_falls_back_to_loopback_when_tls_is_unavailable(self) -> None:
+        """
+        Summary
+        Ensure one-click agent startup never opts into insecure HTTP when TLS setup fails.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Creates a temporary repository layout and derived one-click config.
+
+        Error handling
+        Raises AssertionError with context on failures.
+
+        Ties to other methods
+        Exercises `run_one_click_agent` with mocked network, TLS, port, token, and server startup boundaries.
+
+        Why this exists
+        A TLS failure must reduce exposure to loopback rather than silently weakening LAN transport security.
+        """
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                root = Path(td)
+                config_dir = root / "config"
+                config_dir.mkdir()
+                (config_dir / "config.json").write_text('{"api": {}}\n', encoding="utf-8")
+
+                with patch.dict(
+                    os.environ,
+                    {"MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL": "https://stale.example.test:9999"},
+                    clear=True,
+                ):
+                    with patch(
+                        "mac_health_checkup.app.backend.one_click._best_effort_lan_ip",
+                        autospec=True,
+                        return_value="192.168.1.25",
+                    ):
+                        with patch(
+                            "mac_health_checkup.app.backend.one_click._ensure_self_signed_cert",
+                            autospec=True,
+                            return_value=(False, "openssl unavailable"),
+                        ):
+                            with patch(
+                                "mac_health_checkup.app.backend.one_click._pick_free_port",
+                                autospec=True,
+                                return_value=43210,
+                            ) as pick_port:
+                                with patch(
+                                    "mac_health_checkup.app.backend.one_click.secrets.token_urlsafe",
+                                    autospec=True,
+                                    return_value="secure-test-token-with-more-than-32-characters",
+                                ):
+                                    with patch(
+                                        "mac_health_checkup.app.entrypoint.main",
+                                        autospec=True,
+                                        return_value=0,
+                                    ):
+                                        code = one_click.run_one_click_agent(repo_root=root)
+
+                    self.assertEqual(code, 0)
+                    pick_port.assert_called_once_with("127.0.0.1")
+                    derived_path = Path(os.environ["MAC_HEALTH_CHECKUP_CONFIG"])
+                    derived = cast(JsonDict, json.loads(derived_path.read_text(encoding="utf-8")))
+                    api = derived.get("api")
+                    self.assertIsInstance(api, dict)
+                    if isinstance(api, dict):
+                        self.assertEqual(api.get("bind_host"), "127.0.0.1")
+                        self.assertIs(api.get("allow_lan"), False)
+                        self.assertIs(api.get("allow_insecure_http_lan"), False)
+                        self.assertIs(api.get("tls_enabled"), False)
+                    self.assertNotIn("MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL", os.environ)
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
+            raise AssertionError(
+                f"{MODULE_PATH}:OneClickUnitTests.test_run_one_click_agent_falls_back_to_loopback_when_tls_is_unavailable failed: {exc}"
+            ) from exc
+
+    def test_run_one_click_agent_keeps_tls_lan_mode_when_material_is_ready(self) -> None:
+        """
+        Summary
+        Ensure one-click agent startup preserves secure LAN pairing when TLS setup succeeds.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Creates a temporary repository layout and derived one-click config.
+
+        Error handling
+        Raises AssertionError with context on failures.
+
+        Ties to other methods
+        Exercises `run_one_click_agent` with mocked network, TLS, port, token, and server startup boundaries.
+
+        Why this exists
+        Fail-closed fallback must not regress the existing HTTPS LAN path when certificate material is available.
+        """
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                root = Path(td)
+                config_dir = root / "config"
+                config_dir.mkdir()
+                (config_dir / "config.json").write_text('{"api": {}}\n', encoding="utf-8")
+
+                with patch.dict(os.environ, {}, clear=True):
+                    with patch(
+                        "mac_health_checkup.app.backend.one_click._best_effort_lan_ip",
+                        autospec=True,
+                        return_value="192.168.1.25",
+                    ):
+                        with patch(
+                            "mac_health_checkup.app.backend.one_click._ensure_self_signed_cert",
+                            autospec=True,
+                            return_value=(True, None),
+                        ):
+                            with patch(
+                                "mac_health_checkup.app.backend.one_click._pick_free_port",
+                                autospec=True,
+                                return_value=43210,
+                            ) as pick_port:
+                                with patch(
+                                    "mac_health_checkup.app.backend.one_click.secrets.token_urlsafe",
+                                    autospec=True,
+                                    return_value="secure-test-token-with-more-than-32-characters",
+                                ):
+                                    with patch(
+                                        "mac_health_checkup.app.entrypoint.main",
+                                        autospec=True,
+                                        return_value=0,
+                                    ):
+                                        code = one_click.run_one_click_agent(repo_root=root)
+
+                    self.assertEqual(code, 0)
+                    pick_port.assert_called_once_with("192.168.1.25")
+                    derived_path = Path(os.environ["MAC_HEALTH_CHECKUP_CONFIG"])
+                    derived = cast(JsonDict, json.loads(derived_path.read_text(encoding="utf-8")))
+                    api = derived.get("api")
+                    self.assertIsInstance(api, dict)
+                    if isinstance(api, dict):
+                        self.assertEqual(api.get("bind_host"), "192.168.1.25")
+                        self.assertIs(api.get("allow_lan"), True)
+                        self.assertIs(api.get("allow_insecure_http_lan"), False)
+                        self.assertIs(api.get("tls_enabled"), True)
+                    self.assertEqual(
+                        os.environ.get("MAC_HEALTH_CHECKUP_PUBLIC_BASE_URL"),
+                        "https://192.168.1.25:43210",
+                    )
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
+            raise AssertionError(
+                f"{MODULE_PATH}:OneClickUnitTests.test_run_one_click_agent_keeps_tls_lan_mode_when_material_is_ready failed: {exc}"
+            ) from exc
+
+    def test_run_one_click_agent_enforces_private_modes_on_existing_paths(self) -> None:
+        """
+        Summary
+        Ensure generated secret directories and configuration are owner-only.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Creates deliberately over-permissive one-click paths and runs the agent with mocked startup boundaries.
+
+        Error handling
+        Raises AssertionError with context on failures.
+
+        Ties to other methods
+        Exercises `run_one_click_agent`, `_ensure_private_directory`, and `_write_private_text`.
+
+        Why this exists
+        Existing paths and an ambient umask must not expose generated TLS material or the API auth token.
+        """
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                root = Path(td)
+                config_dir = root / "config"
+                config_dir.mkdir()
+                (config_dir / "config.json").write_text('{"api": {}}\n', encoding="utf-8")
+
+                local_dir = root / ".local"
+                tls_dir = local_dir / "tls"
+                tls_dir.mkdir(parents=True)
+                derived_path = local_dir / "one-click-config.json"
+                derived_path.write_text('{"api": {"auth_token": "stale-token"}}\n', encoding="utf-8")
+                local_dir.chmod(0o755)
+                tls_dir.chmod(0o755)
+                derived_path.chmod(0o644)
+
+                with patch.dict(os.environ, {}, clear=True):
+                    with (
+                        patch(
+                            "mac_health_checkup.app.backend.one_click._best_effort_lan_ip",
+                            autospec=True,
+                            return_value=None,
+                        ),
+                        patch(
+                            "mac_health_checkup.app.backend.one_click._ensure_self_signed_cert",
+                            autospec=True,
+                            return_value=(False, "openssl unavailable"),
+                        ),
+                        patch(
+                            "mac_health_checkup.app.backend.one_click._pick_free_port",
+                            autospec=True,
+                            return_value=43210,
+                        ),
+                        patch(
+                            "mac_health_checkup.app.backend.one_click.secrets.token_urlsafe",
+                            autospec=True,
+                            return_value="secure-test-token-with-more-than-32-characters",
+                        ),
+                        patch(
+                            "mac_health_checkup.app.entrypoint.main",
+                            autospec=True,
+                            return_value=0,
+                        ),
+                    ):
+                        code = one_click.run_one_click_agent(repo_root=root)
+
+                self.assertEqual(code, 0)
+                self.assertEqual(stat.S_IMODE(local_dir.stat().st_mode), 0o700)
+                self.assertEqual(stat.S_IMODE(tls_dir.stat().st_mode), 0o700)
+                self.assertEqual(stat.S_IMODE(derived_path.stat().st_mode), 0o600)
+                derived = cast(JsonDict, json.loads(derived_path.read_text(encoding="utf-8")))
+                api = derived.get("api")
+                self.assertIsInstance(api, dict)
+                if isinstance(api, dict):
+                    self.assertEqual(
+                        api.get("auth_token"),
+                        "secure-test-token-with-more-than-32-characters",
+                    )
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
+            raise AssertionError(
+                f"{MODULE_PATH}:OneClickUnitTests.test_run_one_click_agent_enforces_private_modes_on_existing_paths failed: {exc}"
+            ) from exc
+
+    def test_write_private_text_cleans_up_failed_atomic_replacement(self) -> None:
+        """
+        Summary
+        Ensure a failed private-file replacement leaves no partial token file.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Creates a temporary destination and forces its atomic replacement to fail.
+
+        Error handling
+        Asserts the helper raises a contextual `RuntimeError` and cleans its temporary file.
+
+        Ties to other methods
+        Exercises `_write_private_text` failure cleanup and existing-file handling.
+
+        Why this exists
+        A storage error must preserve the last complete configuration without leaving another token-bearing artifact.
+        """
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                local_dir = Path(td) / ".local"
+                local_dir.mkdir(mode=0o755)
+                destination = local_dir / "one-click-config.json"
+                original = '{"api": {"auth_token": "last-complete-token"}}\n'
+                destination.write_text(original, encoding="utf-8")
+                destination.chmod(0o644)
+
+                with patch(
+                    "mac_health_checkup.app.backend.one_click.os.replace",
+                    autospec=True,
+                    side_effect=OSError("forced replacement failure"),
+                ):
+                    with self.assertRaisesRegex(RuntimeError, "_write_private_text"):
+                        one_click._write_private_text(
+                            destination,
+                            '{"api": {"auth_token": "new-secret-token"}}\n',
+                        )
+
+                self.assertEqual(destination.read_text(encoding="utf-8"), original)
+                self.assertEqual(stat.S_IMODE(local_dir.stat().st_mode), 0o700)
+                self.assertEqual(stat.S_IMODE(destination.stat().st_mode), 0o600)
+                self.assertEqual(list(local_dir.glob(".one-click-config.json.*.tmp")), [])
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            OSError,
+        ) as exc:
+            raise AssertionError(
+                f"{MODULE_PATH}:OneClickUnitTests.test_write_private_text_cleans_up_failed_atomic_replacement failed: {exc}"
+            ) from exc
+
     def test_find_executable_searches_path(self) -> None:
         """
         Summary

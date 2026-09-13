@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import signal
 import threading
+import time
 from dataclasses import dataclass, field
 from types import FrameType
 from typing import Callable
@@ -227,17 +228,56 @@ class ShutdownManager:
         Ensures cleanup completes within a bounded time.
         """
         try:
-            timeout = get_config().shutdown.graceful_timeout_sec
-            deadline = threading.Event()
-            timer = threading.Timer(timeout, deadline.set)
-            timer.start()
-            try:
-                for callback in self._callbacks:
-                    if deadline.is_set():
-                        break
-                    callback()
-            finally:
-                timer.cancel()
+            timeout = float(get_config().shutdown.graceful_timeout_sec)
+            deadline = time.monotonic() + timeout
+            for callback in self._callbacks:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+
+                finished = threading.Event()
+                callback_errors: list[Exception] = []
+
+                def _run_callback(cleanup_callback: Callable[[], None] = callback) -> None:
+                    """
+                    Summary
+                    Run one cleanup callback and signal completion.
+
+                    Inputs
+                    cleanup_callback: Registered cleanup action.
+
+                    Outputs
+                    None.
+
+                    Side effects
+                    Executes cleanup and records any exception for the coordinating thread.
+
+                    Error handling
+                    Captures callback exceptions so they can be re-raised after the bounded wait.
+
+                    Ties to other methods
+                    Used by `_run_cleanup` as a daemon-thread target.
+
+                    Why this exists
+                    A misbehaving callback must not block the shutdown deadline.
+                    """
+                    try:
+                        cleanup_callback()
+                    except Exception as callback_exc:
+                        callback_errors.append(callback_exc)
+                    finally:
+                        finished.set()
+
+                worker = threading.Thread(
+                    target=_run_callback,
+                    name="shutdown-cleanup",
+                    daemon=True,
+                )
+                worker.start()
+                if not finished.wait(timeout=remaining):
+                    break
+                if callback_errors:
+                    raise callback_errors[0]
         except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
             raise RuntimeError(
                 format_error(MODULE_PATH, "ShutdownManager._run_cleanup", "Cleanup failed", exc)

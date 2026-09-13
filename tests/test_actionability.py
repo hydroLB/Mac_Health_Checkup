@@ -35,6 +35,7 @@ def test_worst_severity_from_metrics() -> None:
     try:
         assert worst_severity_from_metrics([("A", "1", "ok")]) == "ok"
         assert worst_severity_from_metrics([("A", "1", "info")]) == "ok"
+        assert worst_severity_from_metrics([("A", "?", "unknown")]) == "warn"
         assert worst_severity_from_metrics([("A", "1", "warn")]) == "warn"
         assert worst_severity_from_metrics([("A", "1", "warn"), ("B", "2", "bad")]) == "bad"
     except (
@@ -48,6 +49,60 @@ def test_worst_severity_from_metrics() -> None:
         OSError,
     ) as exc:
         raise AssertionError(f"{MODULE_PATH}:test_worst_severity_from_metrics failed: {exc}") from exc
+
+
+def test_nested_collector_failure_is_never_advised_as_healthy() -> None:
+    """
+    Summary
+    Verify composite collector failures produce warning advice even when no metric rows exist.
+
+    Inputs
+    Synthetic Performance diagnostics with unavailable thermal and power collectors.
+
+    Outputs
+    Assertions on severity, diagnosis, and next steps.
+
+    Side effects
+    None.
+
+    Error handling
+    Raises `AssertionError` with module and test context when expectations are not met.
+
+    Ties to other methods
+    Exercises `build_section_advice` and nested diagnostic failure detection.
+
+    Why this exists
+    Unavailable health signals must not be presented as `OK` with a "No action needed" recommendation.
+    """
+    try:
+        advice = build_section_advice(
+            "performance",
+            field="Performance data unavailable",
+            metrics=[],
+            diagnostics={
+                "thermals": {"ok": False, "error": "no_sensors"},
+                "power": {"ok": False, "error": "permission_required"},
+            },
+        )
+
+        assert advice["severity"] == "warn"
+        assert advice["diagnosis"] == "Performance data unavailable"
+        steps = advice["next_steps"]
+        assert isinstance(steps, list)
+        assert all("No action needed" not in str(step) for step in steps)
+    except (
+        AssertionError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        KeyError,
+        IndexError,
+        OSError,
+    ) as exc:
+        raise AssertionError(
+            f"{MODULE_PATH}:test_nested_collector_failure_is_never_advised_as_healthy failed: {exc}"
+        ) from exc
 
 
 def test_should_fail_on_thresholds() -> None:

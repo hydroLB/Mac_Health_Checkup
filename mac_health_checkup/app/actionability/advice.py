@@ -79,7 +79,7 @@ def worst_severity_from_metrics(metrics: Sequence[tuple[str, str, str]] | None) 
     None.
 
     Error handling
-    Never raises; returns "ok" on malformed input.
+    Never raises; treats malformed rows conservatively as a warning.
 
     Ties to other methods
     Used by `build_section_advice` and `should_fail_on` logic.
@@ -92,6 +92,9 @@ def worst_severity_from_metrics(metrics: Sequence[tuple[str, str, str]] | None) 
             return "ok"
         worst: AdviceSeverity = "ok"
         for _label, _value, status in metrics:
+            if isinstance(status, str) and status.strip().lower() == "unknown":
+                worst = "warn"
+                continue
             normalized = _normalize_status(status)
             if normalized == "bad":
                 return "bad"
@@ -99,7 +102,7 @@ def worst_severity_from_metrics(metrics: Sequence[tuple[str, str, str]] | None) 
                 worst = "warn"
         return worst
     except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
-        return "ok"
+        return "warn"
 
 
 def should_fail_on(severity: AdviceSeverity, fail_on: str | None) -> bool:
@@ -170,10 +173,45 @@ def _severity_for_section(
         return worst
     if diagnostics is None:
         return "ok"
-    ok_value = diagnostics.get("ok")
-    if ok_value is False:
+    if _contains_explicit_failure(diagnostics):
         return "warn"
     return "ok"
+
+
+def _contains_explicit_failure(value: object) -> bool:
+    """
+    Summary
+    Detect explicit collector failures anywhere in a nested diagnostics payload.
+
+    Inputs
+    value: Diagnostics value that may contain nested mappings or lists.
+
+    Outputs
+    True when any mapping contains `ok=false`; otherwise false.
+
+    Side effects
+    None.
+
+    Error handling
+    Never raises; malformed values that cannot be traversed return false.
+
+    Ties to other methods
+    Used by `_severity_for_section` after metric statuses are evaluated.
+
+    Why this exists
+    Composite sections such as Performance wrap collector results, so checking only the top-level `ok` field can
+    incorrectly label unavailable data as healthy.
+    """
+    try:
+        if isinstance(value, Mapping):
+            if value.get("ok") is False:
+                return True
+            return any(_contains_explicit_failure(item) for item in value.values())
+        if isinstance(value, (list, tuple)):
+            return any(_contains_explicit_failure(item) for item in value)
+        return False
+    except (RuntimeError, ValueError, TypeError, AttributeError, KeyError, IndexError, OSError):
+        return False
 
 
 def _normalize_status(value: object) -> AdviceSeverity | None:

@@ -34,7 +34,7 @@ final class PythonInterpreterResolverTests: XCTestCase {
         let resolved = try PythonInterpreterResolver.resolve(
             pythonOverride: overridePython.path,
             environment: [:],
-            requiredMinimum: PythonVersion(major: 3, minor: 10, patch: 0),
+            requiredMinimum: PythonVersion(major: 3, minor: 11, patch: 0),
             fallbackCandidates: [],
             versionProbe: { _ in PythonVersion(major: 3, minor: 11, patch: 2) }
         )
@@ -75,7 +75,7 @@ final class PythonInterpreterResolverTests: XCTestCase {
             _ = try PythonInterpreterResolver.resolve(
                 pythonOverride: overridePython.path,
                 environment: [:],
-                requiredMinimum: PythonVersion(major: 3, minor: 10, patch: 0),
+                requiredMinimum: PythonVersion(major: 3, minor: 11, patch: 0),
                 fallbackCandidates: [fallbackPython.path],
                 versionProbe: { path in
                     if path == overridePython.path {
@@ -120,7 +120,7 @@ final class PythonInterpreterResolverTests: XCTestCase {
         let resolved = try PythonInterpreterResolver.resolve(
             pythonOverride: nil,
             environment: [:],
-            requiredMinimum: PythonVersion(major: 3, minor: 10, patch: 0),
+            requiredMinimum: PythonVersion(major: 3, minor: 11, patch: 0),
             fallbackCandidates: [fallbackPython.path],
             versionProbe: { _ in PythonVersion(major: 3, minor: 12, patch: 1) }
         )

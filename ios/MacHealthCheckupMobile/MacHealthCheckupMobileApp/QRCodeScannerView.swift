@@ -83,7 +83,7 @@ struct QRCodeScannerView: UIViewControllerRepresentable {
     }
 }
 
-final class ScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
+final class ScannerViewController: UIViewController, @preconcurrency AVCaptureMetadataOutputObjectsDelegate {
     /**
      Summary
      Host an AVCaptureSession to scan QR codes with a live camera preview.

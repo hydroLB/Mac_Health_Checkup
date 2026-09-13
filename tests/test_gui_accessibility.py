@@ -75,7 +75,8 @@ def _to_linear(channel: float) -> float:
     Why this exists
     WCAG contrast computations require linearized channels.
     """
-    return channel / 12.92 if channel <= 0.03928 else ((channel + 0.055) / 1.055) ** 2.4
+    value = channel / 12.92 if channel <= 0.03928 else ((channel + 0.055) / 1.055) ** 2.4
+    return float(value)
 
 
 def _relative_luminance(hex_color: str) -> float:

@@ -58,6 +58,7 @@ public struct RootView: View {
          */
         NavigationSplitView {
             SidebarView(model: model)
+                .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 300)
         } detail: {
             VStack(spacing: 0) {
                 if let err = model.lastError {
@@ -76,6 +77,18 @@ public struct RootView: View {
         }
         .toolbar {
             #if os(macOS)
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    Task {
+                        await model.refreshOnce()
+                    }
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+                .help("Refresh health data (Command-R)")
+                .keyboardShortcut("r", modifiers: .command)
+                .disabled(model.isRefreshing)
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     model.openSettings()
@@ -119,7 +132,9 @@ public struct RootView: View {
         }
         .sheet(isPresented: $model.isSettingsPresented) {
             SettingsView(theme: model.theme, model: model)
+                #if os(macOS)
                 .frame(minWidth: 560, minHeight: 520)
+                #endif
                 .background(model.theme.colors.background)
         }
     }
@@ -250,7 +265,11 @@ private struct ErrorDetailView: View {
             }
         }
         .padding(16)
+        #if os(macOS)
         .frame(minWidth: 520, minHeight: 260)
+        #else
+        .frame(maxWidth: .infinity, minHeight: 260)
+        #endif
         .background(theme.colors.background)
     }
 }

@@ -1,24 +1,37 @@
 from __future__ import annotations
 
+import concurrent.futures
 import sys
-import time
+import threading
 import tkinter as tk
-from datetime import datetime
 from typing import Callable, Protocol, cast
 
 from mac_health_checkup.app.gui.dashboard.lifecycle import ShutdownManager
 from mac_health_checkup.app.gui.dashboard.queueing import SectionQueue
-from mac_health_checkup.app.gui.dashboard.sections import (
-    SECTION_HANDLERS as DEFAULT_SECTION_HANDLERS,
+from mac_health_checkup.app.gui.dashboard.refresh_support import (
+    RECOVERABLE_SECTION_EXCEPTIONS,
+    BufferedRefreshResult,
+    RefreshCycle,
+    RenderMetricsOperation,
+    RenderOperation,
+    RenderTableOperation,
+    RunOnUiOperation,
+    SetFieldOperation,
+    SetMachineHintOperation,
+    build_refresh_messages,
+    build_refresh_status_update,
+    resolve_refresh_runtime,
+    run_buffered_refresh,
+    start_refresh_cycle,
 )
-from mac_health_checkup.app.gui.dashboard.sections import run_section as default_run_section
-from mac_health_checkup.app.gui.dashboard.ui_helpers import _refresh_status_message
 from mac_health_checkup.app.gui.sections.types import SectionHost
 from mac_health_checkup.core.config import Config
 from mac_health_checkup.core.utils import format_error
 from mac_health_checkup.core.utils.error_boundary import ErrorBoundary, map_boundary_exception
 
 MODULE_PATH = "mac_health_checkup/app/gui/dashboard/refresh_mixin.py"
+_REFRESH_POLL_MS = 25
+_SHUTDOWN_POLL_MS = 100
 
 
 class _SetNextRefreshHintFn(Protocol):
@@ -176,6 +189,12 @@ class _DashboardRefreshMixin:
     _clear_section_data_views: _ClearSectionDataViewsFn
     set_field: _SetFieldFn
     _color: Callable[[str], str]
+    _refresh_executor: concurrent.futures.ThreadPoolExecutor
+    _refresh_future: concurrent.futures.Future[BufferedRefreshResult] | None
+    _refresh_cancel_event: threading.Event
+    _refresh_poll_after_id: str | None
+    _shutdown_after_id: str | None
+    _refresh_cycle: RefreshCycle | None
 
     def _cancel_scheduled_refresh(self) -> None:
         """
@@ -345,111 +364,296 @@ class _DashboardRefreshMixin:
         Calls `run_section` for each key in `SECTION_HANDLERS`.
 
         Why this exists
-        Centralizes refresh so UI updates remain predictable and bounded by the queueing logic.
+        Centralizes non-blocking collection and deterministic main-thread replay.
         """
-        app_module = sys.modules.get("mac_health_checkup.app.gui.app")
-        section_handlers = DEFAULT_SECTION_HANDLERS
-        section_runner = default_run_section
-        if app_module is not None:
-            section_handlers = getattr(app_module, "SECTION_HANDLERS", section_handlers)
-            section_runner = getattr(app_module, "run_section", section_runner)
-        failures = 0
-        total_sections = len(section_handlers)
-        now = datetime.now().strftime("%H:%M:%S")
-        started = time.perf_counter()
-        tokens = self.__dict__.get("_ui_tokens")
-        loading_feedback = tokens.section_feedback_loading if tokens is not None else "Refreshing section..."
-        error_feedback = (
-            tokens.section_feedback_error
-            if tokens is not None
-            else "Section refresh failed. Auto retry is enabled."
-        )
         try:
+            active_future = self.__dict__.get("_refresh_future")
+            if active_future is not None:
+                return
+            self._cancel_scheduled_refresh()
+            app_module = sys.modules.get("mac_health_checkup.app.gui.app")
+            runtime = resolve_refresh_runtime(app_module)
+            section_keys = tuple(runtime.section_handlers)
+            cycle = start_refresh_cycle(total_sections=len(section_keys))
+            messages = build_refresh_messages(self.__dict__.get("_ui_tokens"))
             self._set_refresh_controls_busy(True)
-            self._set_status(f"Refreshing {total_sections} sections...", level="loading")
-            cast(tk.Misc, self).update_idletasks()
-            for key in section_handlers:
-                self._queue.enqueue(key)
-                self._set_section_feedback(key, loading_feedback, level="loading")
-            for key in self._queue.drain():
-                try:
-                    section_runner(cast(SectionHost, self), key)
-                    self._set_section_feedback(key, f"Updated at {now}.", level="success")
-                except (
-                    tk.TclError,
-                    RuntimeError,
-                    ValueError,
-                    TypeError,
-                    AttributeError,
-                    KeyError,
-                    IndexError,
-                    OSError,
-                ) as exc:
-                    failures += 1
-                    render_exc: Exception | None = None
-                    try:
-                        self._clear_section_data_views(
-                            key,
-                            message="Data unavailable. The section will retry on the next refresh.",
-                        )
-                        error_color = self._color("status.error")
-                        self.set_field(
-                            key,
-                            f"Unable to refresh ({type(exc).__name__}). Hover for details.",
-                            fg=error_color,
-                            tooltip=str(exc),
-                        )
-                        self._set_section_feedback(key, error_feedback, level="error")
-                    except (
-                        tk.TclError,
-                        RuntimeError,
-                        ValueError,
-                        TypeError,
-                        AttributeError,
-                        KeyError,
-                        IndexError,
-                        OSError,
-                    ) as field_exc:
-                        render_exc = field_exc
-                    if render_exc is not None:
-                        continue
-            elapsed_ms = int((time.perf_counter() - started) * 1000.0)
-            if failures > 0:
-                self._set_status(
-                    _refresh_status_message(
-                        refreshed_at=now,
-                        total_sections=total_sections,
-                        failures=failures,
-                        elapsed_ms=elapsed_ms,
-                    ),
-                    level="warn",
+            self._set_status(f"Refreshing {cycle.total_sections} sections...", level="loading")
+            for key in section_keys:
+                self._set_section_feedback(key, messages.loading_feedback, level="loading")
+            cancel_event = threading.Event()
+            executor = self.__dict__.get("_refresh_executor")
+            if executor is None:
+                executor = concurrent.futures.ThreadPoolExecutor(
+                    max_workers=1, thread_name_prefix="diagnostics"
                 )
-            else:
-                self._set_status(
-                    _refresh_status_message(
-                        refreshed_at=now,
-                        total_sections=total_sections,
-                        failures=0,
-                        elapsed_ms=elapsed_ms,
-                    ),
-                    level="info",
-                )
+                self._refresh_executor = executor
+            self._refresh_cancel_event = cancel_event
+            self._refresh_cycle = cycle
+            machine_hint = cast(SectionHost, self).machine_hint()
+            self._refresh_future = executor.submit(
+                run_buffered_refresh,
+                section_keys,
+                section_runner=runtime.section_runner,
+                machine_hint=machine_hint,
+                should_cancel=lambda: cancel_event.is_set() or self._shutdown.shutdown_requested(),
+            )
+            self._schedule_refresh_poll()
         except (tk.TclError, RuntimeError, ValueError, TypeError) as exc:
-            self._set_status(f"Refresh error at {now}: {type(exc).__name__}", level="error")
+            pending_cancel_event = self.__dict__.get("_refresh_cancel_event")
+            if pending_cancel_event is not None:
+                pending_cancel_event.set()
+            future = self.__dict__.get("_refresh_future")
+            if future is not None:
+                future.cancel()
+            self._refresh_future = None
+            self._refresh_cycle = None
+            self._set_refresh_controls_busy(False)
+            self._set_status(f"Refresh error: {type(exc).__name__}", level="error")
+
+    def _schedule_refresh_poll(self) -> None:
+        """
+        Summary
+        Schedule a short Tk-thread poll for background refresh completion.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Registers one Tk after callback.
+
+        Error handling
+        Propagates Tk scheduling failures to the refresh boundary.
+
+        Ties to other methods
+        Calls `_poll_refresh_result`.
+
+        Why this exists
+        Future completion must be observed without blocking Tk.
+        """
+        if self.__dict__.get("_refresh_poll_after_id") is not None:
+            return
+        poll_ms = max(
+            10,
+            int(getattr(self._cfg.gui, "ui_queue_poll_ms", _REFRESH_POLL_MS)),
+        )
+        self._refresh_poll_after_id = cast(tk.Misc, self).after(poll_ms, self._poll_refresh_result)
+
+    def _poll_refresh_result(self) -> None:
+        """
+        Summary
+        Replay completed buffered section results on the Tk thread.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Polls a future, updates UI state, and schedules the next refresh.
+
+        Error handling
+        Maps recoverable worker or replay failures to UI status.
+
+        Ties to other methods
+        Scheduled by `_schedule_refresh_poll`.
+
+        Why this exists
+        Only the Tk thread may apply buffered render operations.
+        """
+        self._refresh_poll_after_id = None
+        future = self.__dict__.get("_refresh_future")
+        if future is None:
+            return
+        if not future.done():
+            if self._shutdown.shutdown_requested():
+                self._refresh_cancel_event.set()
+            self._schedule_refresh_poll()
+            return
+
+        self._refresh_future = None
+        cycle = self._refresh_cycle
+        self._refresh_cycle = None
+        messages = build_refresh_messages(self.__dict__.get("_ui_tokens"))
+        try:
+            result = future.result()
+            if self._shutdown.shutdown_requested():
+                return
+            replay_failures = 0
+            for section in result.sections:
+                if section.error is not None:
+                    self._handle_section_refresh_failure(
+                        section.key,
+                        section.error,
+                        error_feedback=messages.error_feedback,
+                    )
+                    continue
+                try:
+                    self._replay_render_operations(section.operations)
+                    refreshed_at = cycle.refreshed_at if cycle is not None else "now"
+                    self._set_section_feedback(
+                        section.key,
+                        f"Updated at {refreshed_at}.",
+                        level="success",
+                    )
+                except RECOVERABLE_SECTION_EXCEPTIONS as replay_exc:
+                    replay_failures += 1
+                    self._handle_section_refresh_failure(
+                        section.key,
+                        replay_exc,
+                        error_feedback=messages.error_feedback,
+                    )
+            if cycle is not None:
+                status_update = build_refresh_status_update(
+                    cycle,
+                    failures=result.failures + replay_failures,
+                )
+                self._set_status(status_update.text, level=status_update.level)
+        except (concurrent.futures.CancelledError, tk.TclError, RuntimeError, ValueError, TypeError) as exc:
+            self._set_status(f"Refresh error: {type(exc).__name__}", level="error")
         finally:
-            try:
-                self._set_refresh_controls_busy(False)
-                if not self._shutdown.shutdown_requested():
-                    self._schedule_next_refresh(self._cfg.gui.auto_refresh_ms)
-            except (tk.TclError, RuntimeError, ValueError, TypeError) as finalize_exc:
-                mapped = map_boundary_exception(
-                    finalize_exc,
-                    boundary=ErrorBoundary.UI,
-                    default_message="Refresh finalize failed",
+            self._set_refresh_controls_busy(False)
+            if not self._shutdown.shutdown_requested():
+                self._schedule_next_refresh(self._cfg.gui.auto_refresh_ms)
+
+    def _replay_render_operations(self, operations: tuple[RenderOperation, ...]) -> None:
+        """
+        Summary
+        Apply recorded SectionHost operations to the live UI host in order.
+
+        Inputs
+        operations: Ordered buffered render operations.
+
+        Outputs
+        None.
+
+        Side effects
+        Mutates live dashboard UI state.
+
+        Error handling
+        Propagates render failures for per-section fallback handling.
+
+        Ties to other methods
+        Used by `_poll_refresh_result`.
+
+        Why this exists
+        Separates worker collection from main-thread Tk mutation.
+        """
+        host = cast(SectionHost, self)
+        for operation in operations:
+            if isinstance(operation, SetFieldOperation):
+                host.set_field(operation.key, operation.text, operation.fg, operation.tooltip)
+            elif isinstance(operation, RenderMetricsOperation):
+                host.render_metrics_table(operation.key, operation.rows, columns=operation.columns)
+            elif isinstance(operation, RenderTableOperation):
+                host.render_table(
+                    operation.key,
+                    operation.headers,
+                    operation.rows,
+                    operation.max_col_chars,
                 )
-                sys.stderr.write(
-                    mapped.to_stderr_line(module_path=MODULE_PATH, method="DashboardApp._refresh") + "\n"
-                )
+            elif isinstance(operation, RunOnUiOperation):
+                host.run_on_ui(operation.callback)
+            elif isinstance(operation, SetMachineHintOperation):
+                host.set_machine_hint(operation.descriptor)
+
+    def _schedule_shutdown_poll(self) -> None:
+        """
+        Summary
+        Poll shutdown state so signal-triggered shutdown closes the Tk mainloop.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Closes the app or registers one Tk after callback.
+
+        Error handling
+        Propagates Tk scheduling and close failures to the app boundary.
+
+        Ties to other methods
+        Called by app startup and `_poll_shutdown`.
+
+        Why this exists
+        Signals set lifecycle state but Tk still needs a main-thread close action.
+        """
+        if self._shutdown.shutdown_requested():
+            self._on_close()
+            return
+        self._shutdown_after_id = cast(tk.Misc, self).after(_SHUTDOWN_POLL_MS, self._poll_shutdown)
+
+    def _poll_shutdown(self) -> None:
+        """
+        Summary
+        Close the window after SIGINT or SIGTERM requests shutdown.
+
+        Inputs
+        None.
+
+        Outputs
+        None.
+
+        Side effects
+        Clears the poll id and advances shutdown polling.
+
+        Error handling
+        Propagates close or rescheduling failures to the Tk boundary.
+
+        Ties to other methods
+        Scheduled by `_schedule_shutdown_poll`.
+
+        Why this exists
+        Gives signal-triggered lifecycle state a prompt Tk-mainloop exit path.
+        """
+        self._shutdown_after_id = None
+        self._schedule_shutdown_poll()
+
+    def _handle_section_refresh_failure(self, key: str, exc: Exception, *, error_feedback: str) -> None:
+        """
+        Summary
+        Render fallback state for a failed section refresh.
+
+        Inputs
+        key: Section key.
+        exc: Section refresh failure.
+        error_feedback: Inline section feedback message for the failed state.
+
+        Outputs
+        None.
+
+        Side effects
+        Clears stale section data, updates the summary field, and sets inline feedback.
+
+        Error handling
+        Swallows secondary render failures so one broken section does not abort the refresh loop.
+
+        Ties to other methods
+        Used by `_refresh` after a section runner failure.
+
+        Why this exists
+        Keeps the UI fallback path explicit while the support module owns the section-loop bookkeeping.
+        """
+        try:
+            self._clear_section_data_views(
+                key,
+                message="Data unavailable. The section will retry on the next refresh.",
+            )
+            error_color = self._color("status.error")
+            self.set_field(
+                key,
+                f"Unable to refresh ({type(exc).__name__}). Hover for details.",
+                fg=error_color,
+                tooltip=str(exc),
+            )
+            self._set_section_feedback(key, error_feedback, level="error")
+        except RECOVERABLE_SECTION_EXCEPTIONS:
+            return
 
     def _on_close(self) -> None:
         """
@@ -476,6 +680,36 @@ class _DashboardRefreshMixin:
         """
         try:
             self._cancel_scheduled_refresh()
+            refresh_poll_id = self.__dict__.get("_refresh_poll_after_id")
+            if refresh_poll_id is not None:
+                try:
+                    cast(tk.Misc, self).after_cancel(refresh_poll_id)
+                except tk.TclError:
+                    pass
+                self._refresh_poll_after_id = None
+            shutdown_poll_id = self.__dict__.get("_shutdown_after_id")
+            if shutdown_poll_id is not None:
+                try:
+                    cast(tk.Misc, self).after_cancel(shutdown_poll_id)
+                except tk.TclError:
+                    pass
+                self._shutdown_after_id = None
+            cancel_event = self.__dict__.get("_refresh_cancel_event")
+            if cancel_event is not None:
+                cancel_event.set()
+            future = self.__dict__.get("_refresh_future")
+            if future is not None:
+                try:
+                    future.cancel()
+                except (RuntimeError, ValueError, TypeError):
+                    pass
+                self._refresh_future = None
+            executor = self.__dict__.get("_refresh_executor")
+            if executor is not None:
+                try:
+                    executor.shutdown(wait=False, cancel_futures=True)
+                except (RuntimeError, ValueError, TypeError):
+                    pass
             self._shutdown.trigger_shutdown()
             cast(tk.Misc, self).destroy()
         except (tk.TclError, RuntimeError, ValueError, TypeError) as exc:
