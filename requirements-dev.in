@@ -17,4 +17,4 @@ pytest-cov==6.0.0
 requests>=2.33.0
 ruff==0.12.9
 setuptools>=83.0.0
-urllib3>=2.7.0
+urllib3>=2.8.0
